@@ -8,12 +8,12 @@ const { TOPIC_TAXONOMY }                             = require('./taxonomy');
 const { processCacheMiss, resolveCanonicalTopicLive, trackAsk } = require('./dynamicTaxonomy');
 
 // ─────────────────────────────────────────────────────────────
-// Configuration
+// Configuration — OPTIMIZED for better cache hit rates
 // ─────────────────────────────────────────────────────────────
-const MEM_TTL_MS       = 15  * 60 * 1000;   // 15 min in memory
-const DISK_TTL_MS      = 24  * 60 * 60 * 1000; // 24 hours on disk
-const MAX_MEM_ENTRIES  = 300;
-const MAX_DISK_ENTRIES = 500;
+const MEM_TTL_MS       = 30  * 60 * 1000;   // 30 min in memory (was 15)
+const DISK_TTL_MS      = 48  * 60 * 60 * 1000; // 48 hours on disk (was 24)
+const MAX_MEM_ENTRIES  = 500;  // Increased from 300
+const MAX_DISK_ENTRIES = 1000; // Increased from 500
 const DISK_PATH        = path.join(__dirname, '..', 'data', 'cache.json');
 
 // ─────────────────────────────────────────────────────────────

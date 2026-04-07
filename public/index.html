@@ -60,6 +60,34 @@
       --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
     }
 
+    /* ═══════════════════════════════════════════════════════════
+       PERFORMANCE OPTIMIZATIONS
+       GPU-accelerated animations, reduced repaints
+       ═══════════════════════════════════════════════════════════ */
+    
+    /* GPU acceleration for animated elements */
+    .bubble, .skeleton-loader, .facts-loading-container, .quiz-loading-container,
+    .estimate-badge, .resp-intro, .resp-step, .resp-answer, .structured-response {
+      will-change: transform, opacity;
+      transform: translateZ(0); /* Force GPU layer */
+      backface-visibility: hidden;
+    }
+
+    /* Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Optimize scrolling performance */
+    .chat-area {
+      will-change: scroll-position;
+      contain: layout style paint;
+    }
+
     /* Default (intermediate) theme */
     body {
       --primary: #6C63FF;
@@ -2844,6 +2872,17 @@
     let quizAnswers = {};
     let agentMode = false;
 
+    // ============ Performance: Batched Scroll Helper ============
+    // Uses requestAnimationFrame to batch scroll updates and prevent layout thrashing
+    let scrollRAF = null;
+    function scrollToBottom() {
+      if (scrollRAF) return; // Already scheduled
+      scrollRAF = requestAnimationFrame(() => {
+        chatEl.scrollTop = chatEl.scrollHeight;
+        scrollRAF = null;
+      });
+    }
+
     // ============ Message Bubble Helper ============
     function addBubble(content, role, isHTML = false) {
       const div = document.createElement('div');
@@ -2854,7 +2893,7 @@
         div.textContent = content;
       }
       chatEl.appendChild(div);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
       return div;
     }
 
@@ -3263,7 +3302,7 @@
       `;
 
       chatEl.appendChild(factsContainer);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
 
       // Rotate facts every 4 seconds
       factsInterval = setInterval(() => {
@@ -3461,7 +3500,7 @@
       const skeleton = createSkeletonLoader(s.steps ? s.steps.length : 3);
       container.appendChild(skeleton);
       chatEl.appendChild(container);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
 
       // Render actual content after a short delay (allows skeleton to be seen)
       setTimeout(() => {
@@ -3546,7 +3585,7 @@
         contentElements.forEach(el => container.appendChild(el));
         
         // Scroll to bottom
-        chatEl.scrollTop = chatEl.scrollHeight;
+        scrollToBottom();
       }, 300); // Let skeleton shimmer for 300ms
     }
 
@@ -3609,6 +3648,8 @@
             const imageBubble = document.createElement('img');
             imageBubble.src = e.target.result;
             imageBubble.className = 'bubble-image';
+            imageBubble.loading = 'lazy'; // Lazy load for performance
+            imageBubble.decoding = 'async'; // Non-blocking decode
             imageBubble.style.cssText = `
               width: 120px;
               height: 120px;
@@ -3625,7 +3666,7 @@
             }
             
             chatEl.appendChild(bubbleContainer);
-            chatEl.scrollTop = chatEl.scrollHeight;
+            scrollToBottom();
           };
           reader.readAsDataURL(pendingImage);
 
@@ -3811,7 +3852,7 @@
       });
 
       chatEl.appendChild(wrapper);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     function renderAgentResponse(s) {
@@ -3875,7 +3916,7 @@
         chatEl.appendChild(note);
       }
 
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     async function showProgress() {
@@ -3920,7 +3961,7 @@
       `;
 
       chatEl.appendChild(card);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     async function resetProgress() {
