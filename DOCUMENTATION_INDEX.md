@@ -1,274 +1,86 @@
-# 📚 Complete Documentation Index
+# StudyBuddy — Documentation Index
 
-## Your Recent Issues & Solutions
-
-### Issue 1: Image Upload Not Showing Output ✅ FIXED
-- **What Happened:** Uploaded images but got no response
-- **Solution:** Added vision-specific prompts + fallback system
-- **Read:** `IMAGE_UPLOAD_FIX.md`
-
-### Issue 2: "Gemma is not running. Start Ollama first!" ✅ FIXED  
-- **What Happened:** Got error even though Ollama was running
-- **Solution:** Fixed warmup code to auto-detect models
-- **Read:** `QUICK_FIX_GEMMA.md` or `OLLAMA_DIAGNOSTIC.md`
+All documentation for the StudyBuddy project. Organised by purpose.
 
 ---
 
-## 📖 Documentation Files (In Order of Usefulness)
+## 🚀 Start Here
 
-### 🚀 QUICK START (Read First)
-1. **QUICK_FIX_GEMMA.md** (2 min read)
-   - 60-second solution to Gemma error
-   - Common issues & instant fixes
-   - When to use this: You see "Gemma is not running" error
-
-2. **QUICK_START_FIX.txt** (2 min read)
-   - Quick overview of image upload fix
-   - How to test it
-   - When to use this: Images uploaded but no response
-
-### 🔍 DIAGNOSTIC & UNDERSTANDING (Read Second)
-3. **OLLAMA_DIAGNOSTIC.md** (5 min read)
-   - Complete explanation of Gemma error
-   - What Ollama is vs StudyBuddy server
-   - Port reference (11434 vs 3000)
-   - When to use this: You want to understand the problem
-
-4. **FIX_SUMMARY.md** (3 min read)
-   - Executive summary of image upload fix
-   - What changed and why
-   - Configuration options
-   - When to use this: You want overview of changes
-
-### 🛠️ TECHNICAL DETAILS (Read Third)
-5. **IMAGE_UPLOAD_FIX.md** (10 min read)
-   - Complete technical explanation
-   - Before/after code comparison
-   - Testing procedures
-   - Configuration & tuning
-   - When to use this: Deep dive on image feature
-
-6. **COMPARISON_BEFORE_AFTER.md** (10 min read)
-   - Side-by-side code comparison
-   - Visual flow diagrams
-   - Real-world scenarios
-   - Metrics tables
-   - When to use this: See code changes visually
-
-### 📋 OPERATIONAL GUIDES (Read As Needed)
-7. **SERVER_MANAGEMENT.md**
-   - How to start/stop server
-   - Process management
-   - Health checks
-   - When to use this: Server won't start or stop
-
-8. **TROUBLESHOOTING_IMAGE.md**
-   - General troubleshooting procedures
-   - Browser console errors
-   - Step-by-step debugging
-   - Performance tuning
-   - When to use this: Something broken, need diagnosis
-
-9. **README_IMAGE_FIX.md**
-   - Complete reference guide
-   - All features documented
-   - Support checklist
-   - When to use this: Need everything in one place
+| File | Purpose |
+|------|---------|
+| [README.md](./README.md) | Project overview, quick start, full feature list, API reference |
+| [docs/QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md) | Cheat sheet — all endpoints, tools, commands, troubleshooting |
+| [docs/DOCS_INDEX.md](./docs/DOCS_INDEX.md) | Navigational guide to the full docs folder |
 
 ---
 
-## 🎯 Quick Navigation by Problem
+## 🏗 Architecture
 
-| Your Problem | Go To |
-|--------------|-------|
-| "Gemma is not running" error | `QUICK_FIX_GEMMA.md` |
-| Want to understand Gemma error | `OLLAMA_DIAGNOSTIC.md` |
-| Image upload not working | `IMAGE_UPLOAD_FIX.md` |
-| Server won't start | `SERVER_MANAGEMENT.md` |
-| Something broken, help! | `TROUBLESHOOTING_IMAGE.md` |
-| Want to see code changes | `COMPARISON_BEFORE_AFTER.md` |
-| Need complete overview | `README_IMAGE_FIX.md` |
+| File | Purpose |
+|------|---------|
+| [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Full system design and data flows |
+| [docs/architecture/ARCHITECTURE_INDEX.md](./docs/architecture/ARCHITECTURE_INDEX.md) | Architecture document navigator |
+| [docs/architecture/ARCHITECTURE_SOURCE_MAP.md](./docs/architecture/ARCHITECTURE_SOURCE_MAP.md) | Code → concept mapping |
+| [docs/architecture/IMPLEMENTATION_STATUS.md](./docs/architecture/IMPLEMENTATION_STATUS.md) | What's built, what's pending |
+| [docs/architecture/TEAM_ONBOARDING_SUMMARY.md](./docs/architecture/TEAM_ONBOARDING_SUMMARY.md) | New contributor guide |
 
 ---
 
-## ✅ What Was Fixed
+## ✨ Features
 
-### Fix #1: Image Upload Response (Issues Resolved: 4)
-- ✅ Image now displays in chat
-- ✅ Bot response always shows (no more blank output)
-- ✅ Structured formatting applied
-- ✅ Error messages display on failure
-
-**Files Changed:** `server.js`, `index.html`  
-**Documentation:** `IMAGE_UPLOAD_FIX.md`, `FIX_SUMMARY.md`, `COMPARISON_BEFORE_AFTER.md`
-
-### Fix #2: Gemma/Ollama Error (Issues Resolved: 1)
-- ✅ Server warmup code auto-detects installed models
-- ✅ No more "model not found" errors
-- ✅ Works with whatever models you have installed
-
-**Files Changed:** `server.js` (warmUpModels function)  
-**Documentation:** `QUICK_FIX_GEMMA.md`, `OLLAMA_DIAGNOSTIC.md`
+| File | Purpose |
+|------|---------|
+| [docs/CACHING.md](./docs/CACHING.md) | 4-layer smart cache (taxonomy → hash → inflight → disk) |
+| [docs/AGENT_TESTING_GUIDE.md](./docs/AGENT_TESTING_GUIDE.md) | Testing all 3 agent modes (sequential, parallel, Socratic) |
+| [docs/features/PHASE_9_PWA_IMPLEMENTATION.md](./docs/features/PHASE_9_PWA_IMPLEMENTATION.md) | PWA: manifest, service worker, offline page, install flow |
+| [docs/features/PWA_QUICK_START.md](./docs/features/PWA_QUICK_START.md) | How to test PWA installation |
 
 ---
 
-## 🚀 How to Get Started Right Now
+## 📖 Guides
 
-### Step 1: Start the Server (60 seconds)
-```bash
-npm run dev
-```
-
-Wait for: `StudyBuddy running at http://localhost:3000`
-
-### Step 2: Open Browser
-```
-http://localhost:3000
-```
-
-### Step 3: Test a Feature
-- Ask a text question: "What is AI?"
-- Upload an image: Click 📎
-- Generate a quiz: "Create a Quiz"
-
-### Step 4: If Something Fails
-1. Check console (DevTools: Cmd+Option+J)
-2. Check server logs (terminal output)
-3. Read appropriate documentation above
+| File | Purpose |
+|------|---------|
+| [docs/guides/ANIMATION_SYSTEM_GUIDE.md](./docs/guides/ANIMATION_SYSTEM_GUIDE.md) | Motion design system — GPU-accelerated animations, reduced-motion |
+| [docs/PROJECT_OVERVIEW.md](./docs/PROJECT_OVERVIEW.md) | High-level project summary for new team members |
+| [docs/FOLDER_STRUCTURE.md](./docs/FOLDER_STRUCTURE.md) | Directory layout and file responsibilities |
+| [docs/KAGGLE_WRITEUP.md](./docs/KAGGLE_WRITEUP.md) | Hackathon submission writeup |
 
 ---
 
-## 📊 System Architecture
+## 🎨 Reference
 
-```
-Your Browser (http://localhost:3000)
-         ↓
-    StudyBuddy Server (Port 3000)
-         ↓
-    Ollama Service (Port 11434)
-         ↓
-    Gemma AI Model (gemma4:e4b)
-```
-
-**Key Points:**
-- Both Ollama and StudyBuddy must be running
-- Ollama runs automatically (in background)
-- StudyBuddy needs manual start: `npm run dev`
-- They communicate through ports 11434 and 3000
+| File | Purpose |
+|------|---------|
+| [MOTION_DESIGN_SYSTEM.md](./MOTION_DESIGN_SYSTEM.md) | Animation tokens, easing curves, keyframe library |
+| [docs/reference/MOTION_DESIGN_QUICK_REFERENCE.md](./docs/reference/MOTION_DESIGN_QUICK_REFERENCE.md) | Quick animation cheat sheet |
+| [docs/reference/COMPARISON_BEFORE_AFTER.md](./docs/reference/COMPARISON_BEFORE_AFTER.md) | Before/after UI comparison |
+| [docs/reference/PROJECT_STRUCTURE.md](./docs/reference/PROJECT_STRUCTURE.md) | Detailed file-by-file reference |
 
 ---
 
-## 🔄 Typical Workflow
+## 🔧 Dev Panel
 
-### Morning
-```bash
-# Terminal 1:
-npm run dev
-
-# Expected output:
-# StudyBuddy running at http://localhost:3000
-```
-
-### During Work
-- Use browser at http://localhost:3000
-- Ollama runs automatically in background
-- If error: Check "Quick Navigation" table above
-
-### End of Day
-```bash
-# Press Ctrl+C to stop server
-# Or: killall node
-```
+| File | Purpose |
+|------|---------|
+| [docs/dev-panel/DEVPANEL_QUICKSTART.md](./docs/dev-panel/DEVPANEL_QUICKSTART.md) | Enable and use the dev metrics panel |
+| [docs/dev-panel/DEVPANEL_REFERENCE.md](./docs/dev-panel/DEVPANEL_REFERENCE.md) | All dev panel metrics explained |
+| [docs/dev-panel/DEVPANEL_IMPLEMENTATION.md](./docs/dev-panel/DEVPANEL_IMPLEMENTATION.md) | How the dev panel is built |
 
 ---
 
-## 💡 Important Notes
+## 🐛 Troubleshooting
 
-1. **Ollama** (AI service)
-   - Runs automatically (part of macOS now)
-   - Always available on port 11434
-   - Provides Gemma model
-
-2. **StudyBuddy** (your app)
-   - Needs manual start: `npm run dev`
-   - Runs on port 3000
-   - Opens in browser
-   - Uses Ollama for AI
-
-3. **Both must run together** for app to work
-
----
-
-## 📞 When You Need Help
-
-### Error in Browser
-→ Check browser console: `Cmd+Option+J`  
-→ Read: `TROUBLESHOOTING_IMAGE.md`
-
-### Server Won't Start
-→ Read: `SERVER_MANAGEMENT.md`  
-→ Check: `OLLAMA_DIAGNOSTIC.md`
-
-### Image Upload Broken
-→ Read: `IMAGE_UPLOAD_FIX.md`  
-→ Check: `TROUBLESHOOTING_IMAGE.md`
-
-### Don't Understand Something
-→ Read: `OLLAMA_DIAGNOSTIC.md` (explains the error)  
-→ Or: `README_IMAGE_FIX.md` (complete reference)
-
----
-
-## 🎓 Learning Path (Recommended Order)
-
-For **Quick Fix (5 minutes):**
-1. `QUICK_FIX_GEMMA.md`
-2. Run: `npm run dev`
-3. Test in browser
-
-For **Understanding (30 minutes):**
-1. `OLLAMA_DIAGNOSTIC.md` — Understand the error
-2. `FIX_SUMMARY.md` — See what was fixed
-3. `COMPARISON_BEFORE_AFTER.md` — See code changes
-
-For **Mastery (1-2 hours):**
-1. All quick files above
-2. `IMAGE_UPLOAD_FIX.md` — Technical details
-3. `TROUBLESHOOTING_IMAGE.md` — Debugging skills
-4. `README_IMAGE_FIX.md` — Complete reference
-
----
-
-## ✨ Status Summary
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Ollama** | ✅ Running | Port 11434, 3 models installed |
-| **Server Fix** | ✅ Applied | Auto-detects models (no errors) |
-| **Image Feature** | ✅ Fixed | Vision prompt + fallback system |
-| **Documentation** | ✅ Complete | 9 comprehensive guides |
-| **Tests** | ✅ Ready | Follow guides to test |
-| **Production** | ✅ Ready | All systems go |
-
----
-
-## 🎯 Next Action
-
-**Right now, type:**
-```bash
-npm run dev
-```
-
-**Then open:**
-```
-http://localhost:3000
-```
-
-**Done!** 🎉
-
----
-
-**Created:** April 6, 2026  
-**Status:** ✅ All issues resolved  
-**Version:** 1.0  
-**Author:** GitHub Copilot
+| File | Purpose |
+|------|---------|
+| [docs/troubleshooting/OLLAMA_DIAGNOSTIC.md](./docs/troubleshooting/OLLAMA_DIAGNOSTIC.md) | Diagnose Ollama/Gemma connection issues |
+| [docs/troubleshooting/QUICK_FIX_GEMMA.md](./docs/troubleshooting/QUICK_FIX_GEMMA.md) | Common Gemma model errors |
+| [docs/troubleshooting/FIX_500_ERRORS.md](./docs/troubleshooting/FIX_500_ERRORS.md) | Server 500 error fixes |
+| [docs/troubleshooting/FIX_400_BAD_REQUEST.md](./docs/troubleshooting/FIX_400_BAD_REQUEST.md) | Request validation errors |
+| [docs/troubleshooting/IMAGE_UPLOAD_FIX.md](./docs/troubleshooting/IMAGE_UPLOAD_FIX.md) | Image upload & vision troubleshooting |
+| [docs/troubleshooting/IMAGE_UPLOAD_ERROR_FIX.md](./docs/troubleshooting/IMAGE_UPLOAD_ERROR_FIX.md) | Specific image error codes |
+| [docs/troubleshooting/FIX_DUPLICATE_AND_LATEX.md](./docs/troubleshooting/FIX_DUPLICATE_AND_LATEX.md) | Duplicate response and LaTeX rendering fixes |
+| [docs/troubleshooting/FIX_DOUBLE_CLICK_FINAL.md](./docs/troubleshooting/FIX_DOUBLE_CLICK_FINAL.md) | Double-send button fix |
+| [docs/troubleshooting/FIX_SUMMARY.md](./docs/troubleshooting/FIX_SUMMARY.md) | Master list of all resolved bugs |
+| [docs/troubleshooting/SERVER_MANAGEMENT.md](./docs/troubleshooting/SERVER_MANAGEMENT.md) | Process management and port conflicts |
+| [docs/bug-fixes/AGENT_FIX_SUMMARY.md](./docs/bug-fixes/AGENT_FIX_SUMMARY.md) | Agent loop bug fix record |

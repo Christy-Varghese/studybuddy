@@ -1,217 +1,180 @@
-# StudyBuddy Quick Reference Card
+# StudyBuddy Quick Reference
 
-## 🚀 Quick Start (5 min)
+## ⚡ Quick Start
 ```bash
-# Terminal 1: Ollama
+# Terminal 1
 ollama run gemma4:e4b
 
-# Terminal 2: Backend
-cd ~/Documents/studybuddy
-npm install
-npm start
+# Terminal 2
+npm install && npm start
 
-# Terminal 3: Frontend
-cd ~/Documents/studybuddy/frontend
-npm install
-npm run dev
-
-# Open: http://localhost:5173
+# Open: http://localhost:3000
 ```
 
-## 🎯 The 4 Core Tools
+---
 
-| Tool | Purpose | Input | Output | When |
-|------|---------|-------|--------|------|
-| **explain_topic** | Step-by-step explanations | topic, level | Intro + steps + key point | Learn a concept |
-| **generate_quiz** | Test knowledge | topic, level, count | 2-5 Q&A with answers | Practice/test |
-| **track_progress** | Save learning history | topic, level, score | Saved, weak/strong areas | Auto-called |
-| **suggest_next_topic** | Personalized path | current topic | Recommended next topic | Ask "what next?" |
+## 🧰 The 6 Learning Tools
+
+| Tool | Purpose | Required args |
+|------|---------|---------------|
+| `explain_topic` | Step-by-step explanation with intro, steps, answer, follow-up | topic, level |
+| `generate_quiz` | 2–5 multiple choice questions with explanations | topic, level, numQuestions |
+| `track_progress` | Save study event + update SRS schedule | topic, level |
+| `suggest_next_topic` | Recommend next topic based on weak/strong areas | currentTopic |
+| `ask_socratic_question` | Turn-based guiding question (never gives answer directly) | topic, level |
+| `generate_concept_map` | Build a nodes-and-edges knowledge graph | topic, level |
+
+---
+
+## 📡 API Endpoints
+
+### Learning
+| Method | Endpoint | Body | Purpose |
+|--------|----------|------|---------|
+| `POST` | `/chat` | `{message, level, history}` | Direct tutor chat |
+| `POST` | `/chat-with-image` | `FormData: message, level, image` | Homework photo analysis |
+| `POST` | `/agent` | `{message, level, history, fast?}` | Full agent pipeline |
+| `POST` | `/socratic` | `{message, level, history}` | Socratic dialogue mode |
+| `POST` | `/concept-map` | `{topic, level}` | Generate concept map |
+| `POST` | `/quiz` | `{topic, level, numQuestions}` | Standalone quiz |
+| `POST` | `/estimate` | `{message, level, hasImage?}` | Time estimate (no LLM) |
+
+### Progress & SRS
+| Method | Endpoint | Body | Purpose |
+|--------|----------|------|---------|
+| `GET` | `/progress` | — | Full progress summary (topics, weak/strong, streak, due) |
+| `DELETE` | `/progress` | — | Clear all progress |
+| `GET` | `/due-reviews` | — | Topics due for spaced repetition today |
+| `PUT` | `/srs/:topic` | `{grade: 0-5}` or `{score: 0-100}` | Update SRS after review |
+| `GET` | `/streak` | — | `{current, longest, studiedToday}` |
+
+### Cache & Search
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/cache-stats` | Cache hit/miss stats |
+| `DELETE` | `/cache` | Clear response cache |
+| `GET` | `/topics/search?q=phot` | Trie prefix autocomplete |
+
+### Admin (Taxonomy)
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/admin/taxonomy` | View learned + pending topics |
+| `POST` | `/admin/taxonomy` | Manually add a topic |
+| `POST` | `/admin/taxonomy/pending/:topic/approve` | Promote pending → learned |
+| `DELETE` | `/admin/taxonomy/pending/:topic` | Reject a pending topic |
+| `DELETE` | `/admin/taxonomy/learned/:topic` | Remove a learned topic |
+| `POST` | `/admin/taxonomy/rebuild` | Rebuild taxonomy live |
+
+---
 
 ## 📁 Key Files
 
 ```
-agent/tools.js              # Tool implementations (200 lines)
-agent/progressStore.js      # Progress persistence (100 lines)
-server.js                   # Express backend (200 lines)
-frontend/src/pages/Chat.tsx # Main UI (150 lines)
-data/progress.json          # Student history
+server.js                       API routes + middleware
+agent/tools.js                  6 tool implementations
+agent/agentLoop.js              3 agent modes (sequential, parallel, Socratic)
+agent/progressStore.js          SM-2 SRS + streak + progress
+agent/smartCache.js             4-layer cache waterfall
+agent/dynamicTaxonomy.js        Auto-learning topic taxonomy
+public/index.html               Full single-page UI
+public/manifest.json            PWA manifest
+public/sw.js                    Service worker (offline-first)
+public/taxonomy-admin.html      Admin panel for topics
+data/progress.json              Student learning history (auto-created)
 ```
-
-## 📡 API Endpoint
-
-**POST /api/chat**
-```json
-Request:  {"message": "Explain photosynthesis", "stream": true}
-Response: Server-sent events with real-time text
-```
-
-## 🔧 System Architecture
-
-```
-Student Input
-    ↓
-Claude (Intent understanding)
-    ↓
-Tool Selection (explain/quiz/track/suggest)
-    ↓
-Ollama Gemma 4 (Content generation)
-Progress Store (Learning history)
-    ↓
-Response Synthesis
-    ↓
-Streaming UI
-```
-
-## 📚 Documentation Map
-
-| File | Purpose | Read Time |
-|------|---------|-----------|
-| **README.md** | Quick start & features | 10 min |
-| **PROGRESS_SUMMARY.md** | Complete overview | 20 min |
-| **ARCHITECTURE.md** | Technical details | 20 min |
-| **IMPLEMENTATION_STATUS.md** | Next steps & roadmap | 15 min |
-| **DOCS_INDEX.md** | Navigation guide | 5 min |
-| **FINAL_SUMMARY.md** | Session recap | 10 min |
-
-## 🎓 I Want To...
-
-- **Learn about StudyBuddy** → README.md
-- **Understand the system** → PROGRESS_SUMMARY.md
-- **Implement a feature** → IMPLEMENTATION_STATUS.md
-- **Check the API** → ARCHITECTURE.md#api-reference
-- **Debug an issue** → ARCHITECTURE.md#error-handling-strategy
-- **See what changed** → FINAL_SUMMARY.md
-
-## ⚡ Key Commands
-
-```bash
-# Test Ollama
-curl http://localhost:11434/api/chat
-
-# Test Backend
-curl -X POST http://localhost:3000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Hi","stream":false}'
-
-# View Progress
-cat data/progress.json
-
-# Check Ports
-lsof -i :3000        # Backend
-lsof -i :5173        # Frontend
-lsof -i :11434       # Ollama
-```
-
-## 🐛 Common Issues
-
-| Problem | Solution |
-|---------|----------|
-| "Ollama not found" | Run `ollama run gemma4:e4b` in separate terminal |
-| "API key error" | Check .env file has `ANTHROPIC_API_KEY=sk-...` |
-| "Progress not saving" | Verify `data/` directory exists and is writable |
-| "Frontend fails to fetch" | Check backend is running on port 3000 |
-| "Responses slow" | First request takes ~10s (model warmup), normal after |
-
-## 💾 Data Storage
-
-```json
-// data/progress.json format
-{
-  "topics": [
-    {
-      "name": "photosynthesis",
-      "level": "beginner",
-      "count": 3,
-      "avgScore": 85,
-      "allScores": [90, 80, 85],
-      "lastStudied": "2025-01-15T14:23:00Z"
-    }
-  ],
-  "lastUpdated": "2025-01-15T14:23:00Z"
-}
-```
-
-## 🎯 Next Priority Tasks
-
-1. **HIGH**: Model routing in server.js (2-3 hrs)
-   - Route quiz to gemma4:e2b (fast)
-   - Keep synthesis on gemma4:e4b (quality)
-
-2. **HIGH**: Error handling (2 hrs)
-   - Timeout for Ollama (15s)
-   - Fallback responses
-   - Retry logic
-
-3. **MEDIUM**: Performance optimization (3-4 hrs)
-   - Cache explanations
-   - Deduplicate requests
-   - Profile response times
-
-4. **LOW**: Advanced features (future)
-   - Image analysis (Claude Vision)
-   - Spaced repetition
-   - Multi-user support
-
-## 🧪 Testing Quick Checklist
-
-- [ ] Backend starts without errors
-- [ ] Frontend loads at http://localhost:5173
-- [ ] Chat accepts message input
-- [ ] Tool calls are being made (check logs)
-- [ ] Progress is saved (check data/progress.json)
-- [ ] Weak areas are detected (Progress page)
-- [ ] Streaming works (see text appear live)
-- [ ] Quiz generation works (check JSON format)
-- [ ] Next topic suggestion works
-
-## 🤖 Models
-
-- **gemma4:e4b** - High quality, slower (explanations, synthesis)
-- **gemma4:e2b** - Fast inference (quizzes, planning)
-- **claude-3.5-sonnet** - Orchestration (tool calling, intent understanding)
-
-## 📊 System Status
-
-```
-✅ Gemma 4 integration
-✅ Tool system (4 tools working)
-✅ Progress store
-✅ Claude orchestration
-✅ React frontend
-✅ Comprehensive documentation
-⏳ Model routing optimization (HIGH PRIORITY)
-⏳ Error handling (HIGH PRIORITY)
-⏳ Performance tuning (MEDIUM PRIORITY)
-```
-
-## 🔗 Important Links
-
-- Ollama: https://ollama.ai
-- Claude API: https://anthropic.com
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3000
-- Ollama API: http://localhost:11434
-
-## 📝 Notes
-
-- All tools return JSON for structured parsing
-- Progress is persistent (survives restarts)
-- Claude decides which tools to call based on intent
-- Front-end handles streaming message display
-- Weak areas auto-computed from quiz scores
-
-## 🎓 Learning Paths
-
-**For Users**: Start at frontend, ask questions, take quizzes, check progress
-
-**For Devs**: README → PROGRESS_SUMMARY → ARCHITECTURE → IMPLEMENTATION_STATUS → Code
-
-**For Architects**: PROGRESS_SUMMARY → ARCHITECTURE → Design decisions
-
-**For Managers**: FINAL_SUMMARY → IMPLEMENTATION_STATUS → Next steps
 
 ---
 
-**Print this and keep it nearby while working! 📌**
+## 💾 Data Format — `data/progress.json`
 
-*Last Updated: January 2025*
+```json
+{
+  "sessions": [
+    { "topic": "photosynthesis", "level": "beginner", "quizScore": 85, "timestamp": "..." }
+  ],
+  "topics": {
+    "photosynthesis": {
+      "timesStudied": 3,
+      "scores": [75, 85, 90],
+      "level": "beginner",
+      "lastStudied": "2026-04-07T10:30:00Z",
+      "srs": {
+        "repetitions": 2,
+        "easeFactor": 2.6,
+        "interval": 6,
+        "nextReview": "2026-04-13T00:00:00Z"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🤖 Agent Modes
+
+| Mode | Trigger | LLM calls | What happens |
+|------|---------|-----------|--------------|
+| **Parallel** (default) | `POST /agent` | 2 | Plan → execute tools concurrently → synthesise |
+| **Sequential** | `/agent` with `fast:false` | 4–5 | Explain → quiz → track → suggest (one by one) |
+| **Socratic** | `POST /socratic` | 1 | Ask a guiding question, track engagement |
+
+---
+
+## 🐛 Common Issues
+
+| Problem | Fix |
+|---------|-----|
+| `Gemma is not running` | Start Ollama: `ollama run gemma4:e4b` |
+| Slow first response (~10s) | Normal — model warmup on first request |
+| `progress.json` not saving | Check `data/` directory is writable |
+| Concept map empty | Topic may be too short — use a full phrase e.g. "Newton's Laws" |
+| SRS grade rejected | Use `grade` (0–5) or `score` (0–100), not both |
+| Service worker stale | Open DevTools → Application → SW → "Update on reload" |
+
+---
+
+## 🧪 Test Checklist
+
+```bash
+# All return 200
+curl http://localhost:3000/progress
+curl http://localhost:3000/streak
+curl http://localhost:3000/due-reviews
+curl "http://localhost:3000/topics/search?q=photo"
+
+# Agent responds with structured data
+curl -X POST http://localhost:3000/agent \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain gravity","level":"beginner","history":[]}'
+
+# Concept map returns nodes + edges
+curl -X POST http://localhost:3000/concept-map \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"gravity","level":"intermediate"}'
+
+# SRS update
+curl -X PUT http://localhost:3000/srs/gravity \
+  -H "Content-Type: application/json" \
+  -d '{"score":80}'
+```
+
+---
+
+## 📊 Current Feature Status
+
+```
+✅ Gemma 4 (gemma4:e4b) — fully local, no internet
+✅ 6 learning tools
+✅ 3 agent modes (sequential, parallel, Socratic)
+✅ Concept map generation (animated SVG)
+✅ Spaced Repetition — SM-2 algorithm
+✅ Learning streak tracking
+✅ 4-layer smart cache (~70% bandwidth savings)
+✅ Dynamic topic taxonomy (auto-promotes learned topics)
+✅ Homework photo analysis (Gemma 4 vision)
+✅ Progressive Web App — installable offline
+✅ 3 adaptive themes (beginner / intermediate / advanced)
+✅ Voice input (Web Speech API)
+✅ Taxonomy admin panel
+```

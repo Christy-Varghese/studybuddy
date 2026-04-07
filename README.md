@@ -1,48 +1,73 @@
-# StudyBuddy 📚 — AI-Powered Educational Tutor
+# StudyBuddy 📚 — Offline AI Tutor Powered by Gemma 4
 
-An intelligent tutoring system that combines **Claude 3.5**, **Gemma 4 LLM** (via Ollama), and **persistent progress tracking** to provide personalized, adaptive learning experiences.
+An intelligent, fully offline tutoring platform that runs entirely on your device using **Gemma 4 via Ollama**. No cloud, no API keys, no internet required after setup.
 
-**New in v2.0:** Tool-based architecture with progress persistence, weak area detection, and personalized learning path recommendations.
+Built for the [Gemma 4 Good Hackathon](https://kaggle.com/competitions/gemma-4-good-hackathon) — Future of Education track.
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Ollama** with `gemma4:e4b` and `gemma4:e2b` models (download from [ollama.ai](https://ollama.ai))
+- **Ollama** with `gemma4:e4b` — download from [ollama.ai](https://ollama.ai)
 - **Node.js 16+**
-- **Anthropic API Key** for Claude
-- **8GB RAM** (for Gemma 4 inference)
+- **8GB RAM** minimum (16GB recommended for best performance)
 
-### Setup (5 minutes)
+### Setup (2 minutes)
 
 ```bash
-# 1. Start Ollama (in terminal 1)
+# Terminal 1 — start Gemma 4
 ollama run gemma4:e4b
 
-# 2. In a new terminal, set up backend
+# Terminal 2 — start StudyBuddy
 cd studybuddy
 npm install
-echo "ANTHROPIC_API_KEY=sk-..." > .env
-npm start
-# Backend runs on http://localhost:3000
-
-# 3. In another terminal, start frontend
-cd frontend
-npm install
-npm run dev
-# Frontend runs on http://localhost:5173
+npm start          # or: npm run dev
 ```
 
-Then open http://localhost:5173 in your browser.
+Open **http://localhost:3000** — that's it. No `.env`, no API keys, fully local.
 
 ---
 
-## � Documentation
+## ✨ Features
 
-| Document | Purpose |
-|----------|---------|
-| **[PROGRESS_SUMMARY.md](./PROGRESS_SUMMARY.md)** | **START HERE** — Overview of architecture and what's been implemented |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Detailed system design, data flows, API specs, tool contracts |
-| **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** | Development status, next steps, testing checklist |
+### 🎓 Learning Modes
+| Mode | How it works |
+|------|-------------|
+| **Tutor Mode** (default) | Structured explanations with steps, follow-up questions, instant quizzes |
+| **Socratic Mode** | AI guides you to *discover* the answer through questions — never just tells you |
+| **Agent Mode** | Full pipeline: explain + quiz + track + suggest next topic in one request |
+
+### 🗺 Concept Maps
+Generate an interactive knowledge graph for any topic. Gemma 4 produces a nodes-and-edges map showing how concepts connect, rendered as an animated SVG — no external libraries.
+
+### 📊 Spaced Repetition (SM-2)
+Every quiz score feeds the SM-2 algorithm. Topics are scheduled for review at scientifically optimal intervals (Day 1 → 6 → exponential). A **"Due for Review"** banner appears automatically on your study days.
+
+### 🔥 Learning Streaks
+Tracks consecutive study days. Streak badge appears in the header — turns orange at 3+ days.
+
+### 🧠 Smart 4-Layer Cache
+1. Live taxonomy resolution
+2. Normalised hash lookup (catches varied phrasing)
+3. In-flight deduplication
+4. Disk persistence (48-hour TTL)
+
+~70% bandwidth reduction via gzip. Predictive pre-warming caches your next suggested topic in the background.
+
+### 📚 Dynamic Topic Taxonomy
+Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin.html` for manual curation.
+
+### 📸 Homework Photo Analysis
+Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step.
+
+### 🎨 Three Adaptive Themes
+- **Beginner** (ages 8–12): playful, colourful, emoji-rich
+- **Intermediate** (high school): clean, professional
+- **Advanced** (university): terminal-style, monospace
+
+### 📱 Progressive Web App
+Install on any device directly from the browser. Works fully offline — the shell is cached by the service worker, Ollama runs locally.
 
 ---
 
@@ -50,354 +75,107 @@ Then open http://localhost:5173 in your browser.
 
 ```
 studybuddy/
+├── server.js                   — Express backend, all API routes
 ├── agent/
-│   ├── tools.js                    ← 4 core learning tools (explain, quiz, track, suggest)
-│   └── progressStore.js            ← Persistent progress tracking (JSON-based)
-├── data/
-│   └── progress.json              ← Student learning history
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx                ← React router
-│   │   └── pages/
-│   │       ├── Chat.tsx            ← Main conversational interface
-│   │       ├── Progress.tsx        ← Analytics & statistics
-│   │       └── Settings.tsx        ← Configuration
-│   └── package.json
-├── server.js                       ← Express API & Claude orchestration
-├── package.json                    ← Backend dependencies
-├── README.md                       ← This file
-├── PROGRESS_SUMMARY.md             ← Session notes and accomplishments
-├── IMPLEMENTATION_STATUS.md        ← Development roadmap
-└── ARCHITECTURE.md                 ← System design details
-```
-
-## �📁 Project Structure
-
-```
-studybuddy/
-├── server.js              ← Node.js backend (3 routes)
+│   ├── agentLoop.js            — Sequential, parallel & Socratic agents
+│   ├── tools.js                — 6 learning tools (explain, quiz, track, suggest, socratic, concept-map)
+│   ├── progressStore.js        — SM-2 SRS + streak tracking (JSON-based)
+│   ├── smartCache.js           — 4-layer cache waterfall
+│   ├── dynamicTaxonomy.js      — Auto-learn + curate topic taxonomy
+│   ├── taxonomy.js             — Base topic taxonomy
+│   └── trie.js                 — O(k) prefix search for autocomplete
 ├── public/
-│   └── index.html         ← Frontend UI (polished design)
-├── uploads/               ← Temporary image storage
-├── package.json           ← Dependencies
-├── KAGGLE_WRITEUP.md      ← Hackathon submission template
-└── README.md              ← This file
+│   ├── index.html              — Full single-page UI (~5000 lines)
+│   ├── manifest.json           — PWA manifest
+│   ├── sw.js                   — Service worker (offline-first)
+│   ├── offline.html            — Offline fallback page
+│   └── taxonomy-admin.html     — Topic taxonomy admin panel
+└── data/
+    └── progress.json           — Student learning history (auto-created)
 ```
 
 ---
 
-## ✨ Core Features
+## 📡 API Reference
 
-### 📖 Interactive Learning
-- **Structured Explanations** - Topics broken into step-by-step guides with emojis
-- **Auto-Generated Quizzes** - 2-5 multiple choice questions per topic
-- **Immediate Feedback** - Explanations for why answers are correct
-- **Natural Conversation** - Chat naturally with an AI tutor
-
-### 📊 Progress Tracking
-- **Persistent Study History** - All topics and scores automatically saved
-- **Weak Area Detection** - System identifies topics you need to review
-- **Performance Analytics** - Visualize your strong and weak areas
-- **Personalized Recommendations** - Smart suggestions based on your learning profile
-
-### ⚡ Smart Features
-- **Model Optimization** - Gemma 4 for cost-effective responses, Claude for orchestration
-- **Real-Time Streaming** - See responses character-by-character
-- **Session Persistence** - Your progress persists across sessions
-- **Flexible Learning** - Learn any topic at your own pace
-
----
-
-## ✨ Features
-
-### 1️⃣ **Adaptive Chat** (`POST /chat`)
-- Ask questions in text
-- Three difficulty levels: Beginner → Advanced
-- Explanations adapt to your knowledge level
-- Multi-turn conversation history
-
-### 2️⃣ **Homework Photo Analysis** (`POST /chat-with-image`)
-- 📎 Snap a photo of your homework
-- Upload images (JPEG, PNG, WebP)
-- StudyBuddy analyzes the image and explains it
-- Max 10MB per image
-
-### 3️⃣ **Quiz Generation** (`POST /quiz`)
-- Generate custom quizzes on ANY topic
-- Configurable difficulty level (Beginner/Intermediate/Advanced)
-- 3-10 questions per quiz
-- Instant feedback with explanations
-- Score tracking
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/chat` | Direct Gemma 4 chat with structured response |
+| `POST` | `/chat-with-image` | Vision: homework photo analysis |
+| `POST` | `/agent` | Full agent pipeline (explain + quiz + track + suggest) |
+| `POST` | `/socratic` | Socratic dialogue — guided discovery mode |
+| `POST` | `/concept-map` | Generate concept map (nodes + edges JSON) |
+| `POST` | `/quiz` | Standalone quiz generation |
+| `POST` | `/estimate` | Response time prediction (no LLM call) |
+| `GET`  | `/progress` | Student progress summary |
+| `DELETE` | `/progress` | Clear all progress |
+| `GET`  | `/due-reviews` | Topics due for spaced repetition review |
+| `PUT`  | `/srs/:topic` | Update SRS state after a review session |
+| `GET`  | `/streak` | Current + longest learning streak |
+| `GET`  | `/topics/search?q=` | Trie-based topic autocomplete |
+| `GET`  | `/cache-stats` | Cache performance metrics |
 
 ---
 
-## 🎯 How It Works
+## 🧰 The 6 Learning Tools
 
-```
-You ask a question
-    ↓
-Claude (via Anthropic API) understands your intent
-    ↓
-Decides which tool to call (explain, quiz, track, suggest)
-    ↓
-Tool calls Ollama Gemma 4 or manipulates progress store
-    ↓
-Results are synthesized into natural response
-    ↓
-You see personalized, adaptive response with context
-```
-
-### Example Flow: Learn & Quiz
-
-**You:** "Explain photosynthesis"  
-**StudyBuddy:** 
-- Calls `explain_topic` → Ollama generates step-by-step explanation
-- Shows intro + 4 steps + key takeaway
-- Calls `track_progress` → Saves "photosynthesis" to your history
-
-**You:** "Test me on that"  
-**StudyBuddy:**
-- Calls `generate_quiz` → Ollama creates 3 questions
-- You answer each question
-- Shows explanations for right answers
-- Calls `track_progress` with your quiz score (e.g., 75%)
-
-**You:** "What should I study next?"  
-**StudyBuddy:**
-- Calls `suggest_next_topic` → Reads your progress
-- Sees you got 55% on "Cell Respiration"
-- Recommends: "Study Cellular Respiration (you're weak here and it complements photosynthesis)"
+| Tool | What it does |
+|------|-------------|
+| `explain_topic` | Structured explanation: intro + steps + key answer + follow-up |
+| `generate_quiz` | 2–5 multiple choice questions with explanations |
+| `track_progress` | Saves study event, updates SRS schedule |
+| `suggest_next_topic` | Personalised next topic based on weak/strong areas |
+| `ask_socratic_question` | Guiding question — adapts each turn of the dialogue |
+| `generate_concept_map` | Builds nodes + edges knowledge graph |
 
 ---
 
-## 🎨 UI/UX Highlights
+## 🤖 Models
 
-✅ **Dark Mode Support** — Uses `@media (prefers-color-scheme: dark)`
-
-✅ **Responsive Design** — Works on desktop, tablet, mobile
-
-✅ **Smooth Animations** — Fade-in messages, pulsing status dots, sliding modals
-
-✅ **Polished Color Scheme** — Purple gradient header, intuitive controls
-
-✅ **Accessible** — Clear typography, good contrast ratios
+| Model | Role |
+|-------|------|
+| `gemma4:e4b` | Primary — planning, explanation, synthesis, vision |
+| `gemma4:e2b` | Fallback — faster for quiz gen and suggestions |
 
 ---
 
-## 🔧 API Routes
+## 📖 Documentation
 
-### `POST /api/chat` - Main Learning Interface
-Send a message to the tutor and get an intelligent response with optional tool calls.
-
-**Request:**
-```json
-{
-  "message": "Explain photosynthesis",
-  "stream": true
-}
-```
-
-**Response (Streaming):**
-Server-sent events with real-time text:
-```
-data: {"type":"content","text":"Photosynthesis is..."}\n\n
-data: {"type":"content","text":" the process..."}\n\n
-data: {"type":"done"}\n\n
-```
-
-**Response (Non-Streaming):**
-```json
-{
-  "response": "Full response text with complete explanation",
-  "toolCalls": [
-    {
-      "toolName": "explain_topic",
-      "input": {"topic":"photosynthesis","level":"beginner"},
-      "result": {"success":true,"explanation":{...}}
-    }
-  ],
-  "metadata": {
-    "tokensUsed": 1234,
-    "executionTime": 3.45
-  }
-}
-```
-
-For full API specification, see [ARCHITECTURE.md](./ARCHITECTURE.md#api-reference).
+| Document | What it covers |
+|----------|----------------|
+| [docs/QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md) | API cheat sheet, commands, troubleshooting |
+| [docs/CACHING.md](./docs/CACHING.md) | 4-layer smart cache architecture |
+| [docs/AGENT_TESTING_GUIDE.md](./docs/AGENT_TESTING_GUIDE.md) | How to test each agent mode |
+| [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Full system design |
+| [docs/KAGGLE_WRITEUP.md](./docs/KAGGLE_WRITEUP.md) | Hackathon submission writeup |
+| [docs/DOCS_INDEX.md](./docs/DOCS_INDEX.md) | Full documentation map |
 
 ---
 
-## 🔑 Key Technologies
-
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Orchestration** | Claude 3.5 Sonnet (Anthropic API) | Understands intent, calls tools, synthesizes responses |
-| **Explanation & Quiz** | Gemma 4 E4B via Ollama | Cost-effective, local LLM for content generation |
-| **Fast Planning** | Gemma 4 E2B via Ollama | Optimized for fast inference on planning tasks |
-| **Progress Store** | JSON file (`data/progress.json`) | Persistent storage of learning history |
-| **Frontend** | React + TypeScript + Vite | Modern UI with real-time streaming |
-| **Backend** | Node.js + Express | REST API, tool orchestration, file handling |
-
----
-
-## 📊 System Architecture
-
-StudyBuddy uses a **tool-based architecture** where Claude orchestrates specialized tools:
-
-1. **Student Input** → Natural language question
-2. **Claude** → Analyzes intent, decides which tools to call
-3. **Tool Calls** → `explain_topic`, `generate_quiz`, `track_progress`, `suggest_next_topic`
-4. **Ollama Gemma 4** → Generates explanations, quizzes
-5. **Progress Store** → Saves and analyzes learning history
-6. **Response Synthesis** → Claude creates natural, context-aware response
-7. **Streaming Output** → React frontend renders in real-time
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for system diagrams and detailed data flows.
-
----
-
-## 📄 System Prompt (Claude)
-
-Claude is instructed to:
-- Understand student's learning intent
-- Call appropriate tools (explain, quiz, track, suggest)
-- Adapt complexity to student's level
-- Always explain why answers are correct
-- Maintain conversation context
-- Personalize recommendations based on progress
-
----
-
-## 🎯 Use Cases
-
-- 📚 **Students** needing personalized tutoring without expensive tutors
-- 🌍 **Offline learners** without reliable internet access
-- 👨‍👩‍👧‍👦 **Parents** wanting privacy-first homework help
-- 🔬 **Self-learners** testing knowledge with adaptive quizzes
-- 🏫 **Educators** using AI to supplement classroom learning
-
----
-
-## 🛠️ Development
-
-### Running the Full Stack
+## 🧪 Test It Works
 
 ```bash
-# Terminal 1: Start Ollama
-ollama run gemma4:e4b
+# Gemma 4 responding?
+curl http://localhost:11434/api/tags
 
-# Terminal 2: Backend
-cd studybuddy
-npm install
-npm start
+# Backend healthy?
+curl http://localhost:3000/progress
 
-# Terminal 3: Frontend  
-cd studybuddy/frontend
-npm install
-npm run dev
+# Explain a topic
+curl -X POST http://localhost:3000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain gravity","level":"beginner","history":[]}'
+
+# Socratic mode
+curl -X POST http://localhost:3000/socratic \
+  -H "Content-Type: application/json" \
+  -d '{"message":"gravity","level":"intermediate","history":[]}'
+
+# Concept map
+curl -X POST http://localhost:3000/concept-map \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"photosynthesis","level":"beginner"}'
+
+# Due reviews
+curl http://localhost:3000/due-reviews
 ```
-
-### Project Architecture
-See [PROGRESS_SUMMARY.md](./PROGRESS_SUMMARY.md) for:
-- What's been implemented
-- Architecture overview
-- Recent accomplishments
-- Next steps for development
-
-See [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) for:
-- Current development status
-- High/medium/low priority tasks
-- Testing checklist
-- Known issues
-
----
-
-## 🚨 Troubleshooting
-
-**Error: "Ollama connection refused"**
-```bash
-# Check Ollama is running
-curl http://localhost:11434/api/chat
-
-# Start Ollama if needed
-ollama run gemma4:e4b
-```
-
-**API key error**
-```bash
-# Verify .env file with ANTHROPIC_API_KEY
-cat .env
-# Should contain: ANTHROPIC_API_KEY=sk-...
-```
-
-**Progress not saving**
-```bash
-# Ensure data directory exists and is writable
-mkdir -p data
-chmod 755 data
-```
-
-**Frontend shows "Failed to fetch"**
-```bash
-# Check backend is running on port 3000
-lsof -i :3000
-
-# Restart backend
-npm start
-```
-
-**Responses too slow**
-- First request to Ollama takes ~10 seconds (model warmup)
-- Subsequent requests typically < 3 seconds
-- Check system has 8GB+ RAM available
-
----
-
-## � Next Steps
-
-### For Users
-1. **Try it out:** Ask questions in the Chat tab
-2. **Take quizzes:** Use the quiz generator to test knowledge
-3. **Check progress:** View your weak areas in the Progress tab
-4. **Get recommendations:** Ask "what should I study next?"
-
-### For Developers
-See [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) for:
-- **High Priority:** Model routing optimization in `server.js`
-- **Medium Priority:** Error handling and performance tuning
-- **Low Priority:** Advanced features (image analysis, multi-user, spaced repetition)
-
-### Contributing
-We welcome contributions! To extend StudyBuddy:
-1. Add new tools to `agent/tools.js`
-2. Claude will automatically discover and use them
-3. See [ARCHITECTURE.md](./ARCHITECTURE.md) for tool contracts
-
----
-
-## �📄 License
-
-Open-source educational tool. Use freely for learning and development!
-
----
-
-## 👨‍💻 Built with ❤️
-
-**StudyBuddy** brings frontier AI (Claude + Gemma 4) to every student with **personalized learning paths**, **persistent progress tracking**, and **adaptive explanations**.
-
-### Key Innovations
-✅ Tool-based architecture for composable learning  
-✅ Persistent progress store for weak area detection  
-✅ Model routing for cost efficiency  
-✅ Streaming UI for responsive interaction  
-✅ No internet required (runs locally)  
-
-**Status:** ✅ Alpha (Active Development)  
-**Last Updated:** January 2025  
-
----
-
-For detailed information about features, architecture, and development:
-- 📖 **[PROGRESS_SUMMARY.md](./PROGRESS_SUMMARY.md)** - Start here for overview
-- 🏗️ **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design & API reference
-- 📋 **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** - Development roadmap
