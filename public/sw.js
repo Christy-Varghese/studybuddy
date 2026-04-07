@@ -1,0 +1,204 @@
+const CACHE_VERSION   = 'studybuddy-v1';
+const SHELL_CACHE     = `${CACHE_VERSION}-shell`;
+const RUNTIME_CACHE   = `${CACHE_VERSION}-runtime`;
+
+// App shell — these files are cached on install
+// They are the minimum needed to show the UI offline
+const SHELL_ASSETS = [
+  '/',
+  '/index.html',
+  '/offline.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable.png',
+  // Google Fonts — cache the CSS (fonts themselves load from CDN)
+  'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap',
+];
+
+// Routes that should NEVER be cached (always need live server)
+const NEVER_CACHE = [
+  '/dev/metrics',
+  '/admin',
+  '/admin/taxonomy',
+  '/cache-stats',
+  '/devpanel.js',
+];
+
+// API routes — try network first, cache response as fallback
+const API_ROUTES = [
+  '/chat',
+  '/quiz',
+  '/estimate',
+  '/progress',
+  '/topics/search',
+];
+
+// ── Install event — cache the app shell ────────────────────
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
+  event.waitUntil(
+    caches.open(SHELL_CACHE)
+      .then(cache => {
+        console.log('[SW] Caching app shell');
+        // Use individual adds so one failure doesn't break everything
+        return Promise.allSettled(
+          SHELL_ASSETS.map(url => cache.add(url).catch(err => {
+            console.warn(`[SW] Failed to cache: ${url}`, err.message);
+          }))
+        );
+      })
+      .then(() => {
+        console.log('[SW] Shell cached. Activating immediately.');
+        return self.skipWaiting();  // activate new SW without waiting
+      })
+  );
+});
+
+// ── Activate event — clean up old caches ──────────────────
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
+  event.waitUntil(
+    caches.keys()
+      .then(cacheNames => {
+        return Promise.all(
+          cacheNames
+            .filter(name => name.startsWith('studybuddy-') && name !== SHELL_CACHE && name !== RUNTIME_CACHE)
+            .map(name => {
+              console.log(`[SW] Deleting old cache: ${name}`);
+              return caches.delete(name);
+            })
+        );
+      })
+      .then(() => {
+        console.log('[SW] Activated. Claiming clients.');
+        return self.clients.claim();  // take control of all open tabs immediately
+      })
+  );
+});
+
+// ── Fetch event — intercept all network requests ──────────
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Only handle requests to our own origin (or Google Fonts)
+  const isOurOrigin   = url.origin === self.location.origin;
+  const isGoogleFonts = url.origin === 'https://fonts.googleapis.com'
+                      || url.origin === 'https://fonts.gstatic.com';
+
+  if (!isOurOrigin && !isGoogleFonts) return; // let CDN requests pass through
+
+  // Never cache dev/admin routes — always go to network
+  if (NEVER_CACHE.some(route => url.pathname.startsWith(route))) {
+    return; // no event.respondWith = default browser behaviour
+  }
+
+  // POST requests (API calls like /chat, /agent) — network only
+  // We cannot cache POST responses meaningfully
+  if (event.request.method === 'POST') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // If network fails on a POST (truly offline), return a helpful JSON error
+        return new Response(
+          JSON.stringify({
+            error: 'offline',
+            message: 'You are offline. The AI model needs to be reachable on your local network.',
+            offline: true
+          }),
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      })
+    );
+    return;
+  }
+
+  // GET API routes — network first, then cache, then offline page
+  if (API_ROUTES.some(route => url.pathname.startsWith(route))) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  // App shell assets — cache first (fastest for repeat loads)
+  event.respondWith(cacheFirst(event.request));
+});
+
+// ── Cache strategies ───────────────────────────────────────
+
+// Cache First: serve from cache immediately, update cache in background
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) {
+    // Update cache in background without blocking response
+    updateCacheInBackground(request);
+    return cached;
+  }
+  // Not in cache — fetch and cache for next time
+  return fetchAndCache(request, SHELL_CACHE);
+}
+
+// Network First: try network, fall back to cache, then offline page
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    // Cache successful GET responses
+    if (response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    // Network failed — try cache
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    // Nothing in cache either — return offline page for navigation requests
+    if (request.mode === 'navigate') {
+      return caches.match('/offline.html');
+    }
+    return new Response('Offline', { status: 503 });
+  }
+}
+
+// Fetch a resource and store it in the specified cache
+async function fetchAndCache(request, cacheName) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.status < 400) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    // Network failed completely
+    if (request.mode === 'navigate') {
+      const offlinePage = await caches.match('/offline.html');
+      return offlinePage || new Response('<h1>Offline</h1>', {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+    return new Response('Network error', { status: 503 });
+  }
+}
+
+// Background cache update — doesn't block the response
+function updateCacheInBackground(request) {
+  fetch(request)
+    .then(response => {
+      if (response.ok) {
+        caches.open(SHELL_CACHE).then(cache => cache.put(request, response));
+      }
+    })
+    .catch(() => {}); // silently ignore background update failures
+}
+
+// ── Message handler — allow pages to control the SW ───────
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data?.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: CACHE_VERSION });
+  }
+});

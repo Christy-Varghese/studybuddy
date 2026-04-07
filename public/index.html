@@ -17,7 +17,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     /* ============ CSS Variables & Theme Defaults ============ */
     :root {
@@ -38,6 +38,9 @@
       --error: #EF4444;
       --border: #E5E7EB;
       --font-family: 'Inter', sans-serif;
+      --border-radius-lg: 16px;
+      --border-radius-md: 12px;
+      --border-radius-sm: 8px;
     }
 
     /* ============ Beginner Theme — Playful classroom ============ */
@@ -53,7 +56,10 @@
       --success: #6BCB77;
       --error: #FF6B6B;
       --border: #FFE0CC;
-      --font-family: 'Nunito', sans-serif;
+      --font-family: 'DM Sans', sans-serif;
+      --border-radius-lg: 24px;
+      --border-radius-md: 20px;
+      --border-radius-sm: 16px;
     }
 
     /* ============ Intermediate Theme — Clean study desk ============ */
@@ -70,6 +76,9 @@
       --error: #EF4444;
       --border: #E5E7EB;
       --font-family: 'Inter', sans-serif;
+      --border-radius-lg: 16px;
+      --border-radius-md: 12px;
+      --border-radius-sm: 8px;
     }
 
     /* ============ Advanced Theme — Research terminal ============ */
@@ -86,6 +95,9 @@
       --error: #F85149;
       --border: #30363D;
       --font-family: 'JetBrains Mono', monospace;
+      --border-radius-lg: 4px;
+      --border-radius-md: 4px;
+      --border-radius-sm: 2px;
     }
 
     /* ============ Global Reset ============ */
@@ -363,7 +375,7 @@
     .bubble {
       max-width: 72%;
       padding: 12px 16px;
-      border-radius: 18px;
+      border-radius: var(--border-radius-md);
       line-height: 1.6;
       word-wrap: break-word;
       animation: fadeInUp 0.3s ease;
@@ -373,7 +385,7 @@
     }
 
     [data-theme="advanced"] .bubble {
-      border-radius: 6px;
+      border-radius: var(--border-radius-md);
       font-size: 14px;
     }
 
@@ -1501,6 +1513,35 @@
       color: #8B949E;
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
+    }
+
+    /* ============ Estimation Badge ============ */
+    .estimate-badge {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      background: var(--primary);
+      color: white;
+      padding: 8px 14px;
+      border-radius: var(--border-radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideInRight 0.3s ease;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     /* ============ PWA Install Banner ============ */

@@ -1,5 +1,11 @@
 node_modules/
 uploads/
 data/progress.json
+data/cache.json
+# Taxonomy files: Uncomment below to accumulate learned taxonomy across deployments
+# Commented: fresh start on each deploy (taxonomy resets)
+# Uncommented: persistent learning (recommended for production)
+# data/taxonomy_learned.json
+# data/taxonomy_pending.json
 .DS_Store
 *.log

@@ -214,6 +214,27 @@
       }
     }
 
+    // Cache stats section (if available)
+    if (data.cache) {
+      const c = data.cache;
+      html += `
+        <div style="border-top:1px solid #21262D;"></div>
+        <div style="font-size:9px;color:#484F58;padding:4px 10px 2px;
+                    text-transform:uppercase;letter-spacing:.08em;">smart cache + taxonomy</div>
+        <div style="display:flex;gap:1px;padding:4px 10px 6px;">
+          ${statCell(c.memEntries,    'mem entries', '#3FB950')}
+          ${statCell(c.inFlight,      'in-flight',   '#F0B429')}
+          ${statCell(c.liveKeywords,  'keywords',    '#388BFD')}
+          ${statCell(c.pendingTopics, 'pending',     c.pendingTopics > 0 ? '#F0B429' : '#3FB950')}
+        </div>
+        ${c.pendingTopics > 0 ? `
+          <div style="padding:2px 10px 4px;font-size:9px;color:#F0B429;">
+            ${c.pendingTopics} topic(s) waiting for admin review →
+            <span style="cursor:pointer;color:#388BFD;text-decoration:underline;" onclick="window.open('/admin')">open admin</span>
+          </div>` : ''}
+      `;
+    }
+
     // Uptime footer
     html += `
       <div style="border-top:1px solid #21262D;margin-top:4px;"></div>

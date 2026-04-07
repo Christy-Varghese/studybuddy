@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { runAgentLoop, runParallelAgent } = require('./agent/agentLoop');
 const { getProgressSummary, clearProgress } = require('./agent/progressStore');
+const { getCacheStats, searchTopics, clearAll: clearSmartCache } = require('./agent/smartCache');
 
 // ── Dev metrics collector ──────────────────────────────
 // Only active in development. Tracks timing for every route.
@@ -127,6 +128,21 @@ if (IS_DEV) {
   });
 }
 
+// ── PWA Middleware ────────────────────────────────────
+// Set correct MIME types and cache headers for PWA assets
+app.use((req, res, next) => {
+  if (req.path === '/manifest.json') {
+    res.type('application/manifest+json');
+    res.set('Cache-Control', 'public, max-age=3600');
+  }
+  if (req.path === '/sw.js') {
+    res.type('application/javascript');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Service-Worker-Allowed', '/');
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 // Create uploads directory if it doesn't exist
@@ -162,35 +178,10 @@ const upload = multer({
 });
 
 // ============ Response Cache ============
-// Caches Ollama tool results in memory for 15 minutes.
-// Key = tool name + stringified args.
-// Prevents repeat Ollama calls for the same topic + level.
-
-const responseCache  = new Map();
-const CACHE_TTL_MS   = 15 * 60 * 1000;   // 15 minutes
-
-function cacheGet(key) {
-  const entry = responseCache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
-    responseCache.delete(key);
-    return null;
-  }
-  return entry.value;
-}
-
-function cacheSet(key, value) {
-  // Prevent cache from growing unbounded
-  if (responseCache.size > 200) {
-    // Delete the oldest 50 entries
-    const keys = [...responseCache.keys()].slice(0, 50);
-    keys.forEach(k => responseCache.delete(k));
-  }
-  responseCache.set(key, { value, ts: Date.now() });
-}
-
-// Export helpers so agent tools can use them
-global.studyBuddyCache = { get: cacheGet, set: cacheSet };
+// Smart cache system — 4-layer waterfall (taxonomy → normalised hash → dedup → Ollama)
+// Replaces the old simple Map() cache.
+// See agent/smartCache.js for implementation details.
+// No manual management needed — smartCache.js handles all memory/disk persistence.
 
 // ============ Utility: Estimate response time based on complexity ============
 function estimateResponseTime(message, level, hasImage = false) {
@@ -275,33 +266,38 @@ The "followup" question should challenge the student with a related harder probl
   return `
 ${levelInstructions[level] || levelInstructions.intermediate}
 
-CRITICAL INSTRUCTION — OUTPUT FORMAT:
-You MUST respond ONLY with a valid JSON object. No markdown. No prose outside the JSON.
-No code fences. No explanation before or after. Just the raw JSON object.
+ABSOLUTE REQUIREMENT — JSON ONLY OUTPUT:
+You MUST respond with ONLY valid JSON. No markdown. No text before or after.
+No code fences (\`\`\`). No explanations. Just a single JSON object.
 
-The JSON must follow this exact structure:
+The response MUST be valid parseable JSON with this exact structure:
 {
-  "intro": "A short 1–2 sentence friendly opener that names the topic",
+  "intro": "A short 1–2 sentence friendly opener that names the topic and sets the scene (NOT a repeat of the question)",
   "steps": [
     {
-      "title": "Short step label (e.g. 'Start with 3')",
-      "text": "One clear sentence explaining this step",
-      "emoji": "2–4 emojis that visually show this step (beginner only, else empty string)"
+      "title": "Short step label (2–5 words max, e.g. 'Start with the basics')",
+      "text": "One clear sentence explaining this step. NO markdown, NO bold, NO italic. Plain text only.",
+      "emoji": "2–5 emojis for this step (fill for beginner, leave empty string '' for intermediate/advanced)"
     }
   ],
-  "answer": "The final answer stated clearly",
-  "followup": "One question to check understanding"
+  "answer": "One complete sentence with the final answer. Plain text only. NO markdown.",
+  "followup": "One engagement question (beginner: playful; intermediate: analytical; advanced: challenging)"
 }
 
-Rules:
-- "steps" must have between 2 and 5 items
-- "emoji" field: fill it for beginner level, leave it as "" for intermediate and advanced
-- "intro" must NOT repeat the question — just set the scene
-- "answer" must be a complete sentence, not just a number or word
-- Do NOT include markdown bold (**), italic (*), or any formatting inside any string value
-- All string values must be plain text only
-- If the question cannot be broken into steps (e.g. a simple factual lookup),
-  use a single step with title "Answer" and put the explanation there
+STRICT RULES:
+1. MUST be valid JSON — no trailing commas, proper quotes, no special characters outside strings
+2. "steps" array must have 2–5 items
+3. "emoji" field: ONLY for beginner level; for intermediate/advanced, use empty string ""
+4. NO markdown formatting (**bold**, *italic*, links, etc.) anywhere in string values
+5. NO escape sequences needed — use plain UTF-8 text
+6. "intro" must introduce the topic, NOT repeat the user's question
+7. "answer" must be a complete sentence, not fragments
+8. "followup" must be a single question to encourage engagement
+9. If the topic cannot be broken into steps (pure factual lookup), use one step with title "Answer"
+10. Return the JSON object itself, NOT wrapped in markdown code fence
+
+CRITICAL: If you cannot generate valid JSON, your response will fail parsing and the user will see an error.
+Always validate your JSON before responding. Test it mentally: can it be parsed by JSON.parse()?
 `.trim();
 }
 
@@ -339,7 +335,16 @@ app.post('/chat', async (req, res) => {
       })
     });
 
+    if (!ollamaRes.ok) {
+      throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
+    }
+
     const data = await ollamaRes.json();
+    
+    if (!data.message || !data.message.content) {
+      throw new Error('Invalid response from Ollama - no message content');
+    }
+    
     const rawReply = data.message.content;
 
     // Attempt to parse as structured JSON
@@ -363,7 +368,8 @@ app.post('/chat', async (req, res) => {
       structured: structured     // parsed object or null
     });
   } catch (err) {
-    res.status(500).json({ error: 'Gemma is not running. Start Ollama first!' });
+    console.error('[/chat] Error:', err.message);
+    res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
   }
 });
 
@@ -391,16 +397,36 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
       history = [];
     }
 
+    // Build system prompt specifically for vision tasks
+    const visionSystemPrompt = `You are an expert tutor helping students understand homework problems.
+When analyzing images of homework or problems:
+1. Explain what you see in the image
+2. Break down the solution into clear steps
+3. Explain the concepts being tested
+4. Provide the final answer
+
+Always respond in this EXACT JSON format (no markdown, pure JSON):
+{
+  "intro": "Brief overview of what's shown",
+  "steps": [
+    {"title": "Step title", "text": "Step explanation", "emoji": "👉"},
+    {"title": "Step title", "text": "Step explanation", "emoji": "👉"}
+  ],
+  "answer": "The final answer or conclusion",
+  "followup": "Optional: A follow-up concept to explore"
+}
+
+IMPORTANT: Respond ONLY with valid JSON, no other text or markdown.`;
+
     // Build messages array with vision capability
+    // For Ollama, we need to use the 'images' field at the message level
     const messages = [
-      { role: 'system', content: buildSystemPrompt(level || 'beginner') },
+      { role: 'system', content: visionSystemPrompt },
       ...history,
       {
         role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } },
-          { type: 'text', text: message || 'Please help me with this homework problem.' }
-        ]
+        content: message || 'Please help me with this homework problem.',
+        images: [base64Image]  // Ollama-style vision: pass base64 directly
       }
     ];
 
@@ -411,12 +437,22 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
       body: JSON.stringify({
         model: 'gemma4:e4b',
         messages: messages,
-        stream: false
+        stream: false,
+        temperature: 0.3  // Lower temperature for consistent JSON output
       })
     });
 
+    if (!ollamaRes.ok) {
+      throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
+    }
+
     const data = await ollamaRes.json();
-    const rawReply = data.message.content;
+    
+    if (!data.message || !data.message.content) {
+      throw new Error('Invalid response from Ollama - no message content');
+    }
+    
+    let rawReply = data.message.content;
 
     // Attempt to parse as structured JSON
     let structured = null;
@@ -429,8 +465,18 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
         .trim();
       structured = JSON.parse(cleaned);
     } catch (e) {
-      // Gemma failed to return valid JSON — fall back to plain text
-      structured = null;
+      // Gemma failed to return valid JSON
+      // Try to construct a simple structured response from the raw text
+      if (rawReply && rawReply.trim().length > 0) {
+        structured = {
+          intro: rawReply.substring(0, Math.min(150, rawReply.length)),
+          steps: [],
+          answer: rawReply.length > 150 ? rawReply.substring(150) : '',
+          followup: 'Would you like me to explain any part further?'
+        };
+      } else {
+        structured = null;
+      }
     }
 
     // Clean up uploaded temp file
@@ -439,7 +485,7 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
     // Return both structured and raw so frontend can handle either
     res.json({
       reply: rawReply,           // raw text fallback
-      structured: structured     // parsed object or null
+      structured: structured     // parsed object or constructed fallback
     });
   } catch (err) {
     // Clean up file on error
@@ -448,7 +494,8 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
         fs.unlinkSync(req.file.path);
       } catch (e) {}
     }
-    res.status(500).json({ error: 'Gemma is not running. Start Ollama first!' });
+    console.error('[/chat-with-image] Error:', err.message);
+    res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
   }
 });
 
@@ -492,7 +539,16 @@ Format:
       })
     });
 
+    if (!ollamaRes.ok) {
+      throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
+    }
+
     const data = await ollamaRes.json();
+    
+    if (!data.message || !data.message.content) {
+      throw new Error('Invalid response from Ollama - no message content');
+    }
+    
     let responseText = data.message.content;
 
     // Strip markdown code fences if present
@@ -512,8 +568,8 @@ Format:
 
     res.json({ questions });
   } catch (err) {
-    console.error('Quiz generation error:', err.message);
-    res.status(500).json({ error: 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
+    console.error('[/quiz] Error:', err.message);
+    res.status(500).json({ error: err.message || 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
   }
 });
 
@@ -565,15 +621,92 @@ app.delete('/progress', (req, res) => {
 
 // ─── Cache endpoints ────────────────────────────
 app.get('/cache-stats', (req, res) => {
+  res.json(getCacheStats());
+});
+
+// ─── PWA Status endpoint (debugging) ────────────────────────────
+app.get('/pwa-status', (req, res) => {
   res.json({
-    entries: responseCache.size,
-    keys:    [...responseCache.keys()]
+    pwaReady: true,
+    serviceWorkerUrl: '/sw.js',
+    manifestUrl: '/manifest.json',
+    icons: {
+      '192': '/icon-192.png',
+      '512': '/icon-512.png',
+      'maskable': '/icon-maskable.png'
+    },
+    cacheVersion: 'studybuddy-v1',
+    timestamp: new Date().toISOString(),
+    environment: IS_DEV ? 'development' : 'production',
+    message: 'PWA assets are ready. Service Worker can be registered.'
   });
 });
 
 app.delete('/cache', (req, res) => {
-  responseCache.clear();
-  res.json({ success: true, message: 'Cache cleared' });
+  clearSmartCache();
+  res.json({ success: true, message: 'All cache layers cleared' });
+});
+
+// NEW: topic autocomplete endpoint (uses Trie)
+app.get('/topics/search', (req, res) => {
+  const prefix  = (req.query.q || '').toLowerCase();
+  const results = searchTopics(prefix);
+  res.json({ prefix, results, count: results.length });
+});
+
+// ─── Taxonomy admin routes ────────────────────────────────────
+const {
+  getStats,
+  approvePending,
+  rejectPending,
+  removeLearned,
+  manuallyAddTopic,
+  rebuildLiveTaxonomy
+} = require('./agent/dynamicTaxonomy');
+
+// GET full taxonomy stats (learned + pending)
+app.get('/admin/taxonomy', (req, res) => {
+  res.json(getStats());
+});
+
+// POST manually add a topic
+// Body: { topic: string, keywords: string[], subject: string }
+app.post('/admin/taxonomy', (req, res) => {
+  const { topic, keywords, subject } = req.body;
+  if (!topic || !Array.isArray(keywords)) {
+    return res.status(400).json({ error: 'topic and keywords[] required' });
+  }
+  const key = manuallyAddTopic(topic, keywords, subject);
+  res.json({ success: true, addedKey: key });
+});
+
+// POST approve a pending topic
+app.post('/admin/taxonomy/pending/:topic/approve', (req, res) => {
+  const ok = approvePending(decodeURIComponent(req.params.topic));
+  res.json({ success: ok });
+});
+
+// DELETE reject a pending topic
+app.delete('/admin/taxonomy/pending/:topic', (req, res) => {
+  const ok = rejectPending(decodeURIComponent(req.params.topic));
+  res.json({ success: ok });
+});
+
+// DELETE remove a learned topic
+app.delete('/admin/taxonomy/learned/:topic', (req, res) => {
+  const ok = removeLearned(decodeURIComponent(req.params.topic));
+  res.json({ success: ok });
+});
+
+// POST force rebuild live taxonomy (useful after manual file edits)
+app.post('/admin/taxonomy/rebuild', (req, res) => {
+  rebuildLiveTaxonomy();
+  res.json({ success: true, message: 'Live taxonomy rebuilt' });
+});
+
+// Serve admin UI
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'taxonomy-admin.html'));
 });
 
 // ── Dev metrics API ────────────────────────────────────
@@ -618,6 +751,8 @@ if (IS_DEV) {
     })) || [];
 
     // Check Ollama models — fire-and-forget HEAD requests
+    const cacheStats = getCacheStats();
+
     res.json({
       uptime:        Math.round((now - devMetrics.startedAt) / 1000),
       totalRequests: devMetrics.requests.length,
@@ -628,6 +763,7 @@ if (IS_DEV) {
                      : null,
       routes,
       toolBreakdown,
+      cache:         cacheStats,   // add smart cache statistics
       timestamp:     now
     });
   });
@@ -644,23 +780,41 @@ if (IS_DEV) {
 
 // ─── Warm up models on startup ───────────────────
 async function warmUpModels() {
-  const models = ['gemma4:e2b', 'gemma4:e4b'];
-  for (const model of models) {
-    try {
-      await fetch('http://localhost:11434/api/generate', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          prompt:    'hi',
-          stream:    false,
-          options:   { num_predict: 1 }
-        })
-      });
-      console.log(`[warmup] ${model} loaded into RAM`);
-    } catch (err) {
-      console.warn(`[warmup] Could not warm up ${model}:`, err.message);
+  // Only try to warm up models that are actually installed
+  // Check which models are available first
+  try {
+    const tagsRes = await fetch('http://localhost:11434/api/tags');
+    const tagsData = await tagsRes.json();
+    const installedModels = tagsData.models.map(m => m.name);
+    
+    // Warm up only installed models (prefer faster ones)
+    const modelsToWarmup = installedModels.filter(m => 
+      m.includes('gemma4:e4b') || m.includes('gemma4:e2b') || m.includes('gemma3')
+    ).slice(0, 2);  // Just warm up first 2 available
+    
+    for (const model of modelsToWarmup) {
+      try {
+        await fetch('http://localhost:11434/api/generate', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            prompt:    'hi',
+            stream:    false,
+            options:   { num_predict: 1 }
+          })
+        });
+        console.log(`[warmup] ${model} loaded into RAM`);
+      } catch (err) {
+        console.warn(`[warmup] Could not warm up ${model}:`, err.message);
+      }
     }
+    
+    if (modelsToWarmup.length === 0) {
+      console.warn('[warmup] No suitable models found for warmup. Available models:', installedModels);
+    }
+  } catch (err) {
+    console.warn('[warmup] Could not check available models:', err.message);
   }
 }
 

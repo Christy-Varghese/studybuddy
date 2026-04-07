@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudyBuddy — Taxonomy Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #F8F7FF;
+         color: #1A1A2E; font-size: 14px; }
+  header { background: #6C63FF; color: white; padding: 16px 28px;
+           display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 18px; }
+  .badge { background: rgba(255,255,255,0.2); padding: 3px 10px;
+           border-radius: 12px; font-size: 12px; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 28px; }
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #E5E3FF; margin-bottom: 20px; }
+  .tab { padding: 10px 20px; cursor: pointer; font-weight: 500;
+         color: #7A7990; border-bottom: 2px solid transparent;
+         margin-bottom: -2px; transition: all 0.2s; }
+  .tab.active { color: #6C63FF; border-color: #6C63FF; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  table { width: 100%; border-collapse: collapse; background: white;
+          border-radius: 10px; overflow: hidden;
+          border: 1px solid #E5E3FF; }
+  th { background: #F0EEFF; color: #6C63FF; font-size: 11px;
+       text-transform: uppercase; letter-spacing: 0.06em;
+       padding: 10px 14px; text-align: left; }
+  td { padding: 10px 14px; border-bottom: 1px solid #F0EEFF;
+       vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #FAFAFF; }
+  .btn { padding: 5px 12px; border-radius: 6px; border: none;
+         cursor: pointer; font-size: 12px; font-weight: 500;
+         transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.8; }
+  .btn-approve { background: #EAF3DE; color: #27500A; }
+  .btn-reject  { background: #FCEBEB; color: #A32D2D; }
+  .btn-remove  { background: #FCEBEB; color: #A32D2D; }
+  .btn-primary { background: #6C63FF; color: white; }
+  .progress-bar { background: #F0EEFF; border-radius: 4px;
+                  height: 6px; width: 80px; overflow: hidden; }
+  .progress-fill { background: #6C63FF; height: 6px; border-radius: 4px; }
+  .tag { display: inline-block; background: #F0EEFF; color: #6C63FF;
+         padding: 2px 8px; border-radius: 10px; font-size: 11px;
+         margin: 1px; }
+  .tag.green  { background: #EAF3DE; color: #27500A; }
+  .tag.amber  { background: #FFF8E1; color: #633806; }
+  .tag.purple { background: #F0EEFF; color: #534AB7; }
+  .add-form { background: white; border: 1px solid #E5E3FF; border-radius: 10px;
+              padding: 20px; margin-bottom: 20px; }
+  .add-form h3 { font-size: 14px; margin-bottom: 14px; color: #6C63FF; }
+  .form-row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .form-row input, .form-row select { padding: 8px 12px; border: 1px solid #E5E3FF;
+    border-radius: 6px; font-size: 13px; flex: 1; min-width: 140px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr);
+               gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: white; border: 1px solid #E5E3FF; border-radius: 10px;
+               padding: 16px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #6C63FF; }
+  .stat-lbl { font-size: 11px; color: #7A7990; margin-top: 4px; }
+  .empty { text-align: center; padding: 32px; color: #7A7990; }
+  .search { padding: 8px 14px; border: 1px solid #E5E3FF; border-radius: 8px;
+            font-size: 13px; width: 240px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 StudyBuddy — Taxonomy Admin</h1>
+  <span class="badge" id="live-count">Loading...</span>
+  <span class="badge" id="pending-badge" style="background:rgba(249,168,37,0.3);">0 pending</span>
+  <button class="btn btn-primary" style="margin-left:auto;" onclick="loadData()">Refresh</button>
+</header>
+
+<div class="container">
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-learned">0</div>
+      <div class="stat-lbl">Learned topics</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-pending" style="color:#F9A825;">0</div>
+      <div class="stat-lbl">Pending review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-keywords">0</div>
+      <div class="stat-lbl">Live keywords</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-threshold">2</div>
+      <div class="stat-lbl">Promotion threshold</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('pending')">Pending Review</div>
+    <div class="tab" onclick="showTab('learned')">Learned Topics</div>
+    <div class="tab" onclick="showTab('add')">Add Manually</div>
+  </div>
+
+  <!-- Pending panel -->
+  <div class="panel active" id="panel-pending">
+    <p style="color:#7A7990;margin-bottom:14px;font-size:13px;">
+      Topics students have asked that aren't in the taxonomy yet.
+      Approve to add them instantly. Reject to ignore permanently.
+    </p>
+    <table id="pending-table">
+      <thead>
+        <tr>
+          <th>Topic</th>
+          <th>Subject</th>
+          <th>Times asked</th>
+          <th>Progress</th>
+          <th>Example question</th>
+          <th>First seen</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pending-body">
+        <tr><td colspan="7" class="empty">No pending topics</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Learned panel -->
+  <div class="panel" id="panel-learned">
+    <input class="search" id="learned-search" placeholder="Search topics..." oninput="filterLearned()">
+    <table id="learned-table">
+      <thead>
+        <tr>
+          <th>Topic</th>
+          <th>Subject</th>
+          <th>Keywords</th>
+          <th>Times asked</th>
+          <th>Source</th>
+          <th>Added</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="learned-body">
+        <tr><td colspan="7" class="empty">No learned topics yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Add manually panel -->
+  <div class="panel" id="panel-add">
+    <div class="add-form">
+      <h3>Add a topic manually</h3>
+      <div class="form-row">
+        <input id="add-topic"    placeholder="Topic name (e.g. black holes)" />
+        <select id="add-subject">
+          <option value="biology">Biology</option>
+          <option value="chemistry">Chemistry</option>
+          <option value="physics">Physics</option>
+          <option value="mathematics">Mathematics</option>
+          <option value="history">History</option>
+          <option value="english">English</option>
+          <option value="computer_science">Computer Science</option>
+          <option value="geography">Geography</option>
+          <option value="other">Other</option>
+        </select>
+        <input id="add-keywords" placeholder="Keywords, comma separated" style="flex:2;" />
+        <button class="btn btn-primary" onclick="addTopic()">Add Topic</button>
+      </div>
+      <p style="font-size:12px;color:#7A7990;margin-top:10px;">
+        Keywords are aliases students might use, e.g. "singularity, event horizon, hawking radiation"
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let allLearned = [];
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', ['pending','learned','add'][i] === name);
+    });
+    document.querySelectorAll('.panel').forEach((p,i) => {
+      p.classList.toggle('active', ['panel-pending','panel-learned','panel-add'][i] === 'panel-' + name);
+    });
+  }
+
+  async function loadData() {
+    const res  = await fetch('/admin/taxonomy');
+    const data = await res.json();
+
+    document.getElementById('stat-learned').textContent  = data.learnedCount;
+    document.getElementById('stat-pending').textContent  = data.pendingCount;
+    document.getElementById('stat-keywords').textContent = data.liveKeywords;
+    document.getElementById('stat-threshold').textContent= data.threshold;
+    document.getElementById('live-count').textContent    = data.liveKeywords + ' keywords';
+    document.getElementById('pending-badge').textContent = data.pendingCount + ' pending';
+
+    // Render pending
+    const pb = document.getElementById('pending-body');
+    if (data.pending.length === 0) {
+      pb.innerHTML = '<tr><td colspan="7" class="empty">No pending topics — all clear!</td></tr>';
+    } else {
+      pb.innerHTML = data.pending.map(p => `
+        <tr>
+          <td><b>${p.topic}</b></td>
+          <td><span class="tag purple">${p.subject}</span></td>
+          <td>${p.count}</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${p.pct}%"></div>
+            </div>
+            <span style="font-size:11px;color:#7A7990;">${p.count}/${data.threshold}</span>
+          </td>
+          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;color:#7A7990;"
+              title="${p.example}">"${p.example}"</td>
+          <td style="font-size:11px;color:#7A7990;">${new Date(p.firstSeen).toLocaleDateString()}</td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn btn-approve" onclick="approve('${p.topic}')">Approve</button>
+            <button class="btn btn-reject"  onclick="reject('${p.topic}')">Reject</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Render learned
+    allLearned = data.learned;
+    renderLearned(allLearned);
+  }
+
+  function renderLearned(list) {
+    const lb = document.getElementById('learned-body');
+    if (list.length === 0) {
+      lb.innerHTML = '<tr><td colspan="7" class="empty">No learned topics yet.<br>Topics will appear here after students ask about them.</td></tr>';
+      return;
+    }
+    lb.innerHTML = list.map(t => `
+      <tr>
+        <td><b>${t.topic}</b></td>
+        <td><span class="tag purple">${t.subject}</span></td>
+        <td>${t.keywords} keywords</td>
+        <td><span class="tag green">${t.askCount} asks</span></td>
+        <td><span class="tag ${t.source === 'manual' ? 'amber' : ''}">${t.source}</span></td>
+        <td style="font-size:11px;color:#7A7990;">${new Date(t.addedAt).toLocaleDateString()}</td>
+        <td><button class="btn btn-remove" onclick="removeLearned('${t.topic}')">Remove</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function filterLearned() {
+    const q = document.getElementById('learned-search').value.toLowerCase();
+    renderLearned(allLearned.filter(t => t.topic.includes(q) || t.subject.includes(q)));
+  }
+
+  async function approve(topic) {
+    await fetch(`/admin/taxonomy/pending/${encodeURIComponent(topic)}/approve`, { method: 'POST' });
+    loadData();
+  }
+
+  async function reject(topic) {
+    if (!confirm(`Reject "${topic}"? It will be ignored permanently.`)) return;
+    await fetch(`/admin/taxonomy/pending/${encodeURIComponent(topic)}`, { method: 'DELETE' });
+    loadData();
+  }
+
+  async function removeLearned(topic) {
+    if (!confirm(`Remove "${topic}" from learned taxonomy?`)) return;
+    await fetch(`/admin/taxonomy/learned/${encodeURIComponent(topic)}`, { method: 'DELETE' });
+    loadData();
+  }
+
+  async function addTopic() {
+    const topic    = document.getElementById('add-topic').value.trim();
+    const subject  = document.getElementById('add-subject').value;
+    const keywords = document.getElementById('add-keywords').value
+                       .split(',').map(k => k.trim()).filter(Boolean);
+    if (!topic) return alert('Please enter a topic name');
+    await fetch('/admin/taxonomy', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ topic, keywords, subject })
+    });
+    document.getElementById('add-topic').value    = '';
+    document.getElementById('add-keywords').value = '';
+    alert(`Added "${topic}" to taxonomy!`);
+    loadData();
+  }
+
+  // Load on page open
+  loadData();
+  // Auto-refresh every 10 seconds
+  setInterval(loadData, 10000);
+</script>
+</body>
+</html>

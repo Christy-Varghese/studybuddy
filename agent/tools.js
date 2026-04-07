@@ -1,4 +1,5 @@
 const { saveProgress, getProgressSummary } = require('./progressStore');
+const { smartGet, smartSet, registerInFlight } = require('./smartCache');
 
 // ─────────────────────────────────────────────
 // TIMING WRAPPER FOR DEV METRICS
@@ -95,9 +96,16 @@ const toolDefinitions = [
 // ─────────────────────────────────────────────
 
 // Tool 1: explain_topic
-// Builds the structured explanation prompt and calls Ollama directly
+// 4-layer smart cache + builds the structured explanation prompt and calls Ollama
 async function explain_topic({ topic, level, context }) {
-  const systemPrompt = `You are StudyBuddy, a clear and patient tutor.
+  // ── Smart cache lookup (4-layer) ──
+  const lookup = smartGet('explain', topic, level);
+  if (lookup.value)    return lookup.value;
+  if (lookup.inFlight) return lookup.inFlight;  // deduplicated wait
+
+  // Build the Ollama promise and register as in-flight
+  const promise = (async () => {
+    const systemPrompt = `You are StudyBuddy, a clear and patient tutor.
 Respond ONLY with valid JSON matching this exact structure:
 {
   "intro": "1-2 sentence opener",
@@ -107,42 +115,62 @@ Respond ONLY with valid JSON matching this exact structure:
   "answer": "key takeaway sentence",
   "followup": "one check-understanding question"
 }
-Steps: 3-5 items. No markdown inside strings. Plain text only.`;
+Rules:
+- Steps: 3-5 items. 
+- NO markdown, LaTeX, or special formatting inside strings.
+- For chemical formulas: Use subscript numbers directly (H2O not H₂O or \\textH₂\\textO)
+- For mathematical: Use plain text (x^2, square root, fractions as text)
+- For units: Write out (watts, meters, celsius not W, m, °C)
+- Plain text only. JSON must be valid.`;
 
-  const userMsg = context
-    ? `Explain "${topic}" to a ${level} student. Extra context: ${context}`
-    : `Explain "${topic}" to a ${level} student.`;
+    const userMsg = context
+      ? `Explain "${topic}" to a ${level} student. Extra context: ${context}`
+      : `Explain "${topic}" to a ${level} student.`;
 
-  const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model:    'gemma4:e4b',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userMsg }
-      ],
-      stream: false
-    })
-  });
+    const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:    'gemma4:e4b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMsg }
+        ],
+        stream: false,
+        options: { num_predict: 400, temperature: 0.7 }
+      })
+    });
 
-  const data    = await response.json();
-  const rawText = data.message.content;
+    const data    = await response.json();
+    const rawText = data.message.content;
 
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
-    return { success: true, explanation: JSON.parse(cleaned), topic, level, _ms: fetchMs };
-  } catch {
-    return { success: true, explanation: { intro: rawText, steps: [], answer: '', followup: '' }, topic, level, _ms: fetchMs };
-  }
+    let explanation = null;
+    try {
+      const cleaned = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
+      explanation   = JSON.parse(cleaned);
+    } catch {
+      explanation = { intro: rawText, steps: [], answer: '', followup: '' };
+    }
+
+    const result = { success: true, explanation, topic, level, _ms: fetchMs };
+    smartSet('explain', topic, level, result);  // store in 4-layer cache
+    return result;
+  })();
+
+  registerInFlight('explain', topic, level, promise);
+  return promise;
 }
 
 // Tool 2: generate_quiz
-// Generates N multiple choice questions and returns them as structured JSON
+// 4-layer smart cache + generates N multiple choice questions
 async function generate_quiz({ topic, level, numQuestions }) {
-  const n = Math.min(Math.max(Math.round(numQuestions), 2), 5);
+  const n      = Math.min(Math.max(Math.round(numQuestions), 2), 5);
+  const lookup = smartGet('quiz', `${topic}::${n}`, level);
+  if (lookup.value)    return lookup.value;
+  if (lookup.inFlight) return lookup.inFlight;
 
-  const systemPrompt = `You are a quiz generator.
+  const promise = (async () => {
+    const systemPrompt = `You are a quiz generator.
 Respond ONLY with a valid JSON array. No markdown. No explanation. Just the raw JSON.
 Format:
 [
@@ -154,29 +182,38 @@ Format:
   }
 ]`;
 
-  const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model:    'gemma4:e4b',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.` }
-      ],
-      stream: false
-    })
-  });
+    const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:    'gemma4:e4b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.` }
+        ],
+        stream: false,
+        options: { num_predict: 500, temperature: 0.8 }
+      })
+    });
 
-  const data    = await response.json();
-  const rawText = data.message.content;
+    const data    = await response.json();
+    const rawText = data.message.content;
 
-  try {
-    const cleaned   = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
-    const questions = JSON.parse(cleaned);
-    return { success: true, questions, topic, numQuestions: questions.length, _ms: fetchMs };
-  } catch {
-    return { success: false, error: 'Quiz generation failed', questions: [], _ms: fetchMs };
-  }
+    try {
+      const cleaned   = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
+      const questions = JSON.parse(cleaned);
+      const result = { success: true, questions, topic, numQuestions: questions.length, _ms: fetchMs };
+      smartSet('quiz', `${topic}::${n}`, level, result);
+      return result;
+    } catch {
+      const result = { success: false, error: 'Quiz generation failed', questions: [], _ms: fetchMs };
+      smartSet('quiz', `${topic}::${n}`, level, result);
+      return result;
+    }
+  })();
+
+  registerInFlight('quiz', `${topic}::${n}`, level, promise);
+  return promise;
 }
 
 // Tool 3: track_progress

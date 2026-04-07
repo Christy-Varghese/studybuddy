@@ -1,5 +1,6 @@
 const { toolDefinitions, toolImplementations } = require('./tools');
 const { getProgressSummary } = require('./progressStore');
+const { preWarm } = require('./smartCache');
 
 // The main agent loop - simplified version
 // Directly executes tools based on the student message and synthesizes results
@@ -355,6 +356,12 @@ Respond ONLY with valid JSON — no markdown, no preamble:
       progressNote: 'Great work studying!'
     };
     console.log('[Agent] Using fallback synthesis');
+  }
+
+  // Predictive pre-warming — fire and forget
+  if (structured?.nextTopic?.nextTopic) {
+    const { explain_topic } = require('./tools').toolImplementations;
+    preWarm(structured.nextTopic.nextTopic, level, explain_topic);
   }
 
   return {
