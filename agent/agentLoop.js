@@ -382,4 +382,67 @@ Respond ONLY with valid JSON — no markdown, no preamble:
   }
 }
 
-module.exports = { runAgentLoop, runParallelAgent };
+// ─────────────────────────────────────────────────────────────
+// SOCRATIC AGENT
+// Drives a guided-discovery conversation instead of explaining.
+// Each turn asks a question rather than giving the answer.
+// ─────────────────────────────────────────────────────────────
+async function runSocraticAgent(studentMessage, level, conversationHistory) {
+  const toolCallLog = [];
+
+  try {
+    // Detect turn number from history (every 2 messages = 1 turn)
+    const turnNumber = Math.floor((conversationHistory.filter(m => m.role === 'user').length)) + 1;
+
+    // Extract topic from student message or last user message
+    const topic = extractTopic(studentMessage);
+
+    // Previous student response for context (empty on turn 1)
+    const studentResponse = turnNumber > 1 ? studentMessage : '';
+
+    const socrResult = await toolImplementations.ask_socratic_question({
+      topic,
+      level,
+      studentResponse,
+      turnNumber
+    });
+
+    toolCallLog.push({ tool: 'ask_socratic_question', args: { topic, level, turnNumber }, result: socrResult });
+
+    // Track that the student is engaging with this topic
+    const trackResult = toolImplementations.track_progress({ topic, level, quizScore: null });
+    toolCallLog.push({ tool: 'track_progress', args: { topic, level }, result: trackResult });
+
+    const structured = {
+      mode:            'socratic',
+      agentSummary:    `Socratic turn ${turnNumber} on "${topic}"`,
+      toolsUsed:       toolCallLog.map(t => t.tool),
+      acknowledgement: socrResult.acknowledgement || '',
+      question:        socrResult.question || 'What do you already know about this topic?',
+      hint:            socrResult.hint || '',
+      isNearAnswer:    socrResult.isNearAnswer || false,
+      topic,
+      turn:            turnNumber,
+      progressNote:    generateProgressNote(getProgressSummary(), toolCallLog.length)
+    };
+
+    return {
+      success:    true,
+      rawReply:   socrResult.question,
+      structured,
+      toolCallLog,
+      iterations: 1
+    };
+
+  } catch (err) {
+    console.error('[SocraticAgent] Error:', err.message);
+    return {
+      success:    false,
+      rawReply:   'Socratic agent error: ' + err.message,
+      structured: null,
+      toolCallLog
+    };
+  }
+}
+
+module.exports = { runAgentLoop, runParallelAgent, runSocraticAgent };

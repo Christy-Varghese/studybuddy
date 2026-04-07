@@ -4,8 +4,9 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const { runAgentLoop, runParallelAgent } = require('./agent/agentLoop');
-const { getProgressSummary, clearProgress } = require('./agent/progressStore');
+const { runAgentLoop, runParallelAgent, runSocraticAgent } = require('./agent/agentLoop');
+const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak } = require('./agent/progressStore');
+const { toolImplementations } = require('./agent/tools');
 const { getCacheStats, searchTopics, clearAll: clearSmartCache } = require('./agent/smartCache');
 
 // ── Dev metrics collector ──────────────────────────────
@@ -723,6 +724,84 @@ app.delete('/progress', (req, res) => {
   try {
     clearProgress();
     res.json({ success: true, message: 'Progress cleared' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Socratic mode endpoint ─────────────────────
+// Drives guided-discovery dialogue via Socratic questioning
+app.post('/socratic', async (req, res) => {
+  const { message, level, history } = req.body;
+  if (!message) return res.status(400).json({ error: 'message is required' });
+
+  try {
+    const result = await runSocraticAgent(message, level || 'intermediate', history || []);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, rawReply: 'Socratic agent error: ' + err.message });
+  }
+});
+
+// ─── Concept map endpoint ───────────────────────
+// Generates a JSON concept map (nodes + edges) for a topic
+app.post('/concept-map', async (req, res) => {
+  const { topic, level } = req.body;
+  if (!topic) return res.status(400).json({ error: 'topic is required' });
+
+  try {
+    const result = await toolImplementations.generate_concept_map({
+      topic,
+      level: level || 'intermediate'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Spaced repetition endpoints ────────────────
+// GET topics due for review today
+app.get('/due-reviews', (req, res) => {
+  try {
+    res.json({ reviews: getDueReviews() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update SRS after a review session
+// grade: 0-5 (0=failed, 3=passed, 5=perfect)  OR  score: 0-100 (auto-converted)
+app.put('/srs/:topic', (req, res) => {
+  const topic = decodeURIComponent(req.params.topic);
+  let { grade, score } = req.body;
+
+  // Allow passing a raw quiz score instead of a grade
+  if (grade === undefined && score !== undefined) {
+    if (score >= 90)      grade = 5;
+    else if (score >= 75) grade = 4;
+    else if (score >= 60) grade = 3;
+    else if (score >= 40) grade = 2;
+    else                  grade = 0;
+  }
+
+  if (grade === undefined || grade < 0 || grade > 5) {
+    return res.status(400).json({ error: 'grade (0-5) or score (0-100) required' });
+  }
+
+  try {
+    const updated = updateSRS(topic, grade);
+    if (!updated) return res.status(404).json({ error: 'Topic not found in progress' });
+    res.json({ success: true, topic, srs: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Streak endpoint ────────────────────────────
+app.get('/streak', (req, res) => {
+  try {
+    res.json(getLearningStreak());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

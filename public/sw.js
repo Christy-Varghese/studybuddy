@@ -32,6 +32,13 @@ const API_ROUTES = [
   '/estimate',
   '/progress',
   '/topics/search',
+  // New routes: Socratic mode, concept maps, SRS, streaks
+  '/agent',
+  '/socratic',
+  '/concept-map',
+  '/due-reviews',
+  '/streak',
+  '/srs',
 ];
 
 // ── Install event — cache the app shell ────────────────────
