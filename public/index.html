@@ -1890,6 +1890,187 @@
         padding-top: max(12px, env(safe-area-inset-top));
       }
     }
+
+    /* ============ Responsive Layout ============ */
+    @media (max-width: 1024px) {
+      #chat {
+        max-width: 100%;
+        padding: 16px 20px;
+      }
+
+      .controls {
+        padding: 0 16px;
+      }
+
+      .input-row {
+        padding: 12px 16px;
+      }
+
+      .bubble {
+        max-width: 85%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 0 16px;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 52px;
+        gap: 12px;
+      }
+
+      .controls label {
+        flex-basis: 100%;
+      }
+
+      #level {
+        width: 100%;
+      }
+
+      .controls button {
+        margin-left: 0;
+      }
+
+      #chat {
+        padding: 14px 16px;
+      }
+
+      .input-row {
+        flex-wrap: wrap;
+        align-items: stretch;
+      }
+
+      .button-group {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        max-width: 92%;
+      }
+
+      .quiz-card {
+        width: 100%;
+      }
+
+      .estimate-badge {
+        right: 12px;
+        bottom: 90px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      header {
+        height: 56px;
+      }
+
+      .controls {
+        top: 56px;
+        padding: 8px 12px;
+      }
+
+      body {
+        font-size: 14px;
+      }
+
+      #chat {
+        padding: 12px;
+      }
+
+      .input-row {
+        padding: 10px 12px;
+      }
+
+      #input {
+        font-size: 16px;
+      }
+
+      .bubble {
+        max-width: 100%;
+      }
+
+      .bubble-image {
+        width: 96px;
+        height: 96px;
+      }
+
+      .status-badge {
+        font-size: 12px;
+      }
+    }
+
+    /* ── Landscape phone optimizations ── */
+    @media (max-height: 500px) and (orientation: landscape) {
+      header {
+        height: 48px;
+      }
+
+      .controls {
+        height: auto;
+        min-height: 44px;
+        top: 48px;
+        padding: 6px 12px;
+      }
+
+      #chat {
+        padding: 10px 12px;
+      }
+
+      .input-row {
+        min-height: 56px;
+        padding: 8px 12px;
+      }
+
+      .bubble {
+        max-width: 80%;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .estimate-badge {
+        bottom: 70px;
+        right: 8px;
+      }
+    }
+
+    /* ── Foldable device (split-screen) support ── */
+    @media (fold-left: 0px) {
+      body {
+        display: flex;
+        width: 100vw;
+      }
+
+      header, .controls {
+        flex: 1;
+      }
+
+      #chat, .input-row {
+        flex: 1;
+      }
+    }
+
+    @media (fold-top: 0px) {
+      body {
+        flex-direction: column;
+      }
+
+      header {
+        height: 48px;
+      }
+
+      #chat {
+        flex: 0.6;
+        overflow-y: auto;
+      }
+
+      .input-row {
+        flex: 0.4;
+      }
+    }
   </style>
 </head>
 <body data-theme="intermediate">
@@ -3272,6 +3453,55 @@
 
     // Clean up voice state - reset after message is processed
     // Simple cleanup without wrapping sendMessage
+
+    // ============ Responsive Device Debugger & Foldable Support ============
+    (function() {
+      const debugLabel = document.createElement('div');
+      debugLabel.id = 'device-debug-overlay';
+      debugLabel.style.cssText = `
+        position: fixed;
+        top: 2px;
+        right: 2px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #00FF00;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: monospace;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0.8;
+      `;
+      document.body.appendChild(debugLabel);
+
+      function updateDebugLabel() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const isFoldable = window.innerHeight > window.innerWidth * 2;
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const isPortrait = window.innerWidth <= window.innerHeight;
+
+        let breakpoint = 'desktop';
+        let orientation = isLandscape ? 'landscape' : 'portrait';
+
+        if (width <= 480) breakpoint = 'phone';
+        else if (width <= 768) breakpoint = 'tablet';
+        else if (width <= 1024) breakpoint = 'small-desktop';
+
+        const foldableNote = isFoldable ? ' [FOLDABLE]' : '';
+        debugLabel.textContent = `${width}x${height} | ${breakpoint} | ${orientation}${foldableNote}`;
+      }
+
+      updateDebugLabel();
+      window.addEventListener('resize', updateDebugLabel);
+      window.addEventListener('orientationchange', () => setTimeout(updateDebugLabel, 100));
+
+      // ── Foldable device support ──
+      if (window.matchMedia('(fold-left: 0px)').matches || window.matchMedia('(fold-top: 0px)').matches) {
+        document.body.style.overflow = 'auto';
+        console.log('[Responsive] Foldable device detected — split-screen layout enabled');
+      }
+    })();
   </script>
 
   <!-- ============ PWA Service Worker Registration & Install Banner ============ -->
