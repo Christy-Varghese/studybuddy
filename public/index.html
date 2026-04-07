@@ -1912,6 +1912,185 @@
     }
 
     /* ══════════════════════════════════════════════════════════
+       ENGAGING FACTS LOADING SCREEN
+       Shows random educational facts while AI is processing
+       ══════════════════════════════════════════════════════════ */
+
+    .facts-loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--border-radius-lg);
+      max-width: 90%;
+      align-self: flex-start;
+      box-shadow: var(--shadow-lg);
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+      .facts-loading-container {
+        max-width: 75%;
+        min-height: 200px;
+      }
+    }
+
+    /* Animated brain icon */
+    .facts-loading-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-md);
+      animation: brainPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes brainPulse {
+      0%, 100% { 
+        transform: scale(1) rotate(0deg); 
+        filter: drop-shadow(0 0 5px var(--primary));
+      }
+      25% { transform: scale(1.1) rotate(-5deg); }
+      50% { 
+        transform: scale(1.05) rotate(0deg);
+        filter: drop-shadow(0 0 15px var(--primary));
+      }
+      75% { transform: scale(1.1) rotate(5deg); }
+    }
+
+    /* Did you know label */
+    .facts-loading-label {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--primary);
+      margin-bottom: var(--space-sm);
+      opacity: 0.9;
+    }
+
+    /* Fact text with smooth transitions */
+    .facts-loading-text {
+      font-size: var(--font-size-md);
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 300px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    /* Animated dots */
+    .facts-loading-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: var(--space-md);
+    }
+
+    .facts-loading-dots span {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: factsDotBounce 1.4s ease-in-out infinite;
+    }
+
+    .facts-loading-dots span:nth-child(1) { animation-delay: 0s; }
+    .facts-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .facts-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes factsDotBounce {
+      0%, 80%, 100% { 
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+      40% { 
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+    }
+
+    /* Progress indicator */
+    .facts-loading-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .facts-loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent, var(--primary)));
+      animation: progressSlide 3s ease-in-out infinite;
+    }
+
+    @keyframes progressSlide {
+      0% { width: 0%; margin-left: 0; }
+      50% { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* Theme variations */
+    [data-theme="beginner"] .facts-loading-container {
+      background: rgba(255, 249, 240, 0.95);
+      border-color: rgba(255, 107, 107, 0.2);
+    }
+
+    [data-theme="beginner"] .facts-loading-icon {
+      animation: brainPulse 1.5s ease-in-out infinite, rainbowGlow 3s linear infinite;
+    }
+
+    @keyframes rainbowGlow {
+      0% { filter: drop-shadow(0 0 10px #FF6B6B); }
+      33% { filter: drop-shadow(0 0 10px #FFD93D); }
+      66% { filter: drop-shadow(0 0 10px #4ECDC4); }
+      100% { filter: drop-shadow(0 0 10px #FF6B6B); }
+    }
+
+    [data-theme="advanced"] .facts-loading-container {
+      background: rgba(13, 17, 23, 0.95);
+      border-color: rgba(0, 255, 157, 0.2);
+    }
+
+    [data-theme="advanced"] .facts-loading-icon {
+      filter: drop-shadow(0 0 10px var(--primary));
+    }
+
+    [data-theme="advanced"] .facts-loading-progress-bar {
+      background: linear-gradient(90deg, #00FF9D, #00D4FF);
+    }
+
+    /* Fade in/out transitions */
+    .facts-loading-container.fade-in {
+      animation: factsFadeIn 0.4s ease forwards;
+    }
+
+    .facts-loading-container.fade-out {
+      animation: factsFadeOut 0.3s ease forwards;
+    }
+
+    @keyframes factsFadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes factsFadeOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    }
+
+    /* ══════════════════════════════════════════════════════════
        ANIMATION UTILITY CLASSES
        ══════════════════════════════════════════════════════════ */
 
@@ -2994,7 +3173,8 @@
         <div class="estimate-value">${estimate.label}</div>
         <div class="estimate-complexity">${estimate.complexity}</div>
       `;
-      chatEl.appendChild(badge);
+      // Append to body for proper fixed positioning (avoids z-index issues in chat container)
+      document.body.appendChild(badge);
 
       let remaining = estimate.seconds;
       const interval = setInterval(() => {
@@ -3024,6 +3204,100 @@
       };
 
       return { badge, interval };
+    }
+
+    // ============ Engaging Facts Loading Screen ============
+    const learningFacts = [
+      "🧠 Your brain uses 20% of your body's total energy!",
+      "🌍 Earth's core is as hot as the surface of the Sun — about 5,500°C!",
+      "🐙 Octopuses have three hearts and blue blood!",
+      "📚 The Library of Alexandria once held 400,000 scrolls of knowledge!",
+      "🔬 A single human cell contains about 6 feet of DNA!",
+      "🌊 The ocean produces over 50% of the world's oxygen!",
+      "🦋 Butterflies taste with their feet!",
+      "⚡ Lightning strikes Earth about 8 million times per day!",
+      "🌙 The Moon is slowly drifting away from Earth at 3.8 cm per year!",
+      "🧮 Zero was invented independently in India and by the Mayans!",
+      "🎵 Music can reduce stress hormones by up to 25%!",
+      "🌳 Trees communicate through underground fungal networks!",
+      "🔭 Light from the Sun takes 8 minutes to reach Earth!",
+      "🧬 Humans share 60% of their DNA with bananas!",
+      "📖 Reading for just 6 minutes can reduce stress by 68%!",
+      "🦠 Your body has more bacteria than human cells!",
+      "🌌 There are more stars in the universe than grains of sand on Earth!",
+      "🧊 Hot water freezes faster than cold water (Mpemba effect)!",
+      "🐋 A blue whale's heart is the size of a small car!",
+      "🎨 Van Gogh only sold one painting during his lifetime!",
+      "🏔️ Mount Everest grows about 4mm taller every year!",
+      "🦷 Tooth enamel is the hardest substance in the human body!",
+      "🌸 Honey never spoils — 3,000-year-old honey is still edible!",
+      "🦑 Giant squid have the largest eyes in the animal kingdom!",
+      "📱 The first computer weighed over 27 tons!"
+    ];
+
+    let factsContainer = null;
+    let factsInterval = null;
+    let currentFactIndex = 0;
+
+    function showFactsLoading() {
+      // Remove any existing facts container
+      hideFactsLoading();
+
+      // Shuffle and pick a random starting index
+      currentFactIndex = Math.floor(Math.random() * learningFacts.length);
+
+      factsContainer = document.createElement('div');
+      factsContainer.className = 'facts-loading-container fade-in';
+      factsContainer.innerHTML = `
+        <div class="facts-loading-icon">🧠</div>
+        <div class="facts-loading-label">Did you know?</div>
+        <div class="facts-loading-text">${learningFacts[currentFactIndex]}</div>
+        <div class="facts-loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="facts-loading-progress">
+          <div class="facts-loading-progress-bar"></div>
+        </div>
+      `;
+
+      chatEl.appendChild(factsContainer);
+      chatEl.scrollTop = chatEl.scrollHeight;
+
+      // Rotate facts every 4 seconds
+      factsInterval = setInterval(() => {
+        currentFactIndex = (currentFactIndex + 1) % learningFacts.length;
+        const textEl = factsContainer.querySelector('.facts-loading-text');
+        if (textEl) {
+          textEl.style.opacity = '0';
+          textEl.style.transform = 'translateY(-10px)';
+          setTimeout(() => {
+            textEl.textContent = learningFacts[currentFactIndex];
+            textEl.style.opacity = '1';
+            textEl.style.transform = 'translateY(0)';
+          }, 200);
+        }
+      }, 4000);
+
+      return factsContainer;
+    }
+
+    function hideFactsLoading() {
+      if (factsInterval) {
+        clearInterval(factsInterval);
+        factsInterval = null;
+      }
+      if (factsContainer && factsContainer.parentNode) {
+        factsContainer.classList.remove('fade-in');
+        factsContainer.classList.add('fade-out');
+        setTimeout(() => {
+          if (factsContainer && factsContainer.parentNode) {
+            factsContainer.remove();
+          }
+          factsContainer = null;
+        }, 300);
+      }
     }
 
     // ============ LaTeX to Readable Conversion ============
@@ -3355,6 +3629,9 @@
           };
           reader.readAsDataURL(pendingImage);
 
+          // Show engaging facts loading screen for image processing
+          showFactsLoading();
+
           // Use /chat-with-image endpoint
           const formData = new FormData();
           formData.append('message', message);
@@ -3366,6 +3643,9 @@
             method: 'POST',
             body: formData
           });
+          
+          // Hide facts loading when response arrives
+          hideFactsLoading();
           
           if (!res.ok) {
             const error = await res.json();
@@ -3421,6 +3701,10 @@
           history.push({ role: 'assistant', content: data.reply });
         }
       } catch (err) {
+        // Clean up any loading states
+        hideFactsLoading();
+        if (estimateBadge) estimateBadge.triggerShrinkFade();
+        if (countdownInterval) clearInterval(countdownInterval);
         alert('⚠️ Could not reach StudyBuddy. Is the server running?');
       }
     }
