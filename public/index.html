@@ -439,7 +439,12 @@
     /* ============ Chat Area ============ */
     #chat {
       flex: 1;
+      /* allow the chat flex child to shrink and enable scrolling inside it
+         (min-height: 0 is required so flexbox doesn't force the child to
+         grow beyond the container, which prevents overflow from working) */
+      min-height: 0;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
       padding: 20px 24px;
       display: flex;
       flex-direction: column;
