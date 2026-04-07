@@ -1,5 +1,6 @@
 const { saveProgress, getProgressSummary } = require('./progressStore');
 
+
 // ─────────────────────────────────────────────
 // TIMING WRAPPER FOR DEV METRICS
 // Wraps fetch calls to Ollama and measures milliseconds
@@ -83,6 +84,35 @@ const toolDefinitions = [
         subject:      { type: 'string', description: 'Broad subject area, e.g. "biology"' }
       },
       required: ['currentTopic']
+    }
+  },
+  {
+    name: 'ask_socratic_question',
+    description: `Guides a student to discover the answer themselves through Socratic questioning.
+      Use this instead of explain_topic when the student is in Socratic mode.
+      Never gives the answer directly — always asks a guiding question.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        topic:           { type: 'string', description: 'The topic being explored' },
+        level:           { type: 'string', enum: ['beginner','intermediate','advanced'] },
+        studentResponse: { type: 'string', description: 'What the student just said (empty on turn 1)' },
+        turnNumber:      { type: 'number', description: 'Which turn in the dialogue (starts at 1)' }
+      },
+      required: ['topic', 'level']
+    }
+  },
+  {
+    name: 'generate_concept_map',
+    description: `Generates a concept map showing how ideas within a topic connect to each other.
+      Use this after explaining a topic to give the student a visual knowledge graph.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string', description: 'The topic to map' },
+        level: { type: 'string', enum: ['beginner','intermediate','advanced'] }
+      },
+      required: ['topic', 'level']
     }
   }
 ];
@@ -234,12 +264,131 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
   }
 }
 
+// ─────────────────────────────────────────────
+// TOOL 5: ask_socratic_question
+// Instead of explaining, guides the student to discover the answer
+// ─────────────────────────────────────────────
+async function ask_socratic_question({ topic, level, studentResponse, turnNumber }) {
+  const turn = turnNumber || 1;
+
+  const systemPrompt = `You are a Socratic tutor. Your goal is to guide the student to discover the answer themselves through questions — never just give the answer directly.
+
+Turn number: ${turn}
+Rules:
+- Turn 1: Ask an engaging opening question that activates prior knowledge. Start with something relatable.
+- Turn 2-3: Respond to what the student said, acknowledge it, then ask a deeper follow-up question.
+- Turn 4+: If the student is close, give a gentle hint and final guiding question. If stuck, break it into a simpler sub-question.
+- NEVER give the direct answer — always end with a question.
+- Keep each response SHORT: 2-3 sentences max + 1 question.
+
+Respond ONLY with valid JSON:
+{
+  "acknowledgement": "Brief warm reaction to student's response (empty string on turn 1)",
+  "question": "Your Socratic question",
+  "hint": "A subtle hint if turn >= 3, else empty string",
+  "isNearAnswer": false
+}`;
+
+  const userMsg = turn === 1
+    ? `Topic: "${topic}". Student level: ${level}. Begin the Socratic dialogue.`
+    : `Topic: "${topic}". Student level: ${level}. Student's latest response: "${studentResponse}". This is turn ${turn}.`;
+
+  const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model:    FAST_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userMsg }
+      ],
+      stream: false,
+      options: { num_predict: 250, temperature: 0.7 }
+    })
+  });
+
+  const data    = await response.json();
+  const rawText = data.message.content;
+
+  try {
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    return { success: true, ...JSON.parse(cleaned), topic, turn, _ms: fetchMs };
+  } catch {
+    return {
+      success:         true,
+      acknowledgement: '',
+      question:        rawText.trim(),
+      hint:            '',
+      isNearAnswer:    false,
+      topic,
+      turn,
+      _ms: fetchMs
+    };
+  }
+}
+
+// ─────────────────────────────────────────────
+// TOOL 6: generate_concept_map
+// Returns nodes and edges representing how concepts relate
+// ─────────────────────────────────────────────
+async function generate_concept_map({ topic, level }) {
+  const systemPrompt = `You are a knowledge graph builder. Given a topic, generate a concept map showing how key ideas connect.
+
+Respond ONLY with valid JSON in exactly this format — no markdown, no extra text:
+{
+  "central": "Main topic label",
+  "nodes": [
+    { "id": "n1", "label": "Concept name", "type": "main" },
+    { "id": "n2", "label": "Related idea", "type": "related" },
+    { "id": "n3", "label": "Example",      "type": "example" }
+  ],
+  "edges": [
+    { "from": "central", "to": "n1", "label": "involves" },
+    { "from": "n1",      "to": "n2", "label": "requires" }
+  ]
+}
+
+Node types: "main" (key concepts), "related" (supporting ideas), "example" (concrete examples)
+Rules:
+- 5-9 nodes total (not counting central)
+- 6-10 edges
+- Beginner: simple concrete concepts. Advanced: technical, nuanced concepts.
+- Edge labels: short verbs like "causes", "requires", "produces", "is part of", "leads to"`;
+
+  const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model:    FAST_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: `Generate a concept map for "${topic}" at ${level} level.` }
+      ],
+      stream: false,
+      options: { num_predict: 600, temperature: 0.3 }
+    })
+  });
+
+  const data    = await response.json();
+  const rawText = data.message.content;
+
+  try {
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed  = JSON.parse(cleaned);
+    return { success: true, ...parsed, topic, level, _ms: fetchMs };
+  } catch {
+    return { success: false, error: 'Concept map generation failed', topic, level, _ms: fetchMs };
+  }
+}
+
 // Map tool name strings to their implementation functions
 const toolImplementations = {
   explain_topic,
   generate_quiz,
   track_progress,
-  suggest_next_topic
+  suggest_next_topic,
+  ask_socratic_question,
+  generate_concept_map
 };
 
 module.exports = { toolDefinitions, toolImplementations };
