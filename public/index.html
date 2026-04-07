@@ -1776,7 +1776,7 @@
     /* ============ Estimation Badge ============ */
     .estimate-badge {
       position: fixed;
-      bottom: 100px;
+      bottom: max(110px, calc(72px + env(safe-area-inset-bottom)));
       right: 20px;
       background: var(--primary);
       color: white;
@@ -1814,7 +1814,7 @@
     /* ============ PWA Install Banner ============ */
     .pwa-install-banner {
       position: fixed;
-      bottom: -100px;
+      bottom: calc(-100px - env(safe-area-inset-bottom));
       left: 0;
       right: 0;
       background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -1829,7 +1829,7 @@
     }
 
     .pwa-install-banner.show {
-      bottom: max(0px, env(safe-area-inset-bottom));
+      bottom: 0;
     }
 
     .pwa-install-banner-text {
@@ -1960,7 +1960,7 @@
 
       .estimate-badge {
         right: 12px;
-        bottom: 90px;
+        bottom: max(95px, calc(72px + env(safe-area-inset-bottom) + 15px));
       }
     }
 
@@ -2001,6 +2001,13 @@
 
       .status-badge {
         font-size: 12px;
+      }
+
+      .estimate-badge {
+        right: 12px;
+        bottom: max(80px, calc(72px + env(safe-area-inset-bottom) + 20px));
+        font-size: 11px;
+        padding: 6px 12px;
       }
     }
 
