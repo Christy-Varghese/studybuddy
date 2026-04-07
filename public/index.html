@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyBuddy</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6C63FF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StudyBuddy">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="msapplication-TileColor" content="#6C63FF">
+  <meta name="msapplication-TileImage" content="/icon-192.png">
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1491,6 +1502,86 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
     }
+
+    /* ============ PWA Install Banner ============ */
+    .pwa-install-banner {
+      position: fixed;
+      bottom: -100px;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      z-index: 9999;
+      transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      font-family: var(--font-family);
+    }
+
+    .pwa-install-banner.show {
+      bottom: 0;
+    }
+
+    .pwa-install-banner-text {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .pwa-install-banner-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .pwa-banner-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-family);
+    }
+
+    .pwa-banner-btn.install {
+      background: white;
+      color: var(--primary);
+    }
+
+    .pwa-banner-btn.install:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .pwa-banner-btn.dismiss {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .pwa-banner-btn.dismiss:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ============ Standalone Mode - Safe Area Support ============ */
+    @supports (padding: max(0px)) {
+      body.pwa-standalone {
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Notch awareness for iPhone-like devices */
+    @media (display-mode: standalone) {
+      body {
+        padding-top: max(12px, env(safe-area-inset-top));
+      }
+    }
   </style>
 </head>
 <body data-theme="intermediate">
@@ -1502,6 +1593,17 @@
     style="position:absolute; width:1px; height:1px; overflow:hidden;
            clip:rect(0,0,0,0); white-space:nowrap;"
   ></div>
+
+  <!-- ============ PWA Install Banner ============ -->
+  <div id="pwa-install-banner" class="pwa-install-banner" role="status" aria-live="assertive">
+    <div class="pwa-install-banner-text">
+      📱 <strong>Install StudyBuddy</strong> to your home screen for quick access!
+    </div>
+    <div class="pwa-install-banner-buttons">
+      <button id="pwa-install-btn" class="pwa-banner-btn install">Install Now</button>
+      <button id="pwa-dismiss-btn" class="pwa-banner-btn dismiss">Not now</button>
+    </div>
+  </div>
 
   <!-- ============ Header ============ -->
   <header>
@@ -1572,7 +1674,7 @@
         <div id="voice-preview"></div>
       </button>
       <button class="attach-btn" id="attachBtn" onclick="triggerImageUpload()" title="Attach image">📎</button>
-      <button id="send" onclick="sendMessage()">Send</button>
+      <button id="send">Send</button>
     </div>
   </div>
 
@@ -1693,18 +1795,11 @@
       inputEl.value = '';
       sendBtn.disabled = true;
 
-      // Show user message with optional image
-      let userBubbleHTML = '';
-      if (pendingImage) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          userBubbleHTML = `<img src="${e.target.result}" alt="Homework" class="bubble-image">${message}`;
-          const userBubble = addBubble(userBubbleHTML, 'user', true);
-        };
-        reader.readAsDataURL(pendingImage);
-      } else {
+      // Show user message with optional image (handled by sendToChat)
+      if (!pendingImage) {
         addBubble(message, 'user');
       }
+      // If there's an image, sendToChat will handle displaying it
 
       const thinkingBubble = addBubble('Thinking...', 'thinking');
       thinkingBubble.remove();
@@ -1717,90 +1812,6 @@
 
       sendBtn.disabled = false;
       inputEl.focus();
-    }
-
-    async function sendToChat(message) {
-      // Existing chat logic
-      let estimateBadge = null;
-      let countdownInterval = null;
-      try {
-        const estimateRes = await fetch('/estimate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message,
-            level: levelEl.value,
-            hasImage: !!pendingImage
-          })
-        });
-
-        if (estimateRes.ok) {
-          const estimate = await estimateRes.json();
-          const { badge, interval } = showEstimateBadge(estimate);
-          estimateBadge = badge;
-          countdownInterval = interval;
-        }
-      } catch (e) {
-        // Silently fail estimate - it's optional
-      }
-
-      try {
-        if (pendingImage) {
-          // Use /chat-with-image endpoint
-          const formData = new FormData();
-          formData.append('message', message);
-          formData.append('level', levelEl.value);
-          formData.append('history', JSON.stringify(history));
-          formData.append('image', pendingImage);
-
-          const res = await fetch('/chat-with-image', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await res.json();
-          if (estimateBadge) estimateBadge.remove();
-          if (countdownInterval) clearInterval(countdownInterval);
-
-          if (data.error) {
-            addBubble('⚠️ ' + data.error, 'bot');
-          } else {
-            renderBotResponse(data);
-            history.push({ role: 'user', content: message });
-            history.push({ role: 'assistant', content: data.reply });
-          }
-
-          pendingImage = null;
-          removeImage();
-        } else {
-          // Use /chat endpoint
-          const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message,
-              level: levelEl.value,
-              history
-            })
-          });
-
-          const data = await res.json();
-          if (estimateBadge) estimateBadge.remove();
-          if (countdownInterval) clearInterval(countdownInterval);
-
-          if (data.error) {
-            addBubble('⚠️ ' + data.error, 'bot');
-          } else {
-            renderBotResponse(data);
-            history.push({ role: 'user', content: message });
-            history.push({ role: 'assistant', content: data.reply });
-          }
-        }
-      } catch (e) {
-        if (estimateBadge) estimateBadge.remove();
-        if (countdownInterval) clearInterval(countdownInterval);
-        addBubble('⚠️ Could not reach the server.', 'bot');
-      }
     }
 
     // ============ Quiz Modal Handlers ============
@@ -1985,18 +1996,77 @@
       return { badge, interval };
     }
 
+    // ============ LaTeX to Readable Conversion ============
+    function convertLatexToReadable(text) {
+      if (!text) return text;
+
+      return text
+        // Remove malformed \text prefixes (e.g., \textH₂\textO → H₂O)
+        .replace(/\\text([A-Za-z₀-₉])/g, '$1')
+        // Remove \text{} wrappers entirely
+        .replace(/\\text\{([^}]*)\}/g, '$1')
+        // Fix subscript parentheses O₍₆₎ → O₆
+        .replace(/([A-Za-z])₍(\d+)₎/g, (match, letter, digit) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return letter + digit.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Chemical formulas: H_2O or H2O → H₂O
+        .replace(/([A-Za-z])(\d+)/g, (match, letter, num) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return letter + num.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Single subscripts: H_2 → H₂
+        .replace(/_(\d+)/g, (match, digit) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return digit.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Superscripts: ^2 → ²
+        .replace(/\^(\d+)/g, (match, digit) => {
+          const superscriptMap = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+          return digit.split('').map(d => superscriptMap[d] || d).join('');
+        })
+        // Greek letters: \alpha → α
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g, 'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\delta/g, 'δ')
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\lambda/g, 'λ')
+        .replace(/\\pi/g, 'π')
+        // Math operations
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+        .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
+        // Remove remaining LaTeX markers
+        .replace(/\$/g, '')
+        .replace(/\\\\/g, ' ')
+        .replace(/[{}]/g, '');
+    }
+
     // ============ Structured Response Rendering ============
     function renderBotResponse(data) {
       // If structured JSON is available, render it as cards
       if (data.structured && data.structured.steps) {
-        renderStructuredResponse(data.structured);
+        // Convert LaTeX in structured response
+        const converted = {
+          intro: convertLatexToReadable(data.structured.intro),
+          steps: (data.structured.steps || []).map(step => ({
+            title: convertLatexToReadable(step.title),
+            text: convertLatexToReadable(step.text),
+            emoji: step.emoji
+          })),
+          answer: convertLatexToReadable(data.structured.answer),
+          followup: convertLatexToReadable(data.structured.followup)
+        };
+        renderStructuredResponse(converted);
       } else {
         // Fallback: render as plain text bubble (existing behaviour)
-        // Strip any raw markdown bold/italic before displaying
-        const cleaned = (data.reply || '')
+        // Strip any raw markdown bold/italic and convert LaTeX
+        const cleaned = convertLatexToReadable((data.reply || '')
           .replace(/\*\*(.*?)\*\*/g, '$1')   // remove **bold**
           .replace(/\*(.*?)\*/g, '$1')        // remove *italic*
-          .trim();
+          .trim());
         addBubble(cleaned, 'bot');
       }
     }
@@ -2125,6 +2195,41 @@
 
       try {
         if (pendingImage) {
+          // Display user message with image first
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const bubbleContainer = document.createElement('div');
+            bubbleContainer.style.cssText = `
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+              align-self: flex-end;
+              max-width: 65%;
+            `;
+            
+            const imageBubble = document.createElement('img');
+            imageBubble.src = e.target.result;
+            imageBubble.className = 'bubble-image';
+            imageBubble.style.cssText = `
+              width: 120px;
+              height: 120px;
+              border-radius: 8px;
+              object-fit: cover;
+            `;
+            bubbleContainer.appendChild(imageBubble);
+            
+            if (message) {
+              const textBubble = document.createElement('div');
+              textBubble.className = 'bubble user';
+              textBubble.textContent = message;
+              bubbleContainer.appendChild(textBubble);
+            }
+            
+            chatEl.appendChild(bubbleContainer);
+            chatEl.scrollTop = chatEl.scrollHeight;
+          };
+          reader.readAsDataURL(pendingImage);
+
           // Use /chat-with-image endpoint
           const formData = new FormData();
           formData.append('message', message);
@@ -2136,6 +2241,13 @@
             method: 'POST',
             body: formData
           });
+          
+          if (!res.ok) {
+            const error = await res.json();
+            addBubble('❌ Error: ' + (error.error || 'Failed to process image'), 'bot');
+            throw new Error(error.error);
+          }
+
           const data = await res.json();
           pendingImage = null;
           imagePreviewContainer.innerHTML = '';
@@ -2143,9 +2255,15 @@
           if (estimateBadge) estimateBadge.remove();
           if (countdownInterval) clearInterval(countdownInterval);
 
-          renderBotResponse(data);
-          history.push({ role: 'user', content: message });
-          history.push({ role: 'assistant', content: data.reply });
+          // Ensure we have a valid response to render
+          if (data && (data.structured || data.reply)) {
+            renderBotResponse(data);
+          } else {
+            addBubble('Unable to process image. Please try again.', 'bot');
+          }
+
+          history.push({ role: 'user', content: message || '[Image uploaded]' });
+          history.push({ role: 'assistant', content: data.reply || 'Image analyzed' });
         } else {
           // Use /chat endpoint
           const res = await fetch('/chat', {
@@ -2157,6 +2275,13 @@
               history
             })
           });
+
+          if (!res.ok) {
+            const error = await res.json();
+            addBubble('❌ Error: ' + (error.error || 'Failed to get response'), 'bot');
+            throw new Error(error.error || 'Chat failed');
+          }
+
           const data = await res.json();
 
           if (estimateBadge) estimateBadge.remove();
@@ -2598,17 +2723,40 @@
         const inputElement = document.getElementById('input');
         if (inputElement) {
           inputElement.value = finalText;
-          console.log('[Voice] Text set in input element');
+          console.log('[Voice] Text set in input element:', finalText);
           updateVoicePreview(finalText);
+          hideVoiceStatusBar();
+          
           // Auto-send after a brief delay so UI updates are visible
-          setTimeout(() => {
-            console.log('[Voice] Attempting to send message...');
+          setTimeout(async () => {
+            console.log('[Voice] Attempting to send message at', new Date().toISOString());
             try {
-              // Call sendMessage - it should be available at this point
-              sendMessage();
-              console.log('[Voice] sendMessage() called successfully');
+              // Ensure sendMessage is complete before resetting
+              const result = await sendMessage();
+              console.log('[Voice] sendMessage() completed successfully at', new Date().toISOString(), 'Result:', result);
+              
+              // Reset voice state AFTER message is fully sent
+              voiceTranscript = '';
+              setTimeout(() => {
+                hideVoicePreview();
+                setMicState('idle');
+                console.log('[Voice] State reset to idle');
+              }, 500); // Delay to ensure UI has rendered
+              
             } catch (e) {
               console.error('[Voice] Error calling sendMessage:', e);
+              console.error('[Voice] Error stack:', e.stack);
+              
+              // Reset state on error too
+              voiceTranscript = '';
+              hideVoicePreview();
+              setMicState('idle');
+              
+              // Show error to user
+              const errorMsg = '⚠️ Voice message failed to send. Please try again.';
+              addBubble(errorMsg, 'bot');
+              announceToScreenReader(errorMsg);
+              
               // Fallback: trigger send button click
               const sendBtn = document.getElementById('send');
               console.log('[Voice] Trying fallback: clicking send button');
@@ -2616,14 +2764,10 @@
                 sendBtn.click();
               }
             }
-            // Reset voice state after message is sent
-            setTimeout(() => {
-              voiceTranscript = '';
-              hideVoicePreview();
-              setMicState('idle');
-              console.log('[Voice] State reset to idle');
-            }, 200);
           }, 200);
+        } else {
+          console.error('[Voice] Input element not found!');
+          setMicState('idle');
         }
       } else {
         announceToScreenReader('No speech was recognized');
@@ -2703,6 +2847,122 @@
 
     // Clean up voice state - reset after message is processed
     // Simple cleanup without wrapping sendMessage
+  </script>
+
+  <!-- ============ PWA Service Worker Registration & Install Banner ============ -->
+  <script>
+    (function() {
+      'use strict';
+
+      // ── Service Worker Registration ────────────────────
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              console.log('[PWA] Service Worker registered:', reg.scope);
+              
+              // Check for updates every 5 minutes
+              setInterval(() => {
+                reg.update().catch(err => {
+                  console.warn('[PWA] SW update check failed:', err);
+                });
+              }, 5 * 60 * 1000);
+            })
+            .catch(err => {
+              console.warn('[PWA] Service Worker registration failed:', err);
+            });
+        });
+
+        // Handle SW updates and prompt user to reload
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // A new SW took control — UI could refresh automatically or show a "reload" prompt
+          console.log('[PWA] New Service Worker took control');
+        });
+      }
+
+      // ── Standalone Mode Detection ────────────────────
+      // When app is running in standalone mode (installed on home screen),
+      // add the pwa-standalone class for safe area padding
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.body.classList.add('pwa-standalone');
+        console.log('[PWA] Running in standalone mode');
+      }
+
+      // ── Install Prompt Banner ────────────────────
+      let deferredPrompt = null;
+      const banner = document.getElementById('pwa-install-banner');
+      const installBtn = document.getElementById('pwa-install-btn');
+      const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+      // Listen for the beforeinstallprompt event (Chrome, Edge, Opera)
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent browser's default install prompt
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log('[PWA] Install prompt available');
+
+        // Show banner after 3 seconds
+        setTimeout(() => {
+          if (banner && !banner.classList.contains('show')) {
+            banner.classList.add('show');
+          }
+        }, 3000);
+      });
+
+      // Install button clicked
+      if (installBtn) {
+        installBtn.addEventListener('click', () => {
+          if (!deferredPrompt) {
+            console.warn('[PWA] Install prompt not available');
+            return;
+          }
+
+          // Show the install prompt
+          deferredPrompt.prompt();
+
+          // Wait for user's choice
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('[PWA] Install accepted');
+              hideBanner();
+            } else {
+              console.log('[PWA] Install rejected');
+            }
+            deferredPrompt = null;
+          });
+        });
+      }
+
+      // Dismiss button clicked
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          hideBanner();
+        });
+      }
+
+      function hideBanner() {
+        if (banner) {
+          banner.classList.remove('show');
+        }
+      }
+
+      // Hide banner when user installs successfully
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App installed successfully');
+        hideBanner();
+      });
+
+      // ── Offline Detection ────────────────────
+      window.addEventListener('offline', () => {
+        console.log('[PWA] Offline detected');
+        // Show offline indicator (optional UI enhancement)
+      });
+
+      window.addEventListener('online', () => {
+        console.log('[PWA] Online restored');
+        // Hide offline indicator
+      });
+    })();
   </script>
 </body>
 </html>
