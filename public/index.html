@@ -2476,47 +2476,105 @@
       }
     }
 
-    /* ============ PWA Install Banner (Mobile-First) ============ */
+    /* ============ PWA Install Banner (Centered Modal Style) ============ */
     .pwa-install-banner {
       position: fixed;
-      bottom: calc(-120px - env(safe-area-inset-bottom));
-      left: 0;
-      right: 0;
+      /* Center on screen */
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      /* Sizing */
+      width: calc(100% - var(--space-lg) * 2);
+      max-width: 360px;
+      /* Styling */
       background: var(--glass-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       color: var(--text-primary);
-      padding: var(--space-md);
-      padding-bottom: max(var(--space-md), calc(env(safe-area-inset-bottom) + var(--space-sm)));
+      padding: var(--space-xl) var(--space-lg);
       text-align: center;
       z-index: 9999;
-      transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow: var(--shadow-xl);
+      /* Animation */
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      /* Polish */
+      box-shadow: var(--shadow-xl), 0 0 0 1px var(--glass-border);
+      border-radius: var(--border-radius-lg);
       font-family: var(--font-family);
-      border-top: 1px solid var(--glass-border);
+    }
+
+    /* Backdrop overlay when banner is shown */
+    .pwa-install-banner::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
     }
 
     .pwa-install-banner.show {
-      bottom: 0;
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .pwa-install-banner.show::before {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* App icon in banner */
+    .pwa-install-banner-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto var(--space-md);
+      background: var(--primary);
+      border-radius: var(--border-radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .pwa-install-banner-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+      color: var(--text-primary);
     }
 
     .pwa-install-banner-text {
       font-size: var(--font-size-sm);
-      margin-bottom: var(--space-sm);
-      line-height: 1.4;
+      margin-bottom: var(--space-lg);
+      line-height: 1.5;
+      color: var(--text-secondary);
     }
 
     .pwa-install-banner-buttons {
       display: flex;
       gap: var(--space-sm);
       justify-content: center;
-      flex-wrap: wrap;
+      flex-direction: column;
+    }
+
+    @media (min-width: 400px) {
+      .pwa-install-banner-buttons {
+        flex-direction: row;
+      }
     }
 
     .pwa-banner-btn {
       /* Touch target compliance */
       min-height: var(--touch-target-min);
-      padding: var(--space-sm) var(--space-lg);
+      padding: var(--space-sm) var(--space-xl);
       border: none;
       border-radius: var(--border-radius-md);
       font-size: var(--font-size-sm);
@@ -2524,6 +2582,7 @@
       cursor: pointer;
       transition: all 0.2s ease;
       font-family: var(--font-family);
+      flex: 1;
     }
 
     .pwa-banner-btn.install {
@@ -2535,16 +2594,18 @@
     .pwa-banner-btn.install:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-lg);
+      background: var(--primary-dark);
     }
 
     .pwa-banner-btn.dismiss {
-      background: var(--border);
+      background: transparent;
       color: var(--text-secondary);
+      border: 1px solid var(--border);
     }
 
     .pwa-banner-btn.dismiss:hover {
-      background: var(--text-secondary);
-      color: var(--surface);
+      background: var(--border);
+      color: var(--text-primary);
     }
 
     /* ============ Standalone Mode - Safe Area Support ============ */
@@ -2746,14 +2807,16 @@
            clip:rect(0,0,0,0); white-space:nowrap;"
   ></div>
 
-  <!-- ============ PWA Install Banner ============ -->
-  <div id="pwa-install-banner" class="pwa-install-banner" role="status" aria-live="assertive">
-    <div class="pwa-install-banner-text">
-      📱 <strong>Install StudyBuddy</strong> to your home screen for quick access!
+  <!-- ============ PWA Install Banner (Centered Modal) ============ -->
+  <div id="pwa-install-banner" class="pwa-install-banner" role="dialog" aria-labelledby="pwa-title" aria-describedby="pwa-desc">
+    <div class="pwa-install-banner-icon">📚</div>
+    <div class="pwa-install-banner-title" id="pwa-title">Install StudyBuddy</div>
+    <div class="pwa-install-banner-text" id="pwa-desc">
+      Add StudyBuddy to your home screen for instant access, offline support, and a native app experience!
     </div>
     <div class="pwa-install-banner-buttons">
-      <button id="pwa-install-btn" class="pwa-banner-btn install">Install Now</button>
-      <button id="pwa-dismiss-btn" class="pwa-banner-btn dismiss">Not now</button>
+      <button id="pwa-install-btn" class="pwa-banner-btn install">✨ Install App</button>
+      <button id="pwa-dismiss-btn" class="pwa-banner-btn dismiss">Maybe Later</button>
     </div>
   </div>
 
