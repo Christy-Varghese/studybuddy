@@ -4,82 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyBuddy — AI Tutor</title>
+  <meta name="description" content="Offline AI-powered tutoring powered by Gemma 4. Learn anything, anywhere — no internet needed.">
+
+  <!-- PWA Meta Tags -->
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#6C63FF">
-  <meta name="description" content="Offline AI-powered tutoring powered by Gemma 4. Learn anything, anywhere.">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StudyBuddy">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="msapplication-TileColor" content="#6C63FF">
+  <meta name="msapplication-TileImage" content="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
   <style>
     /* ============ CSS Variables & Theme Defaults ============ */
     :root {
       color-scheme: light dark;
+      
+      /* ── Fluid Typography Scale ── */
+      --font-size-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
+      --font-size-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem);
+      --font-size-base: clamp(0.875rem, 0.8rem + 0.4vw, 1rem);
+      --font-size-md: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+      --font-size-lg: clamp(1.125rem, 1rem + 0.6vw, 1.25rem);
+      --font-size-xl: clamp(1.25rem, 1rem + 1vw, 1.5rem);
+      --font-size-2xl: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+      --font-size-3xl: clamp(1.75rem, 1.3rem + 2vw, 2.5rem);
+      
+      /* ── Fluid Spacing Scale ── */
+      --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+      --space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
+      --space-md: clamp(0.75rem, 0.6rem + 0.75vw, 1rem);
+      --space-lg: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+      --space-xl: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+      --space-2xl: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+      
+      /* ── Layout ── */
+      --container-max: 1200px;
+      --container-padding: 16px;
+      
+      /* ── Touch Targets (Accessibility) ── */
+      --touch-target-min: 44px;
+      
+      /* ── Glassmorphism ── */
+      --glass-bg: rgba(255, 255, 255, 0.8);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-blur: blur(12px);
+      
+      /* ── Shadows ── */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
+      
     }
 
-    /* Default (intermediate) theme */
-    body {
-      --primary: #6C63FF;
-      --primary-dark: #5A52E0;
-      --bg: #F8F7FF;
-      --surface: #FFFFFF;
-      --text-primary: #1A1A2E;
-      --text-secondary: #6B7280;
-      --bubble-bot-bg: #FFFFFF;
-      --accent: #A78BFA;
-      --success: #10B981;
-      --error: #EF4444;
-      --border: #E5E7EB;
-      --font-family: 'Inter', sans-serif;
+    /* ═══════════════════════════════════════════════════════════
+       PERFORMANCE OPTIMIZATIONS
+       GPU-accelerated animations, reduced repaints
+       ═══════════════════════════════════════════════════════════ */
+    
+    /* GPU acceleration for animated elements */
+    .bubble, .skeleton-loader, .facts-loading-container, .quiz-loading-container,
+    .estimate-badge, .resp-intro, .resp-step, .resp-answer, .structured-response {
+      will-change: transform, opacity;
+      transform: translateZ(0); /* Force GPU layer */
+      backface-visibility: hidden;
     }
 
-    /* ============ Beginner Theme — Playful classroom ============ */
-    [data-theme="beginner"] {
-      --primary: #FF6B6B;
-      --primary-dark: #E05555;
-      --bg: #FFF9F0;
-      --surface: #FFFFFF;
-      --text-primary: #2D2D2D;
-      --text-secondary: #888888;
-      --bubble-bot-bg: #FFFFFF;
-      --accent: #FFD93D;
-      --success: #6BCB77;
-      --error: #FF6B6B;
-      --border: #FFE0CC;
-      --font-family: 'Nunito', sans-serif;
+    /* Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
 
-    /* ============ Intermediate Theme — Clean study desk ============ */
-    [data-theme="intermediate"] {
-      --primary: #6C63FF;
-      --primary-dark: #5A52E0;
-      --bg: #F8F7FF;
-      --surface: #FFFFFF;
-      --text-primary: #1A1A2E;
-      --text-secondary: #6B7280;
-      --bubble-bot-bg: #FFFFFF;
-      --accent: #A78BFA;
-      --success: #10B981;
-      --error: #EF4444;
-      --border: #E5E7EB;
-      --font-family: 'Inter', sans-serif;
-    }
-
-    /* ============ Advanced Theme — Research terminal ============ */
-    [data-theme="advanced"] {
-      --primary: #00D2FF;
-      --primary-dark: #00A8CC;
-      --bg: #0D1117;
-      --surface: #161B22;
-      --text-primary: #E6EDF3;
-      --text-secondary: #8B949E;
-      --bubble-bot-bg: #1C2128;
-      --accent: #388BFD;
-      --success: #3FB950;
-      --error: #F85149;
-      --border: #30363D;
-      --font-family: 'JetBrains Mono', monospace;
+    /* Optimize scrolling performance */
+    .chat-area {
+      will-change: scroll-position;
+      contain: layout style paint;
     }
 
     /* ============ Global Reset ============ */
@@ -89,30 +97,135 @@
       box-sizing: border-box;
     }
 
-    html, body {
+    html {
       height: 100%;
+      /* Prevent font-size inflation on iOS */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      height: 100%;
+      min-height: 100vh;
+      min-height: -webkit-fill-available; /* iOS Safari */
     }
 
     body {
       font-family: var(--font-family);
-      font-size: 15px;
+      font-size: var(--font-size-base);
       line-height: 1.7;
       background: var(--bg);
       color: var(--text-primary);
+      /* Mobile-first: Column layout by default */
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      transition: background-color 0.15s ease, color 0.15s ease;
+      /* Smooth transitions for theme switching - colors "bleed" into each other */
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      /* Safe area support for all edges */
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Container wrapper for max-width constraint */
+    .app-container {
+      width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
 
     [data-theme="advanced"] {
-      font-size: 14px;
+      font-size: var(--font-size-sm);
+    }
+
+    /* Advanced theme glassmorphism overrides */
+    [data-theme="advanced"] {
+      --glass-bg: rgba(10, 10, 15, 0.9);
+      --glass-border: rgba(45, 45, 58, 0.5);
     }
 
     /* ============ Animations ============ */
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Staggered entrance animation ── */
+    @keyframes fadeInUpStaggered {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── Scale-up bounce for answer pill ── */
+    @keyframes scaleUpBounce {
+      0% {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      50% {
+        transform: scale(1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ── Skeleton shimmer effect (left to right) ── */
+    @keyframes skeletonShimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    /* ── Skeleton fade out into content ── */
+    @keyframes skeletonFadeOut {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        visibility: hidden;
+      }
+    }
+
+    /* ── Badge shrink and fade (countdown to reality) ── */
+    @keyframes badgeShrinkFade {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.5);
+        visibility: hidden;
+      }
+    }
+
+    /* ── Simultaneous greeting fade in ── */
+    @keyframes greetingFadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     @keyframes pulse {
@@ -151,27 +264,49 @@
       100% { transform: scale(1); }
     }
 
-    /* ============ Header ============ */
+    /* ============ Header (Glassmorphism Mobile-First) ============ */
     header {
-      height: 60px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: white;
+      /* Mobile-first: Compact header */
+      height: 56px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      color: var(--text-primary);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 0 var(--container-padding);
+      box-shadow: var(--shadow-md);
       flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    /* Desktop: Larger header */
+    @media (min-width: 1024px) {
+      header {
+        height: 64px;
+        padding: 0 var(--space-xl);
+      }
+    }
+
+    [data-theme="beginner"] header {
+      background: linear-gradient(135deg, var(--accent), var(--highlight));
+      color: var(--text-primary);
+      backdrop-filter: none;
+      border-bottom: none;
     }
 
     [data-theme="advanced"] header {
-      background: var(--surface);
+      background: var(--glass-bg);
       color: var(--text-primary);
       border-bottom: 1px solid var(--border);
     }
 
     header h1 {
-      font-size: 20px;
+      font-size: var(--font-size-lg);
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -179,7 +314,7 @@
     }
 
     [data-theme="advanced"] header h1 {
-      font-size: 16px;
+      font-size: var(--font-size-base);
       letter-spacing: 0.5px;
     }
 
@@ -197,11 +332,11 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
     }
 
     [data-theme="advanced"] .status-badge {
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       font-family: 'JetBrains Mono', monospace;
     }
 
@@ -233,38 +368,71 @@
       animation: float-up 3s ease-in forwards;
     }
 
-    /* ============ Controls Bar ============ */
+    /* ============ Controls Bar (Mobile-First) ============ */
     .controls {
-      height: 52px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      /* Mobile-first: Wrap controls vertically */
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 16px;
-      padding: 0 24px;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--container-padding);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       position: sticky;
-      top: 60px;
-      z-index: 10;
+      top: 56px;
+      z-index: 40;
+    }
+
+    /* Desktop: Single row controls */
+    @media (min-width: 1024px) {
+      .controls {
+        flex-wrap: nowrap;
+        height: 56px;
+        padding: 0 var(--space-xl);
+        top: 64px;
+      }
     }
 
     .controls label {
       font-weight: 500;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       white-space: nowrap;
       color: var(--text-primary);
+      /* Mobile: Full width label */
+      flex-basis: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      .controls label {
+        flex-basis: auto;
+      }
     }
 
     #level {
-      padding: 6px 12px;
+      /* Touch target compliance: min 44px height */
+      min-height: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-md);
       border-radius: 20px;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text-primary);
-      font-size: 14px;
+      font-size: var(--font-size-base);
       font-family: inherit;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      /* Mobile: Full width selector */
+      width: 100%;
+      flex: 1;
+    }
+
+    @media (min-width: 1024px) {
+      #level {
+        width: auto;
+        flex: none;
+      }
     }
 
     [data-theme="beginner"] #level {
@@ -280,6 +448,7 @@
 
     #level:hover {
       border-color: var(--primary);
+      transform: translateY(-1px);
     }
 
     #level:focus {
@@ -298,17 +467,37 @@
     }
 
     .controls button {
-      margin-left: auto;
-      padding: 8px 16px;
+      /* Touch target compliance */
+      min-height: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-md);
       background: var(--primary);
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
       font-family: inherit;
+      white-space: nowrap;
+    }
+
+    /* Mobile: Controls buttons layout */
+    @media (max-width: 1023px) {
+      .controls button {
+        flex: 1;
+        min-width: fit-content;
+      }
+      
+      .controls button:first-of-type {
+        margin-left: 0;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .controls button:first-of-type {
+        margin-left: auto;
+      }
     }
 
     [data-theme="beginner"] .controls button {
@@ -341,34 +530,56 @@
       transform: scale(0.98);
     }
 
-    /* ============ Chat Area ============ */
+    /* ============ Chat Area (Mobile-First) ============ */
     #chat {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      padding: 20px 24px;
+      -webkit-overflow-scrolling: touch;
+      /* Mobile-first: Compact padding */
+      padding: var(--space-md) var(--container-padding);
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      max-width: 800px;
-      margin: 0 auto;
+      gap: var(--space-md);
       width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+    }
+
+    /* Desktop: More spacious chat */
+    @media (min-width: 1024px) {
+      #chat {
+        padding: var(--space-lg) var(--space-xl);
+        max-width: 900px;
+      }
     }
 
     .bubble {
-      max-width: 72%;
-      padding: 12px 16px;
-      border-radius: 18px;
+      /* Mobile-first: 90% width bubbles */
+      max-width: 90%;
+      padding: var(--space-md) var(--space-md);
+      border-radius: var(--border-radius-md);
       line-height: 1.6;
       word-wrap: break-word;
       animation: fadeInUp 0.3s ease;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: var(--space-sm);
+      /* Soft shadows instead of harsh borders */
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Desktop: Narrower bubbles */
+    @media (min-width: 1024px) {
+      .bubble {
+        max-width: 72%;
+        padding: var(--space-md) var(--space-lg);
+      }
     }
 
     [data-theme="advanced"] .bubble {
-      border-radius: 6px;
-      font-size: 14px;
+      border-radius: var(--border-radius-md);
+      font-size: var(--font-size-sm);
     }
 
     .user {
@@ -382,6 +593,7 @@
       background: var(--surface);
       border: 1px solid var(--primary);
       color: var(--primary);
+      box-shadow: none;
     }
 
     .user::before {
@@ -392,7 +604,7 @@
       content: "> query:";
       display: block;
       color: var(--text-secondary);
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       margin-bottom: -6px;
     }
 
@@ -401,24 +613,23 @@
       color: var(--text-primary);
       align-self: flex-start;
       border-bottom-left-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     [data-theme="beginner"] .bot {
       border-left: 4px solid var(--accent);
-      padding-left: 16px;
+      padding-left: var(--space-md);
     }
 
     [data-theme="intermediate"] .bot {
       border-left: 3px solid var(--primary);
-      padding-left: 16px;
+      padding-left: var(--space-md);
     }
 
     [data-theme="advanced"] .bot {
       background: var(--bubble-bot-bg);
       border: 1px solid var(--border);
       color: var(--text-primary);
-      padding: 12px 16px;
+      padding: var(--space-md) var(--space-md);
       box-shadow: none;
     }
 
@@ -438,14 +649,14 @@
       content: "$ response:";
       display: block;
       color: var(--text-secondary);
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       margin-bottom: -6px;
     }
 
     .thinking {
       font-style: italic;
       color: var(--text-secondary);
-      font-size: 13px;
+      font-size: var(--font-size-sm);
     }
 
     [data-theme="beginner"] .thinking::before {
@@ -481,11 +692,20 @@
     }
 
     .bubble-image {
-      width: 120px;
-      height: 120px;
+      width: 100%;
+      max-width: 200px;
+      height: auto;
+      aspect-ratio: 1;
       border-radius: 8px;
       object-fit: cover;
-      margin-bottom: 8px;
+      margin-bottom: var(--space-sm);
+    }
+
+    @media (min-width: 1024px) {
+      .bubble-image {
+        width: 120px;
+        height: 120px;
+      }
     }
 
     [data-theme="beginner"] .system-msg {
@@ -498,39 +718,86 @@
       color: var(--text-secondary);
     }
 
-    /* ============ Input Area ============ */
+    /* ── Empty State (Welcome Screen) ── */
+    .welcome-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-xl);
+      flex: 1;
+    }
+
+    .welcome-state .welcome-icon {
+      font-size: clamp(3rem, 8vw, 5rem);
+      margin-bottom: var(--space-md);
+    }
+
+    .welcome-state h2 {
+      font-size: var(--font-size-xl);
+      color: var(--text-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .welcome-state p {
+      font-size: var(--font-size-base);
+      color: var(--text-secondary);
+      max-width: 300px;
+    }
+
+    /* ============ Input Area (Mobile-First) ============ */
     .input-row {
+      /* Mobile-first: Safe area aware padding */
       min-height: 72px;
-      padding: 16px 24px;
-      background: var(--surface);
+      padding: var(--space-md) var(--container-padding);
+      padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
       border-top: 1px solid var(--border);
       display: flex;
-      gap: 12px;
+      gap: var(--space-sm);
       align-items: flex-end;
       flex-shrink: 0;
       position: relative;
+    }
+
+    @media (min-width: 1024px) {
+      .input-row {
+        padding: var(--space-md) var(--space-xl);
+        gap: var(--space-md);
+      }
     }
 
     .input-container {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: var(--space-sm);
     }
 
     #input {
       flex: 1;
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--border-radius-md);
       border: 1px solid var(--border);
       resize: none;
-      font-size: 15px;
+      /* Mobile: 16px prevents iOS zoom on focus */
+      font-size: 16px;
       font-family: inherit;
       background: var(--surface);
       color: var(--text-primary);
       transition: all 0.2s;
-      min-height: 40px;
+      min-height: var(--touch-target-min);
       max-height: 120px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    @media (min-width: 1024px) {
+      #input {
+        font-size: var(--font-size-base);
+      }
     }
 
     [data-theme="beginner"] #input {
@@ -566,22 +833,32 @@
 
     .button-group {
       display: flex;
-      gap: 8px;
+      gap: var(--space-sm);
       align-items: center;
     }
 
     #send {
-      padding: 10px 20px;
+      /* Touch target compliance */
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-md);
       background: var(--primary);
       color: white;
       border: none;
-      border-radius: 12px;
-      font-size: 15px;
+      border-radius: var(--border-radius-md);
+      font-size: var(--font-size-base);
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
       white-space: nowrap;
       font-family: inherit;
+      box-shadow: var(--shadow-md);
+    }
+
+    @media (min-width: 1024px) {
+      #send {
+        padding: var(--space-sm) var(--space-lg);
+      }
     }
 
     [data-theme="beginner"] #send {
@@ -597,6 +874,7 @@
       background: transparent;
       border: 1px solid var(--primary);
       color: var(--primary);
+      box-shadow: none;
     }
 
     [data-theme="advanced"] #send:hover {
@@ -606,6 +884,8 @@
 
     #send:hover {
       background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
     }
 
     #send:active {
@@ -615,10 +895,15 @@
     #send:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .attach-btn {
-      padding: 10px;
+      /* Touch target compliance */
+      min-height: var(--touch-target-min);
+      min-width: var(--touch-target-min);
+      padding: var(--space-sm);
       background: transparent;
       color: var(--text-secondary);
       border: 1px solid var(--border);
@@ -626,8 +911,6 @@
       font-size: 16px;
       cursor: pointer;
       transition: all 0.2s;
-      width: 40px;
-      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -670,7 +953,7 @@
       height: 80px;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md);
     }
 
     .image-preview img {
@@ -702,7 +985,7 @@
       background: rgba(0, 0, 0, 0.9);
     }
 
-    /* ============ Quiz Modal ============ */
+    /* ============ Quiz Modal (Mobile-First) ============ */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -710,11 +993,13 @@
       right: 0;
       bottom: 0;
       background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 100;
+      padding: var(--container-padding);
     }
 
     .modal-overlay.active {
@@ -723,52 +1008,56 @@
 
     .modal-content {
       background: var(--surface);
-      border-radius: 12px;
-      padding: 32px;
+      border-radius: var(--border-radius-lg);
+      padding: var(--space-lg);
       max-width: 400px;
-      width: 90%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      box-shadow: var(--shadow-xl);
       animation: slideIn 0.3s ease;
       color: var(--text-primary);
       font-family: inherit;
+      /* Safe area aware on mobile */
+      max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);
+      overflow-y: auto;
     }
 
     [data-theme="advanced"] .modal-content {
       background: var(--surface);
       border: 1px solid var(--border);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
+      font-size: var(--font-size-sm);
     }
 
     .modal-content h2 {
-      font-size: 20px;
-      margin-bottom: 20px;
+      font-size: var(--font-size-xl);
+      margin-bottom: var(--space-lg);
       color: var(--text-primary);
     }
 
     [data-theme="advanced"] .modal-content h2 {
-      font-size: 14px;
+      font-size: var(--font-size-base);
       font-weight: 500;
     }
 
     .modal-field {
-      margin-bottom: 16px;
+      margin-bottom: var(--space-md);
     }
 
     .modal-field label {
       display: block;
       font-weight: 500;
-      margin-bottom: 6px;
-      font-size: 14px;
+      margin-bottom: var(--space-xs);
+      font-size: var(--font-size-sm);
       color: var(--text-primary);
     }
 
     .modal-field input {
       width: 100%;
-      padding: 10px 12px;
+      min-height: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-md);
       border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 15px;
+      font-size: 16px; /* Prevents iOS zoom */
       font-family: inherit;
       background: var(--surface);
       color: var(--text-primary);
@@ -778,7 +1067,7 @@
     [data-theme="advanced"] .modal-field input {
       background: var(--bg);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
+      font-size: var(--font-size-sm);
     }
 
     .modal-field input:focus {
@@ -798,16 +1087,18 @@
 
     .modal-buttons {
       display: flex;
-      gap: 12px;
+      gap: var(--space-md);
       justify-content: flex-end;
-      margin-top: 24px;
+      margin-top: var(--space-lg);
+      flex-wrap: wrap;
     }
 
     .modal-btn {
-      padding: 10px 20px;
+      min-height: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-lg);
       border: none;
       border-radius: 8px;
-      font-size: 15px;
+      font-size: var(--font-size-base);
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
@@ -817,6 +1108,7 @@
     .modal-btn.primary {
       background: var(--primary);
       color: white;
+      box-shadow: var(--shadow-md);
     }
 
     [data-theme="advanced"] .modal-btn.primary {
@@ -826,6 +1118,8 @@
 
     .modal-btn.primary:hover {
       background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
     }
 
     .modal-btn.secondary {
@@ -848,31 +1142,39 @@
       background: #d1d5db;
     }
 
-    /* ============ Quiz Card ============ */
+    /* ============ Quiz Card (Mobile-First with Grid) ============ */
     .quiz-card {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
+      border: none;
+      border-radius: var(--border-radius-lg);
+      padding: var(--space-lg);
       background: var(--surface);
       align-self: flex-start;
       max-width: 100%;
       width: 100%;
       animation: fadeInUp 0.3s ease;
       font-family: inherit;
+      box-shadow: var(--shadow-lg);
+    }
+
+    @media (min-width: 1024px) {
+      .quiz-card {
+        max-width: 500px;
+      }
     }
 
     [data-theme="advanced"] .quiz-card {
       border-radius: 6px;
       border: 1px solid var(--border);
+      box-shadow: none;
     }
 
     .quiz-card h2 {
       background: linear-gradient(135deg, var(--primary), var(--accent));
       color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin: -20px -20px 16px -20px;
-      font-size: 18px;
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--border-radius-md);
+      margin: calc(-1 * var(--space-lg)) calc(-1 * var(--space-lg)) var(--space-md) calc(-1 * var(--space-lg));
+      font-size: var(--font-size-lg);
       text-align: center;
     }
 
@@ -884,11 +1186,11 @@
       background: transparent;
       color: var(--text-primary);
       padding: 0;
-      margin: 0 0 16px 0;
+      margin: 0 0 var(--space-md) 0;
       text-transform: uppercase;
       letter-spacing: 1px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
+      padding-bottom: var(--space-md);
     }
 
     [data-theme="advanced"] .quiz-card h2::before {
@@ -901,24 +1203,35 @@
 
     .quiz-question {
       font-weight: 600;
-      margin-bottom: 16px;
-      font-size: 16px;
+      margin-bottom: var(--space-md);
+      font-size: var(--font-size-md);
       color: var(--text-primary);
     }
 
     [data-theme="advanced"] .quiz-question {
-      font-size: 14px;
+      font-size: var(--font-size-sm);
     }
 
+    /* Quiz options grid on larger screens */
     .quiz-options {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-bottom: 16px;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    @media (min-width: 768px) {
+      .quiz-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-md);
+      }
     }
 
     .option-btn {
-      padding: 12px 16px;
+      /* Touch target compliance */
+      min-height: var(--touch-target-min);
+      padding: var(--space-md) var(--space-md);
       text-align: left;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -1113,6 +1426,166 @@
       animation: confetti 3s ease-out forwards;
     }
 
+    /* ============ Quiz Loading Animation ============ */
+    .quiz-loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-xl) var(--space-lg);
+      text-align: center;
+      min-height: 200px;
+    }
+
+    .quiz-loading-spinner {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin-bottom: var(--space-lg);
+    }
+
+    /* Animated book icon */
+    .quiz-loading-book {
+      font-size: 40px;
+      animation: bookBounce 1s ease-in-out infinite;
+    }
+
+    @keyframes bookBounce {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-10px) rotate(5deg); }
+    }
+
+    /* Orbiting dots around the book */
+    .quiz-loading-dots {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      animation: spinDots 2s linear infinite;
+    }
+
+    .quiz-loading-dots span {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: dotPulse 1s ease-in-out infinite;
+    }
+
+    .quiz-loading-dots span:nth-child(1) {
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      animation-delay: 0s;
+    }
+
+    .quiz-loading-dots span:nth-child(2) {
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      animation-delay: 0.25s;
+    }
+
+    .quiz-loading-dots span:nth-child(3) {
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      animation-delay: 0.5s;
+    }
+
+    .quiz-loading-dots span:nth-child(4) {
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      animation-delay: 0.75s;
+    }
+
+    @keyframes spinDots {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes dotPulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .quiz-loading-text {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .quiz-loading-subtext {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      max-width: 250px;
+    }
+
+    /* Typewriter effect for loading messages */
+    .quiz-loading-message {
+      font-size: var(--font-size-sm);
+      color: var(--primary);
+      font-style: italic;
+      min-height: 24px;
+      margin-top: var(--space-md);
+    }
+
+    /* Progress bar */
+    .quiz-loading-progress {
+      width: 100%;
+      max-width: 200px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: var(--space-md);
+    }
+
+    .quiz-loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 2px;
+      animation: progressPulse 2s ease-in-out infinite;
+      width: 30%;
+    }
+
+    @keyframes progressPulse {
+      0% { width: 10%; margin-left: 0; }
+      50% { width: 50%; margin-left: 25%; }
+      100% { width: 10%; margin-left: 90%; }
+    }
+
+    /* Theme overrides for quiz loading */
+    [data-theme="beginner"] .quiz-loading-dots span {
+      background: var(--primary);
+    }
+
+    [data-theme="beginner"] .quiz-loading-progress-bar {
+      background: linear-gradient(90deg, #FF6B6B, #FFD93D);
+    }
+
+    [data-theme="advanced"] .quiz-loading-spinner {
+      filter: none;
+    }
+
+    [data-theme="advanced"] .quiz-loading-book {
+      animation: bookBounce 1s ease-in-out infinite, glowPulse 2s ease-in-out infinite;
+    }
+
+    [data-theme="advanced"] .quiz-loading-dots span {
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { filter: drop-shadow(0 0 5px var(--primary)); }
+      50% { filter: drop-shadow(0 0 15px var(--primary)); }
+    }
+
     /* Theme transition */
     body.theme-transitioning {
       opacity: 0;
@@ -1123,35 +1596,53 @@
       opacity: 1;
     }
 
-    /* ── Structured response container ── */
+    /* ── Structured response container (Mobile-First) ── */
     .structured-response {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-width: 78%;
+      gap: var(--space-sm);
+      /* Mobile-first: 90% width */
+      max-width: 90%;
       align-self: flex-start;
+    }
+
+    @media (min-width: 1024px) {
+      .structured-response {
+        max-width: 78%;
+      }
     }
 
     /* ── Intro ── */
     .resp-intro {
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       line-height: 1.65;
-      padding: 10px 14px;
+      padding: var(--space-sm) var(--space-md);
       border-radius: 16px 16px 16px 4px;
       background: var(--surface, #fff);
       border: 0.5px solid var(--border, #E5E7EB);
       color: var(--text-primary, #1A1A2E);
+      box-shadow: var(--shadow-sm);
     }
 
-    /* ── Step card ── */
+    /* ── Step card (transforms to vertical scrollable on mobile) ── */
     .resp-step {
       display: flex;
-      gap: 10px;
+      gap: var(--space-sm);
       align-items: flex-start;
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--border-radius-md);
       background: var(--surface, #fff);
       border: 0.5px solid var(--border, #E5E7EB);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Step cards grid for desktop */
+    @media (min-width: 1024px) {
+      .resp-steps-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-md);
+      }
     }
 
     .resp-step-num {
@@ -1161,7 +1652,7 @@
       border-radius: 50%;
       background: var(--primary, #6C63FF);
       color: #fff;
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -1177,23 +1668,23 @@
     }
 
     .resp-step-title {
-      font-size: 13px;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       color: var(--text-primary, #1A1A2E);
       line-height: 1.4;
     }
 
     .resp-step-text {
-      font-size: 13px;
+      font-size: var(--font-size-sm);
       color: var(--text-secondary, #6B7280);
       line-height: 1.6;
     }
 
     /* Emoji row — sits on its own line with generous spacing */
     .resp-step-emoji {
-      font-size: 22px;
+      font-size: clamp(18px, 4vw, 22px);
       letter-spacing: 5px;
-      margin-top: 6px;
+      margin-top: var(--space-xs);
       line-height: 1.4;
       display: block;
     }
@@ -1204,22 +1695,710 @@
       align-self: flex-start;
       background: var(--success, #10B981);
       color: #fff;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       border-radius: 20px;
-      padding: 7px 18px;
+      padding: var(--space-xs) var(--space-md);
       line-height: 1.4;
+      box-shadow: var(--shadow-sm);
     }
 
     /* ── Follow-up ── */
     .resp-followup {
-      font-size: 12px;
+      font-size: var(--font-size-xs);
       font-style: italic;
       color: var(--text-secondary, #6B7280);
       background: var(--bg, #F8F7FF);
       border-radius: 10px;
-      padding: 8px 12px;
+      padding: var(--space-sm) var(--space-md);
       line-height: 1.5;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       VISION ANALYSIS CARD — Dedicated image analysis component
+       Sidebar-accent style with OCR-like extracted data display
+       ══════════════════════════════════════════════════════════ */
+    
+    .vision-analysis-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      max-width: 85%;
+      align-self: flex-start;
+      background: var(--surface);
+      border-radius: var(--border-radius-lg);
+      padding: var(--space-lg);
+      padding-left: calc(var(--space-lg) + 6px);
+      border-left: 4px solid var(--accent);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* Micro-thumbnail - blurred image in top-right corner */
+    .vision-thumbnail {
+      position: absolute;
+      top: var(--space-sm);
+      right: var(--space-sm);
+      width: 48px;
+      height: 48px;
+      border-radius: var(--border-radius-sm);
+      object-fit: cover;
+      filter: blur(1px) saturate(0.8);
+      opacity: 0.7;
+      border: 2px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .vision-thumbnail:hover {
+      filter: blur(0) saturate(1);
+      opacity: 1;
+      transform: scale(1.5);
+      z-index: 10;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Section header with theme-adaptive labels */
+    .vision-section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--space-xs);
+    }
+
+    .vision-section-header .icon {
+      font-size: var(--font-size-md);
+    }
+
+    /* Visual summary - what the AI sees */
+    .vision-summary {
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding-right: 60px; /* Space for thumbnail */
+    }
+
+    /* Extracted data - OCR-style display with code font */
+    .vision-extracted-data {
+      background: var(--bg);
+      border-radius: var(--border-radius-sm);
+      padding: var(--space-md);
+      border: 1px solid var(--border);
+    }
+
+    .vision-extracted-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      padding: var(--space-xs) 0;
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+    }
+
+    .vision-extracted-item:last-child {
+      border-bottom: none;
+    }
+
+    .vision-extracted-item::before {
+      content: '▸';
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    /* Logic steps - pedagogical breakdown */
+    .vision-logic-steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .vision-step {
+      display: flex;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--surface);
+      border-radius: var(--border-radius-md);
+      border: 1px solid var(--border);
+      opacity: 0;
+      transform: translateY(10px);
+      animation: visionStepReveal 0.4s ease forwards;
+    }
+
+    .vision-step-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      font-size: var(--font-size-sm);
+      border-radius: 50%;
+    }
+
+    .vision-step-content {
+      flex: 1;
+    }
+
+    .vision-step-title {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .vision-step-explanation {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Final solution - highlighted answer */
+    .vision-final-solution {
+      background: linear-gradient(135deg, var(--accent), var(--primary-dark, var(--accent)));
+      color: white;
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--border-radius-md);
+      font-weight: 600;
+      font-size: var(--font-size-md);
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      transform: scale(0.95);
+      animation: visionAnswerReveal 0.5s ease forwards;
+    }
+
+    /* Confidence indicator */
+    .vision-confidence {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--border);
+    }
+
+    .vision-confidence-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .vision-confidence-dot.high { background: var(--success); }
+    .vision-confidence-dot.medium { background: #F59E0B; }
+    .vision-confidence-dot.low { background: var(--error); }
+
+    /* Scanning animation overlay */
+    .vision-scanning {
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+      z-index: 5;
+      border-radius: var(--border-radius-lg);
+    }
+
+    .vision-scanning-icon {
+      font-size: 2.5rem;
+      animation: visionScanPulse 1.5s ease-in-out infinite;
+    }
+
+    .vision-scanning-text {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .vision-scanning-bar {
+      width: 120px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .vision-scanning-bar::after {
+      content: '';
+      display: block;
+      width: 40%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: visionScanBar 1.2s ease-in-out infinite;
+    }
+
+    /* Vision card animations */
+    @keyframes visionScanPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+    }
+
+    @keyframes visionScanBar {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    @keyframes visionStepReveal {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes visionAnswerReveal {
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes visionFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       VISION CARD - THEME VARIANTS
+       ════════════════════════════════════════════════════════════ */
+
+    /* ── BEGINNER: Larger icons, friendly labels ── */
+    [data-theme="beginner"] .vision-analysis-card {
+      border-left-width: 6px;
+      border-radius: 20px;
+      padding: var(--space-xl);
+    }
+
+    [data-theme="beginner"] .vision-section-header {
+      font-size: var(--font-size-base);
+    }
+
+    [data-theme="beginner"] .vision-section-header .icon {
+      font-size: var(--font-size-xl);
+    }
+
+    [data-theme="beginner"] .vision-thumbnail {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+    }
+
+    [data-theme="beginner"] .vision-step-num {
+      width: 36px;
+      height: 36px;
+      font-size: var(--font-size-base);
+    }
+
+    [data-theme="beginner"] .vision-final-solution {
+      border-radius: 16px;
+      font-size: var(--font-size-lg);
+      padding: var(--space-lg);
+    }
+
+    /* ── ADVANCED: Pro-tool aesthetic ── */
+    [data-theme="advanced"] .vision-analysis-card {
+      background: var(--surface);
+      border-left-color: var(--accent);
+      border-radius: 4px;
+    }
+
+    [data-theme="advanced"] .vision-section-header {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--font-size-xs);
+      letter-spacing: 1px;
+    }
+
+    [data-theme="advanced"] .vision-extracted-data {
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+
+    [data-theme="advanced"] .vision-extracted-item {
+      font-size: var(--font-size-xs);
+    }
+
+    [data-theme="advanced"] .vision-step {
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+
+    [data-theme="advanced"] .vision-step-num {
+      border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      font-size: var(--font-size-xs);
+    }
+
+    [data-theme="advanced"] .vision-final-solution {
+      background: linear-gradient(135deg, var(--accent), #0891B2);
+      border-radius: 4px;
+    }
+
+    [data-theme="advanced"] .vision-thumbnail {
+      border-radius: 4px;
+      filter: grayscale(0.3) blur(1px);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SKELETON LOADER (Ghost Skeleton)
+       ══════════════════════════════════════════════════════════ */
+
+    .skeleton-loader {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 78%;
+      align-self: flex-start;
+    }
+
+    /* Skeleton block — mimics structure of response components */
+    .skeleton-block {
+      border-radius: var(--border-radius-md);
+      background: linear-gradient(
+        90deg,
+        var(--bg, #F8F7FF) 0%,
+        var(--surface, #FFFFFF) 50%,
+        var(--bg, #F8F7FF) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite;
+      height: 20px;
+    }
+
+    /* Skeleton intro block — slightly taller */
+    .skeleton-intro {
+      height: 24px;
+      border-radius: var(--border-radius-md);
+      margin-bottom: 4px;
+    }
+
+    /* Skeleton step card */
+    .skeleton-step {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--border-radius-md);
+      background: var(--surface, #FFFFFF);
+      border: 1px solid var(--border, #E5E7EB);
+    }
+
+    .skeleton-step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: linear-gradient(
+        90deg,
+        var(--bg, #F8F7FF) 0%,
+        var(--surface, #FFFFFF) 50%,
+        var(--bg, #F8F7FF) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite;
+    }
+
+    .skeleton-step-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .skeleton-step-title {
+      height: 16px;
+      width: 60%;
+      border-radius: 4px;
+      background: linear-gradient(
+        90deg,
+        var(--bg, #F8F7FF) 0%,
+        var(--surface, #FFFFFF) 50%,
+        var(--bg, #F8F7FF) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite;
+    }
+
+    .skeleton-step-text {
+      height: 12px;
+      width: 90%;
+      border-radius: 4px;
+      background: linear-gradient(
+        90deg,
+        var(--bg, #F8F7FF) 0%,
+        var(--surface, #FFFFFF) 50%,
+        var(--bg, #F8F7FF) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite 0.1s;
+    }
+
+    .skeleton-step-text:last-child {
+      width: 85%;
+      animation-delay: 0.2s;
+    }
+
+    /* Skeleton answer pill */
+    .skeleton-answer {
+      width: 120px;
+      height: 32px;
+      border-radius: 20px;
+      background: linear-gradient(
+        90deg,
+        var(--bg, #F8F7FF) 0%,
+        var(--surface, #FFFFFF) 50%,
+        var(--bg, #F8F7FF) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite 0.3s;
+    }
+
+    /* Theme overrides for skeleton */
+    [data-theme="beginner"] .skeleton-block,
+    [data-theme="beginner"] .skeleton-intro,
+    [data-theme="beginner"] .skeleton-step-title,
+    [data-theme="beginner"] .skeleton-step-text,
+    [data-theme="beginner"] .skeleton-answer,
+    [data-theme="beginner"] .skeleton-step-num {
+      background: linear-gradient(
+        90deg,
+        #FFF9F0 0%,
+        #FFFFFF 50%,
+        #FFF9F0 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite;
+    }
+
+    [data-theme="advanced"] .skeleton-block,
+    [data-theme="advanced"] .skeleton-intro,
+    [data-theme="advanced"] .skeleton-step-title,
+    [data-theme="advanced"] .skeleton-step-text,
+    [data-theme="advanced"] .skeleton-answer,
+    [data-theme="advanced"] .skeleton-step-num {
+      background: linear-gradient(
+        90deg,
+        #0D1117 0%,
+        #161B22 50%,
+        #0D1117 100%
+      );
+      background-size: 200% 100%;
+      animation: skeletonShimmer 2s infinite;
+    }
+
+    [data-theme="advanced"] .skeleton-step {
+      background: #1C2128;
+      border-color: #30363D;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       ENGAGING FACTS LOADING SCREEN
+       Shows random educational facts while AI is processing
+       ══════════════════════════════════════════════════════════ */
+
+    .facts-loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--border-radius-lg);
+      max-width: 90%;
+      align-self: flex-start;
+      box-shadow: var(--shadow-lg);
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+      .facts-loading-container {
+        max-width: 75%;
+        min-height: 200px;
+      }
+    }
+
+    /* Animated brain icon */
+    .facts-loading-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-md);
+      animation: brainPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes brainPulse {
+      0%, 100% { 
+        transform: scale(1) rotate(0deg); 
+        filter: drop-shadow(0 0 5px var(--primary));
+      }
+      25% { transform: scale(1.1) rotate(-5deg); }
+      50% { 
+        transform: scale(1.05) rotate(0deg);
+        filter: drop-shadow(0 0 15px var(--primary));
+      }
+      75% { transform: scale(1.1) rotate(5deg); }
+    }
+
+    /* Did you know label */
+    .facts-loading-label {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--primary);
+      margin-bottom: var(--space-sm);
+      opacity: 0.9;
+    }
+
+    /* Fact text with smooth transitions */
+    .facts-loading-text {
+      font-size: var(--font-size-md);
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 300px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    /* Animated dots */
+    .facts-loading-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: var(--space-md);
+    }
+
+    .facts-loading-dots span {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: factsDotBounce 1.4s ease-in-out infinite;
+    }
+
+    .facts-loading-dots span:nth-child(1) { animation-delay: 0s; }
+    .facts-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .facts-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes factsDotBounce {
+      0%, 80%, 100% { 
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+      40% { 
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+    }
+
+    /* Progress indicator */
+    .facts-loading-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .facts-loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent, var(--primary)));
+      animation: progressSlide 3s ease-in-out infinite;
+    }
+
+    @keyframes progressSlide {
+      0% { width: 0%; margin-left: 0; }
+      50% { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* Theme variations */
+    [data-theme="beginner"] .facts-loading-container {
+      background: rgba(255, 249, 240, 0.95);
+      border-color: rgba(255, 107, 107, 0.2);
+    }
+
+    [data-theme="beginner"] .facts-loading-icon {
+      animation: brainPulse 1.5s ease-in-out infinite, rainbowGlow 3s linear infinite;
+    }
+
+    @keyframes rainbowGlow {
+      0% { filter: drop-shadow(0 0 10px #FF6B6B); }
+      33% { filter: drop-shadow(0 0 10px #FFD93D); }
+      66% { filter: drop-shadow(0 0 10px #4ECDC4); }
+      100% { filter: drop-shadow(0 0 10px #FF6B6B); }
+    }
+
+    [data-theme="advanced"] .facts-loading-container {
+      background: rgba(13, 17, 23, 0.95);
+      border-color: rgba(0, 255, 157, 0.2);
+    }
+
+    [data-theme="advanced"] .facts-loading-icon {
+      filter: drop-shadow(0 0 10px var(--primary));
+    }
+
+    [data-theme="advanced"] .facts-loading-progress-bar {
+      background: linear-gradient(90deg, #00FF9D, #00D4FF);
+    }
+
+    /* Fade in/out transitions */
+    .facts-loading-container.fade-in {
+      animation: factsFadeIn 0.4s ease forwards;
+    }
+
+    .facts-loading-container.fade-out {
+      animation: factsFadeOut 0.3s ease forwards;
+    }
+
+    @keyframes factsFadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes factsFadeOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       ANIMATION UTILITY CLASSES
+       ══════════════════════════════════════════════════════════ */
+
+    /* Base animation for components entering with stagger */
+    .animate-in {
+      animation: fadeInUpStaggered 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+
+    /* Bounce scale for answer pill (highlight effect) */
+    .animate-bounce-scale {
+      animation: scaleUpBounce 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+
+    /* Greeting intro animation */
+    .animate-greeting {
+      animation: greetingFadeIn 0.3s ease forwards;
+      opacity: 0;
+      will-change: opacity, transform;
     }
 
     /* ──────────────────────────────────────
@@ -1344,11 +2523,14 @@
       font-style: normal;
     }
 
-    /* ── Voice input button ── */
+    /* ── Voice input button (Mobile-First) ── */
     #mic-btn {
       flex-shrink: 0;
-      width: 40px;
-      height: 40px;
+      /* Touch target compliance */
+      min-width: var(--touch-target-min);
+      min-height: var(--touch-target-min);
+      width: var(--touch-target-min);
+      height: var(--touch-target-min);
       border-radius: 50%;
       border: 1.5px solid var(--border, #E5E7EB);
       background: transparent;
@@ -1671,6 +2853,381 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
     }
+
+    /* ============ Estimation Badge (Mobile-First) ============ */
+    .estimate-badge {
+      position: fixed;
+      /* Mobile-first: Position above input row with safe area */
+      bottom: max(90px, calc(80px + env(safe-area-inset-bottom)));
+      right: var(--container-padding);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      color: var(--text-primary);
+      border: 1px solid var(--glass-border);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--border-radius-md);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      font-family: var(--font-family);
+      box-shadow: var(--shadow-lg);
+      animation: slideInRight 0.3s ease;
+      z-index: 100;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: bottom right;
+      will-change: transform, opacity;
+    }
+
+    @media (min-width: 768px) {
+      .estimate-badge {
+        bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+        right: var(--space-lg);
+        font-size: var(--font-size-sm);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .estimate-badge {
+        bottom: max(110px, calc(72px + env(safe-area-inset-bottom)));
+        right: var(--space-xl);
+      }
+    }
+
+    /* ── Badge shrink and fade state (countdown to reality transition) ── */
+    .estimate-badge.shrink-fade {
+      animation: badgeShrinkFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* ============ PWA Install Banner (Centered Modal Style) ============ */
+    .pwa-install-banner {
+      position: fixed;
+      /* Center on screen */
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      /* Sizing */
+      width: calc(100% - var(--space-lg) * 2);
+      max-width: 360px;
+      /* Styling */
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: var(--text-primary);
+      padding: var(--space-xl) var(--space-lg);
+      text-align: center;
+      z-index: 9999;
+      /* Animation */
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      /* Polish */
+      box-shadow: var(--shadow-xl), 0 0 0 1px var(--glass-border);
+      border-radius: var(--border-radius-lg);
+      font-family: var(--font-family);
+    }
+
+    /* Backdrop overlay when banner is shown */
+    .pwa-install-banner::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .pwa-install-banner.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .pwa-install-banner.show::before {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* App icon in banner */
+    .pwa-install-banner-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto var(--space-md);
+      background: var(--primary);
+      border-radius: var(--border-radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .pwa-install-banner-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+      color: var(--text-primary);
+    }
+
+    .pwa-install-banner-text {
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-lg);
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .pwa-install-banner-buttons {
+      display: flex;
+      gap: var(--space-sm);
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    @media (min-width: 400px) {
+      .pwa-install-banner-buttons {
+        flex-direction: row;
+      }
+    }
+
+    .pwa-banner-btn {
+      /* Touch target compliance */
+      min-height: var(--touch-target-min);
+      padding: var(--space-sm) var(--space-xl);
+      border: none;
+      border-radius: var(--border-radius-md);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-family);
+      flex: 1;
+    }
+
+    .pwa-banner-btn.install {
+      background: var(--primary);
+      color: white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .pwa-banner-btn.install:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      background: var(--primary-dark);
+    }
+
+    .pwa-banner-btn.dismiss {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .pwa-banner-btn.dismiss:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    /* ============ Standalone Mode - Safe Area Support ============ */
+    @supports (padding: max(0px)) {
+      body.pwa-standalone {
+        padding-top: max(var(--space-md), env(safe-area-inset-top));
+        padding-left: max(var(--space-md), env(safe-area-inset-left));
+        padding-right: max(var(--space-md), env(safe-area-inset-right));
+        padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Notch awareness for iPhone-like devices */
+    @media (display-mode: standalone) {
+      body {
+        padding-top: max(var(--space-md), env(safe-area-inset-top));
+      }
+      
+      header {
+        padding-top: env(safe-area-inset-top);
+      }
+    }
+
+    /* ============ Responsive Layout (Mobile-First) ============ */
+    
+    /* ── Base styles are mobile (no media query needed) ── */
+    
+    /* ── Tablet Portrait (768px+) ── */
+    @media (min-width: 768px) {
+      #chat {
+        padding: var(--space-lg) var(--space-lg);
+      }
+
+      .bubble {
+        max-width: 85%;
+      }
+
+      .input-row {
+        padding: var(--space-md) var(--space-lg);
+      }
+
+      .controls {
+        padding: var(--space-sm) var(--space-lg);
+      }
+
+      .estimate-badge {
+        right: 16px;
+        bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+      }
+    }
+
+    /* ── Tablet Landscape / Small Desktop (1024px+) ── */
+    @media (min-width: 1024px) {
+      .controls label {
+        flex-basis: auto;
+      }
+
+      #level {
+        width: auto;
+      }
+
+      .bubble {
+        max-width: 72%;
+      }
+
+      .quiz-card {
+        max-width: 500px;
+      }
+
+      .structured-response {
+        max-width: 78%;
+      }
+
+      .estimate-badge {
+        right: 20px;
+        bottom: max(110px, calc(72px + env(safe-area-inset-bottom)));
+      }
+    }
+
+    /* ── Large Desktop (1280px+) ── */
+    @media (min-width: 1280px) {
+      #chat {
+        max-width: 1000px;
+      }
+    }
+
+    /* ── Landscape phone optimizations ── */
+    @media (max-height: 500px) and (orientation: landscape) {
+      header {
+        height: 48px;
+      }
+
+      .controls {
+        height: auto;
+        min-height: 44px;
+        top: 48px;
+        padding: var(--space-xs) var(--space-md);
+      }
+
+      #chat {
+        padding: var(--space-sm) var(--space-md);
+      }
+
+      .input-row {
+        min-height: 56px;
+        padding: var(--space-sm) var(--space-md);
+      }
+
+      .bubble {
+        max-width: 80%;
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--font-size-sm);
+      }
+
+      .estimate-badge {
+        bottom: 70px;
+        right: 8px;
+      }
+    }
+
+    /* ── Foldable device (split-screen) support ── */
+    @media (fold-left: 0px) {
+      body {
+        display: flex;
+        width: 100vw;
+      }
+
+      header, .controls {
+        flex: 1;
+      }
+
+      #chat, .input-row {
+        flex: 1;
+      }
+    }
+
+    @media (fold-top: 0px) {
+      body {
+        flex-direction: column;
+      }
+
+      header {
+        height: 48px;
+      }
+
+      #chat {
+        flex: 0.6;
+        overflow-y: auto;
+      }
+
+      .input-row {
+        flex: 0.4;
+      }
+    }
+
+    /* ── Reduced Motion Preference ── */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ── Dark Mode System Preference ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --glass-bg: rgba(22, 27, 34, 0.85);
+        --glass-border: rgba(48, 54, 61, 0.5);
+      }
+    }
+
+    /* ── High Contrast Mode ── */
+    @media (prefers-contrast: high) {
+      .bubble {
+        border: 2px solid var(--text-primary);
+      }
+      
+      #input {
+        border: 2px solid var(--text-primary);
+      }
+      
+      .controls button,
+      #send {
+        border: 2px solid currentColor;
+      }
+    }
   </style>
 </head>
 <body data-theme="intermediate">
@@ -1682,6 +3239,19 @@
     style="position:absolute; width:1px; height:1px; overflow:hidden;
            clip:rect(0,0,0,0); white-space:nowrap;"
   ></div>
+
+  <!-- ============ PWA Install Banner (Centered Modal) ============ -->
+  <div id="pwa-install-banner" class="pwa-install-banner" role="dialog" aria-labelledby="pwa-title" aria-describedby="pwa-desc">
+    <div class="pwa-install-banner-icon">📚</div>
+    <div class="pwa-install-banner-title" id="pwa-title">Install StudyBuddy</div>
+    <div class="pwa-install-banner-text" id="pwa-desc">
+      Add StudyBuddy to your home screen for instant access, offline support, and a native app experience!
+    </div>
+    <div class="pwa-install-banner-buttons">
+      <button id="pwa-install-btn" class="pwa-banner-btn install">✨ Install App</button>
+      <button id="pwa-dismiss-btn" class="pwa-banner-btn dismiss">Maybe Later</button>
+    </div>
+  </div>
 
   <!-- ============ Header ============ -->
   <header>
@@ -1729,7 +3299,7 @@
     <span id="voice-status-text">Listening... speak your question</span>
     <button
       onclick="stopVoice()"
-      style="margin-left:auto; font-size:12px; color:#EF4444;
+      style="margin-left:auto; font-size:12px; color:var(--error, #EF4444);
              background:none; border:none; cursor:pointer; padding:0;"
     >
       Stop
@@ -1759,7 +3329,7 @@
         <div id="voice-preview"></div>
       </button>
       <button class="attach-btn" id="attachBtn" onclick="triggerImageUpload()" title="Attach image">📎</button>
-      <button id="send" onclick="sendMessage()">Send</button>
+      <button id="send">Send</button>
     </div>
   </div>
 
@@ -1834,6 +3404,17 @@
     let socraticTurn = 0;
     let socraticTopic = '';
 
+    // ============ Performance: Batched Scroll Helper ============
+    // Uses requestAnimationFrame to batch scroll updates and prevent layout thrashing
+    let scrollRAF = null;
+    function scrollToBottom() {
+      if (scrollRAF) return; // Already scheduled
+      scrollRAF = requestAnimationFrame(() => {
+        chatEl.scrollTop = chatEl.scrollHeight;
+        scrollRAF = null;
+      });
+    }
+
     // ============ Message Bubble Helper ============
     function addBubble(content, role, isHTML = false) {
       const div = document.createElement('div');
@@ -1844,7 +3425,7 @@
         div.textContent = content;
       }
       chatEl.appendChild(div);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
       return div;
     }
 
@@ -1909,18 +3490,11 @@
       inputEl.value = '';
       sendBtn.disabled = true;
 
-      // Show user message with optional image
-      let userBubbleHTML = '';
-      if (pendingImage) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          userBubbleHTML = `<img src="${e.target.result}" alt="Homework" class="bubble-image">${message}`;
-          const userBubble = addBubble(userBubbleHTML, 'user', true);
-        };
-        reader.readAsDataURL(pendingImage);
-      } else {
+      // Show user message with optional image (handled by sendToChat)
+      if (!pendingImage) {
         addBubble(message, 'user');
       }
+      // If there's an image, sendToChat will handle displaying it
 
       const thinkingBubble = addBubble('Thinking...', 'thinking');
       thinkingBubble.remove();
@@ -1948,6 +3522,77 @@
       quizModal.classList.remove('active');
     }
 
+    // ============ Quiz Loading Animation ============
+    const quizLoadingMessages = [
+      "🧠 Thinking of challenging questions...",
+      "📚 Researching the topic...",
+      "✨ Crafting perfect answers...",
+      "🎯 Making it fun and educational...",
+      "🔍 Double-checking facts...",
+      "📝 Preparing your quiz..."
+    ];
+
+    function showQuizLoading(topic) {
+      const modalContent = document.querySelector('#quizModal .modal-content');
+      modalContent.innerHTML = `
+        <div class="quiz-loading-container">
+          <div class="quiz-loading-spinner">
+            <div class="quiz-loading-book">📖</div>
+            <div class="quiz-loading-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="quiz-loading-text">Generating Your Quiz</div>
+          <div class="quiz-loading-subtext">Creating questions about <strong>${topic}</strong></div>
+          <div class="quiz-loading-message" id="quizLoadingMessage">${quizLoadingMessages[0]}</div>
+          <div class="quiz-loading-progress">
+            <div class="quiz-loading-progress-bar"></div>
+          </div>
+        </div>
+      `;
+
+      // Cycle through loading messages
+      let messageIndex = 0;
+      window.quizLoadingInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % quizLoadingMessages.length;
+        const msgEl = document.getElementById('quizLoadingMessage');
+        if (msgEl) {
+          msgEl.style.opacity = '0';
+          setTimeout(() => {
+            msgEl.textContent = quizLoadingMessages[messageIndex];
+            msgEl.style.opacity = '1';
+          }, 200);
+        }
+      }, 2500);
+    }
+
+    function hideQuizLoading() {
+      if (window.quizLoadingInterval) {
+        clearInterval(window.quizLoadingInterval);
+        window.quizLoadingInterval = null;
+      }
+      // Reset modal content
+      const modalContent = document.querySelector('#quizModal .modal-content');
+      modalContent.innerHTML = `
+        <h2>Create a Quiz</h2>
+        <div class="modal-field">
+          <label for="quizTopic">Topic</label>
+          <input type="text" id="quizTopic" placeholder="e.g. Photosynthesis, World War II, Algebra">
+        </div>
+        <div class="modal-field">
+          <label for="quizCount">Number of Questions</label>
+          <input type="number" id="quizCount" min="3" max="10" value="5">
+        </div>
+        <div class="modal-buttons">
+          <button class="modal-btn secondary" onclick="closeQuizModal()">Cancel</button>
+          <button class="modal-btn primary" onclick="generateQuiz()">Generate Quiz</button>
+        </div>
+      `;
+    }
+
     async function generateQuiz() {
       const topic = document.getElementById('quizTopic').value.trim();
       const numQuestions = parseInt(document.getElementById('quizCount').value, 10);
@@ -1957,9 +3602,8 @@
         return;
       }
 
-      const generateBtn = event.target;
-      generateBtn.disabled = true;
-      generateBtn.textContent = 'Generating...';
+      // Show loading animation
+      showQuizLoading(topic);
 
       try {
         const res = await fetch('/quiz', {
@@ -1974,6 +3618,9 @@
 
         const data = await res.json();
 
+        // Hide loading animation
+        hideQuizLoading();
+
         if (data.error) {
           alert('⚠️ ' + data.error);
         } else {
@@ -1983,11 +3630,9 @@
           renderQuizCard();
         }
       } catch (e) {
+        hideQuizLoading();
         alert('⚠️ Could not generate quiz. Is Ollama running?');
       }
-
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate Quiz';
     }
 
     // ============ Quiz Rendering ============
@@ -2327,17 +3972,25 @@
 
     // ============ Theme Switching ============
     function applyTheme(theme) {
-      document.body.classList.add('theme-transitioning');
-      setTimeout(() => {
-        document.body.setAttribute('data-theme', theme);
-        document.body.classList.remove('theme-transitioning');
-      }, 150);
+      // Apply theme immediately for smooth CSS variable transitions
+      document.body.setAttribute('data-theme', theme);
+      
+      // Update PWA theme-color meta tag to match the theme
+      const themeColors = {
+        beginner: '#A8E6CF',
+        intermediate: '#6C63FF',
+        advanced: '#00D2FF'
+      };
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', themeColors[theme] || themeColors.intermediate);
+      }
 
       // Show system message based on theme
       const messages = {
-        beginner: "🎉 Great choice! Let's explore in a fun, colorful way!",
-        intermediate: "📖 Nice! Ready to dive deeper into the concepts?",
-        advanced: "⚡ Excellent! Time to explore advanced topics."
+        beginner: "🌿 Safety Zone activated! Soft colors, friendly vibes.",
+        intermediate: "🎯 Focus Flow engaged! Clean and modern.",
+        advanced: "⚡ Mastery Peak unlocked! Sharp, pro-tool aesthetic."
       };
       
       const bubble = addBubble(messages[theme], 'system');
@@ -2351,7 +4004,8 @@
         <div class="estimate-value">${estimate.label}</div>
         <div class="estimate-complexity">${estimate.complexity}</div>
       `;
-      chatEl.appendChild(badge);
+      // Append to body for proper fixed positioning (avoids z-index issues in chat container)
+      document.body.appendChild(badge);
 
       let remaining = estimate.seconds;
       const interval = setInterval(() => {
@@ -2366,25 +4020,459 @@
         }
       }, 1000);
 
+      /**
+       * Method to trigger the "countdown to reality" transition:
+       * Shrinks and fades the badge while the first content element fades in
+       * This creates a psychological "transition" from estimate to actual response
+       */
+      badge.triggerShrinkFade = function() {
+        this.classList.add('shrink-fade');
+        setTimeout(() => {
+          if (this.parentNode) {
+            this.remove();
+          }
+        }, 400);
+      };
+
       return { badge, interval };
     }
 
+    // ============ Engaging Facts Loading Screen ============
+    const learningFacts = [
+      "🧠 Your brain uses 20% of your body's total energy!",
+      "🌍 Earth's core is as hot as the surface of the Sun — about 5,500°C!",
+      "🐙 Octopuses have three hearts and blue blood!",
+      "📚 The Library of Alexandria once held 400,000 scrolls of knowledge!",
+      "🔬 A single human cell contains about 6 feet of DNA!",
+      "🌊 The ocean produces over 50% of the world's oxygen!",
+      "🦋 Butterflies taste with their feet!",
+      "⚡ Lightning strikes Earth about 8 million times per day!",
+      "🌙 The Moon is slowly drifting away from Earth at 3.8 cm per year!",
+      "🧮 Zero was invented independently in India and by the Mayans!",
+      "🎵 Music can reduce stress hormones by up to 25%!",
+      "🌳 Trees communicate through underground fungal networks!",
+      "🔭 Light from the Sun takes 8 minutes to reach Earth!",
+      "🧬 Humans share 60% of their DNA with bananas!",
+      "📖 Reading for just 6 minutes can reduce stress by 68%!",
+      "🦠 Your body has more bacteria than human cells!",
+      "🌌 There are more stars in the universe than grains of sand on Earth!",
+      "🧊 Hot water freezes faster than cold water (Mpemba effect)!",
+      "🐋 A blue whale's heart is the size of a small car!",
+      "🎨 Van Gogh only sold one painting during his lifetime!",
+      "🏔️ Mount Everest grows about 4mm taller every year!",
+      "🦷 Tooth enamel is the hardest substance in the human body!",
+      "🌸 Honey never spoils — 3,000-year-old honey is still edible!",
+      "🦑 Giant squid have the largest eyes in the animal kingdom!",
+      "📱 The first computer weighed over 27 tons!"
+    ];
+
+    let factsContainer = null;
+    let factsInterval = null;
+    let currentFactIndex = 0;
+
+    function showFactsLoading() {
+      // Remove any existing facts container
+      hideFactsLoading();
+
+      // Shuffle and pick a random starting index
+      currentFactIndex = Math.floor(Math.random() * learningFacts.length);
+
+      factsContainer = document.createElement('div');
+      factsContainer.className = 'facts-loading-container fade-in';
+      factsContainer.innerHTML = `
+        <div class="facts-loading-icon">🧠</div>
+        <div class="facts-loading-label">Did you know?</div>
+        <div class="facts-loading-text">${learningFacts[currentFactIndex]}</div>
+        <div class="facts-loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="facts-loading-progress">
+          <div class="facts-loading-progress-bar"></div>
+        </div>
+      `;
+
+      chatEl.appendChild(factsContainer);
+      scrollToBottom();
+
+      // Rotate facts every 4 seconds
+      factsInterval = setInterval(() => {
+        currentFactIndex = (currentFactIndex + 1) % learningFacts.length;
+        const textEl = factsContainer.querySelector('.facts-loading-text');
+        if (textEl) {
+          textEl.style.opacity = '0';
+          textEl.style.transform = 'translateY(-10px)';
+          setTimeout(() => {
+            textEl.textContent = learningFacts[currentFactIndex];
+            textEl.style.opacity = '1';
+            textEl.style.transform = 'translateY(0)';
+          }, 200);
+        }
+      }, 4000);
+
+      return factsContainer;
+    }
+
+    function hideFactsLoading() {
+      if (factsInterval) {
+        clearInterval(factsInterval);
+        factsInterval = null;
+      }
+      if (factsContainer && factsContainer.parentNode) {
+        factsContainer.classList.remove('fade-in');
+        factsContainer.classList.add('fade-out');
+        setTimeout(() => {
+          if (factsContainer && factsContainer.parentNode) {
+            factsContainer.remove();
+          }
+          factsContainer = null;
+        }, 300);
+      }
+    }
+
+    // ============ LaTeX to Readable Conversion ============
+    function convertLatexToReadable(text) {
+      if (!text) return text;
+
+      return text
+        // Remove malformed \text prefixes (e.g., \textH₂\textO → H₂O)
+        .replace(/\\text([A-Za-z₀-₉])/g, '$1')
+        // Remove \text{} wrappers entirely
+        .replace(/\\text\{([^}]*)\}/g, '$1')
+        // Fix subscript parentheses O₍₆₎ → O₆
+        .replace(/([A-Za-z])₍(\d+)₎/g, (match, letter, digit) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return letter + digit.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Chemical formulas: H_2O or H2O → H₂O
+        .replace(/([A-Za-z])(\d+)/g, (match, letter, num) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return letter + num.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Single subscripts: H_2 → H₂
+        .replace(/_(\d+)/g, (match, digit) => {
+          const subscriptMap = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+          return digit.split('').map(d => subscriptMap[d] || d).join('');
+        })
+        // Superscripts: ^2 → ²
+        .replace(/\^(\d+)/g, (match, digit) => {
+          const superscriptMap = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+          return digit.split('').map(d => superscriptMap[d] || d).join('');
+        })
+        // Greek letters: \alpha → α
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g, 'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\delta/g, 'δ')
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\lambda/g, 'λ')
+        .replace(/\\pi/g, 'π')
+        // Math operations
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+        .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
+        // Remove remaining LaTeX markers
+        .replace(/\$/g, '')
+        .replace(/\\\\/g, ' ')
+        .replace(/[{}]/g, '');
+    }
+
     // ============ Structured Response Rendering ============
-    function renderBotResponse(data) {
+    
+    // Store the last uploaded image for thumbnail display
+    let lastUploadedImageDataUrl = null;
+    
+    function renderBotResponse(data, imageDataUrl = null) {
+      // Store image URL for vision responses
+      if (imageDataUrl) {
+        lastUploadedImageDataUrl = imageDataUrl;
+      }
+      
+      // Check if this is a vision response (image analysis)
+      if (data.isVision && data.structured && data.structured.visual_summary) {
+        renderVisionResponse(data.structured, lastUploadedImageDataUrl);
+        lastUploadedImageDataUrl = null; // Clear after use
+        return;
+      }
+      
       // If structured JSON is available, render it as cards
       if (data.structured && data.structured.steps) {
-        renderStructuredResponse(data.structured);
+        // Convert LaTeX in structured response
+        const converted = {
+          intro: convertLatexToReadable(data.structured.intro),
+          steps: (data.structured.steps || []).map(step => ({
+            title: convertLatexToReadable(step.title),
+            text: convertLatexToReadable(step.text),
+            emoji: step.emoji
+          })),
+          answer: convertLatexToReadable(data.structured.answer),
+          followup: convertLatexToReadable(data.structured.followup)
+        };
+        renderStructuredResponse(converted);
       } else {
         // Fallback: render as plain text bubble (existing behaviour)
-        // Strip any raw markdown bold/italic before displaying
-        const cleaned = (data.reply || '')
+        // Strip any raw markdown bold/italic and convert LaTeX
+        const cleaned = convertLatexToReadable((data.reply || '')
           .replace(/\*\*(.*?)\*\*/g, '$1')   // remove **bold**
           .replace(/\*(.*?)\*/g, '$1')        // remove *italic*
-          .trim();
+          .trim());
         addBubble(cleaned, 'bot');
       }
     }
 
+    /**
+     * renderVisionResponse - Renders the Vision Analysis Card with scanning animation
+     * @param {Object} visionData - Structured vision data from backend
+     * @param {string} imageDataUrl - Base64 data URL of the uploaded image
+     */
+    function renderVisionResponse(visionData, imageDataUrl) {
+      const theme = document.body.getAttribute('data-theme') || 'intermediate';
+      
+      // Theme-adaptive labels
+      const labels = {
+        beginner: {
+          summary: '👀 What I See',
+          extracted: '📝 Things I Found',
+          steps: '🎯 Let\'s Learn!',
+          solution: '⭐ The Answer!'
+        },
+        intermediate: {
+          summary: '🔍 Visual Summary',
+          extracted: '📋 Extracted Data',
+          steps: '📖 Breakdown',
+          solution: '✅ Solution'
+        },
+        advanced: {
+          summary: 'VISUAL_ANALYSIS',
+          extracted: 'INPUT_VARIABLES',
+          steps: 'LOGIC_SEQUENCE',
+          solution: 'OUTPUT'
+        }
+      };
+      
+      const currentLabels = labels[theme] || labels.intermediate;
+      
+      // Create main container
+      const card = document.createElement('div');
+      card.className = 'vision-analysis-card';
+      card.setAttribute('data-theme', theme);
+      
+      // Add scanning overlay first (will be removed after animation)
+      const scanning = document.createElement('div');
+      scanning.className = 'vision-scanning';
+      scanning.innerHTML = `
+        <div class="vision-scanning-icon">🔬</div>
+        <div class="vision-scanning-text">Scanning Image...</div>
+        <div class="vision-scanning-bar"></div>
+      `;
+      card.appendChild(scanning);
+      
+      // Add micro-thumbnail if image available
+      if (imageDataUrl) {
+        const thumbnail = document.createElement('img');
+        thumbnail.className = 'vision-thumbnail';
+        thumbnail.src = imageDataUrl;
+        thumbnail.alt = 'Uploaded image';
+        thumbnail.loading = 'lazy';
+        card.appendChild(thumbnail);
+      }
+      
+      // Add card to chat immediately (shows scanning animation)
+      chatEl.appendChild(card);
+      scrollToBottom();
+      
+      // After scanning animation, reveal content
+      setTimeout(() => {
+        // Remove scanning overlay with fade
+        scanning.style.animation = 'visionFadeIn 0.3s ease reverse forwards';
+        setTimeout(() => scanning.remove(), 300);
+        
+        // Build content elements
+        const contentElements = [];
+        
+        // 1. Visual Summary Section
+        if (visionData.visual_summary) {
+          const summarySection = document.createElement('div');
+          summarySection.className = 'vision-summary-section';
+          summarySection.innerHTML = `
+            <div class="vision-section-header">
+              <span class="icon">${theme === 'beginner' ? '👀' : (theme === 'advanced' ? '◉' : '🔍')}</span>
+              <span>${currentLabels.summary}</span>
+            </div>
+            <div class="vision-summary">${convertLatexToReadable(visionData.visual_summary)}</div>
+          `;
+          summarySection.style.animation = 'visionFadeIn 0.4s ease forwards';
+          contentElements.push(summarySection);
+        }
+        
+        // 2. Extracted Data Section (OCR-style)
+        if (visionData.extracted_data && visionData.extracted_data.length > 0) {
+          const extractedSection = document.createElement('div');
+          extractedSection.className = 'vision-extracted-section';
+          
+          const headerIcon = theme === 'beginner' ? '📝' : (theme === 'advanced' ? '⟨⟩' : '📋');
+          let itemsHtml = visionData.extracted_data.map(item => 
+            `<div class="vision-extracted-item">${convertLatexToReadable(item)}</div>`
+          ).join('');
+          
+          extractedSection.innerHTML = `
+            <div class="vision-section-header">
+              <span class="icon">${headerIcon}</span>
+              <span>${currentLabels.extracted}</span>
+            </div>
+            <div class="vision-extracted-data">${itemsHtml}</div>
+          `;
+          extractedSection.style.animation = 'visionFadeIn 0.4s ease 0.2s forwards';
+          extractedSection.style.opacity = '0';
+          contentElements.push(extractedSection);
+        }
+        
+        // 3. Logic Steps Section
+        if (visionData.logic_steps && visionData.logic_steps.length > 0) {
+          const stepsSection = document.createElement('div');
+          stepsSection.className = 'vision-steps-section';
+          
+          const stepsHeaderIcon = theme === 'beginner' ? '🎯' : (theme === 'advanced' ? '▶' : '📖');
+          
+          let stepsHtml = visionData.logic_steps.map((step, i) => `
+            <div class="vision-step" style="animation-delay: ${0.3 + (i * 0.15)}s">
+              <div class="vision-step-num">${step.step || i + 1}</div>
+              <div class="vision-step-content">
+                <div class="vision-step-title">${convertLatexToReadable(step.title)}</div>
+                <div class="vision-step-explanation">${convertLatexToReadable(step.explanation)}</div>
+              </div>
+            </div>
+          `).join('');
+          
+          stepsSection.innerHTML = `
+            <div class="vision-section-header">
+              <span class="icon">${stepsHeaderIcon}</span>
+              <span>${currentLabels.steps}</span>
+            </div>
+            <div class="vision-logic-steps">${stepsHtml}</div>
+          `;
+          contentElements.push(stepsSection);
+        }
+        
+        // 4. Final Solution Section
+        if (visionData.final_solution) {
+          const solutionSection = document.createElement('div');
+          solutionSection.className = 'vision-solution-section';
+          
+          const solutionIcon = theme === 'beginner' ? '⭐' : (theme === 'advanced' ? '◆' : '✅');
+          const stepCount = visionData.logic_steps ? visionData.logic_steps.length : 0;
+          const solutionDelay = 0.4 + (stepCount * 0.15);
+          
+          solutionSection.innerHTML = `
+            <div class="vision-section-header">
+              <span class="icon">${solutionIcon}</span>
+              <span>${currentLabels.solution}</span>
+            </div>
+            <div class="vision-final-solution" style="animation-delay: ${solutionDelay}s">
+              ${convertLatexToReadable(visionData.final_solution)}
+            </div>
+          `;
+          contentElements.push(solutionSection);
+        }
+        
+        // 5. Confidence Indicator
+        if (visionData.confidence) {
+          const confidenceSection = document.createElement('div');
+          confidenceSection.className = 'vision-confidence';
+          const confLevel = visionData.confidence.toLowerCase();
+          const confText = {
+            high: 'High confidence in analysis',
+            medium: 'Medium confidence - verify key details',
+            low: 'Low confidence - image may be unclear'
+          };
+          confidenceSection.innerHTML = `
+            <span class="vision-confidence-dot ${confLevel}"></span>
+            <span>${confText[confLevel] || confText.medium}</span>
+          `;
+          contentElements.push(confidenceSection);
+        }
+        
+        // Append all content elements
+        contentElements.forEach((el, i) => {
+          card.appendChild(el);
+        });
+        
+        // Final scroll
+        setTimeout(() => scrollToBottom(), 100);
+        
+      }, 1500); // Scanning animation duration
+    }
+    
+    /**
+     * createSkeletonLoader - Creates a "ghost" skeleton loader that mimics the structured response
+     * This appears immediately when user hits "Send" while waiting for the actual response
+     */
+    function createSkeletonLoader(stepCount = 3) {
+      const container = document.createElement('div');
+      container.className = 'skeleton-loader';
+      container.setAttribute('data-skeleton', 'true');
+
+      // Skeleton intro
+      const introSkeleton = document.createElement('div');
+      introSkeleton.className = 'skeleton-intro skeleton-block';
+      container.appendChild(introSkeleton);
+
+      // Skeleton steps (default 3, but adapt based on expected count)
+      for (let i = 0; i < stepCount; i++) {
+        const stepSkeleton = document.createElement('div');
+        stepSkeleton.className = 'skeleton-step';
+
+        const numSkeleton = document.createElement('div');
+        numSkeleton.className = 'skeleton-step-num';
+
+        const contentSkeleton = document.createElement('div');
+        contentSkeleton.className = 'skeleton-step-content';
+
+        const titleSkeleton = document.createElement('div');
+        titleSkeleton.className = 'skeleton-step-title';
+
+        const textSkeleton = document.createElement('div');
+        textSkeleton.className = 'skeleton-step-text';
+
+        const textSkeleton2 = document.createElement('div');
+        textSkeleton2.className = 'skeleton-step-text';
+
+        contentSkeleton.appendChild(titleSkeleton);
+        contentSkeleton.appendChild(textSkeleton);
+        contentSkeleton.appendChild(textSkeleton2);
+
+        stepSkeleton.appendChild(numSkeleton);
+        stepSkeleton.appendChild(contentSkeleton);
+
+        container.appendChild(stepSkeleton);
+      }
+
+      // Skeleton answer pill
+      const answerSkeleton = document.createElement('div');
+      answerSkeleton.className = 'skeleton-answer skeleton-block';
+      container.appendChild(answerSkeleton);
+
+      return container;
+    }
+
+    /**
+     * Removes skeleton loader and replaces it with actual content
+     */
+    function removeSkeletonLoader(container) {
+      const skeleton = container.querySelector('[data-skeleton="true"]');
+      if (skeleton) {
+        // Fade out skeleton
+        skeleton.style.animation = 'skeletonFadeOut 0.3s ease forwards';
+        setTimeout(() => skeleton.remove(), 300);
+      }
+    }
+
+    /**
+     * renderStructuredResponse - Renders structured JSON response with staggered animations
+     * Now includes skeleton loader that shows immediately, then fades to actual content
+     */
     function renderStructuredResponse(s) {
       const theme = document.body.getAttribute('data-theme') || 'intermediate';
       const container = document.createElement('div');
@@ -2396,73 +4484,99 @@
         gap: 8px;
         max-width: 78%;
         align-self: flex-start;
-        animation: fadeInUp 0.3s ease forwards;
       `;
 
-      // 1. INTRO card
-      if (s.intro) {
-        const introEl = document.createElement('div');
-        introEl.className = 'resp-intro';
-        introEl.textContent = s.intro;
-        container.appendChild(introEl);
-      }
-
-      // 2. STEP cards
-      if (s.steps && s.steps.length > 0) {
-        s.steps.forEach((step, i) => {
-          const stepEl = document.createElement('div');
-          stepEl.className = 'resp-step';
-
-          const numEl = document.createElement('div');
-          numEl.className = 'resp-step-num';
-          numEl.textContent = i + 1;
-
-          const bodyEl = document.createElement('div');
-          bodyEl.className = 'resp-step-body';
-
-          const titleEl = document.createElement('div');
-          titleEl.className = 'resp-step-title';
-          titleEl.textContent = step.title;
-
-          const textEl = document.createElement('div');
-          textEl.className = 'resp-step-text';
-          textEl.textContent = step.text;
-
-          bodyEl.appendChild(titleEl);
-          bodyEl.appendChild(textEl);
-
-          // Emoji row — only shown if field is non-empty (beginner mode)
-          if (step.emoji && step.emoji.trim() !== '') {
-            const emojiEl = document.createElement('div');
-            emojiEl.className = 'resp-step-emoji';
-            emojiEl.textContent = step.emoji;
-            bodyEl.appendChild(emojiEl);
-          }
-
-          stepEl.appendChild(numEl);
-          stepEl.appendChild(bodyEl);
-          container.appendChild(stepEl);
-        });
-      }
-
-      // 3. ANSWER pill/card
-      if (s.answer) {
-        const answerEl = document.createElement('div');
-        answerEl.className = 'resp-answer';
-        answerEl.textContent = s.answer;
-        container.appendChild(answerEl);
-      }
-
-      // 4. FOLLOW-UP note
-      if (s.followup) {
-        const followupEl = document.createElement('div');
-        followupEl.className = 'resp-followup';
-        followupEl.textContent = s.followup;
-        container.appendChild(followupEl);
-      }
-
+      // Add skeleton loader immediately
+      const skeleton = createSkeletonLoader(s.steps ? s.steps.length : 3);
+      container.appendChild(skeleton);
       chatEl.appendChild(container);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
+
+      // Render actual content after a short delay (allows skeleton to be seen)
+      setTimeout(() => {
+        // Create actual content elements
+        const contentElements = [];
+
+        // 1. INTRO card
+        if (s.intro) {
+          const introEl = document.createElement('div');
+          introEl.className = 'resp-intro animate-greeting';
+          introEl.textContent = s.intro;
+          introEl.style.setProperty('--delay', '0s');
+          contentElements.push(introEl);
+        }
+
+        // 2. STEP cards — each staggered
+        if (s.steps && s.steps.length > 0) {
+          s.steps.forEach((step, i) => {
+            const stepEl = document.createElement('div');
+            stepEl.className = 'resp-step animate-in';
+            // Stagger with 0.1s between each step
+            const delay = (i + 1) * 0.1;
+            stepEl.style.animationDelay = `${delay}s`;
+
+            const numEl = document.createElement('div');
+            numEl.className = 'resp-step-num';
+            numEl.textContent = i + 1;
+
+            const bodyEl = document.createElement('div');
+            bodyEl.className = 'resp-step-body';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'resp-step-title';
+            titleEl.textContent = step.title;
+
+            const textEl = document.createElement('div');
+            textEl.className = 'resp-step-text';
+            textEl.textContent = step.text;
+
+            bodyEl.appendChild(titleEl);
+            bodyEl.appendChild(textEl);
+
+            // Emoji row — only shown if field is non-empty (beginner mode)
+            if (step.emoji && step.emoji.trim() !== '') {
+              const emojiEl = document.createElement('div');
+              emojiEl.className = 'resp-step-emoji';
+              emojiEl.textContent = step.emoji;
+              bodyEl.appendChild(emojiEl);
+            }
+
+            stepEl.appendChild(numEl);
+            stepEl.appendChild(bodyEl);
+            contentElements.push(stepEl);
+          });
+        }
+
+        // 3. ANSWER pill/card — final element with bounce scale
+        if (s.answer) {
+          const answerEl = document.createElement('div');
+          answerEl.className = 'resp-answer animate-bounce-scale';
+          answerEl.textContent = s.answer;
+          // Answer appears after all steps, with bounce effect
+          const delay = (s.steps ? s.steps.length : 0) * 0.1 + 0.2;
+          answerEl.style.animationDelay = `${delay}s`;
+          contentElements.push(answerEl);
+        }
+
+        // 4. FOLLOW-UP note
+        if (s.followup) {
+          const followupEl = document.createElement('div');
+          followupEl.className = 'resp-followup animate-in';
+          followupEl.textContent = s.followup;
+          const delay = (s.steps ? s.steps.length : 0) * 0.1 + 0.3;
+          followupEl.style.animationDelay = `${delay}s`;
+          contentElements.push(followupEl);
+        }
+
+        // Remove skeleton and add content
+        removeSkeletonLoader(container);
+        
+        // Add all content elements to container
+        contentElements.forEach(el => container.appendChild(el));
+        
+        // Scroll to bottom
+        scrollToBottom();
+      }, 300); // Let skeleton shimmer for 300ms
     }
 
     // ============ Event Listeners ============
@@ -2509,6 +4623,57 @@
 
       try {
         if (pendingImage) {
+          // Capture image data URL for vision response thumbnail
+          let capturedImageDataUrl = null;
+          
+          // Display user message with image first
+          const reader = new FileReader();
+          const imageLoadPromise = new Promise((resolve) => {
+            reader.onload = (e) => {
+              capturedImageDataUrl = e.target.result;
+              
+              const bubbleContainer = document.createElement('div');
+              bubbleContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                align-self: flex-end;
+                max-width: 65%;
+              `;
+              
+              const imageBubble = document.createElement('img');
+              imageBubble.src = e.target.result;
+              imageBubble.className = 'bubble-image';
+              imageBubble.loading = 'lazy'; // Lazy load for performance
+              imageBubble.decoding = 'async'; // Non-blocking decode
+              imageBubble.style.cssText = `
+                width: 120px;
+                height: 120px;
+                border-radius: 8px;
+                object-fit: cover;
+              `;
+              bubbleContainer.appendChild(imageBubble);
+              
+              if (message) {
+                const textBubble = document.createElement('div');
+                textBubble.className = 'bubble user';
+                textBubble.textContent = message;
+                bubbleContainer.appendChild(textBubble);
+              }
+              
+              chatEl.appendChild(bubbleContainer);
+              scrollToBottom();
+              resolve();
+            };
+          });
+          reader.readAsDataURL(pendingImage);
+          
+          // Wait for image to be read
+          await imageLoadPromise;
+
+          // Show engaging facts loading screen for image processing
+          showFactsLoading();
+
           // Use /chat-with-image endpoint
           const formData = new FormData();
           formData.append('message', message);
@@ -2520,16 +4685,34 @@
             method: 'POST',
             body: formData
           });
+          
+          // Hide facts loading when response arrives
+          hideFactsLoading();
+          
+          if (!res.ok) {
+            const error = await res.json();
+            addBubble('❌ Error: ' + (error.error || 'Failed to process image'), 'bot');
+            throw new Error(error.error);
+          }
+
           const data = await res.json();
           pendingImage = null;
           imagePreviewContainer.innerHTML = '';
 
-          if (estimateBadge) estimateBadge.remove();
+          if (estimateBadge) {
+            estimateBadge.triggerShrinkFade();
+          }
           if (countdownInterval) clearInterval(countdownInterval);
 
-          renderBotResponse(data);
-          history.push({ role: 'user', content: message });
-          history.push({ role: 'assistant', content: data.reply });
+          // Ensure we have a valid response to render - pass image data URL for vision card
+          if (data && (data.structured || data.reply)) {
+            renderBotResponse(data, capturedImageDataUrl);
+          } else {
+            addBubble('Unable to process image. Please try again.', 'bot');
+          }
+
+          history.push({ role: 'user', content: message || '[Image uploaded]' });
+          history.push({ role: 'assistant', content: data.reply || 'Image analyzed' });
         } else {
           // Use /chat endpoint
           const res = await fetch('/chat', {
@@ -2541,9 +4724,18 @@
               history
             })
           });
+
+          if (!res.ok) {
+            const error = await res.json();
+            addBubble('❌ Error: ' + (error.error || 'Failed to get response'), 'bot');
+            throw new Error(error.error || 'Chat failed');
+          }
+
           const data = await res.json();
 
-          if (estimateBadge) estimateBadge.remove();
+          if (estimateBadge) {
+            estimateBadge.triggerShrinkFade();
+          }
           if (countdownInterval) clearInterval(countdownInterval);
 
           renderBotResponse(data);
@@ -2551,6 +4743,10 @@
           history.push({ role: 'assistant', content: data.reply });
         }
       } catch (err) {
+        // Clean up any loading states
+        hideFactsLoading();
+        if (estimateBadge) estimateBadge.triggerShrinkFade();
+        if (countdownInterval) clearInterval(countdownInterval);
         alert('⚠️ Could not reach StudyBuddy. Is the server running?');
       }
     }
@@ -2587,7 +4783,9 @@
         });
 
         const data = await res.json();
-        if (estimateBadge) estimateBadge.remove();
+        if (estimateBadge) {
+          estimateBadge.triggerShrinkFade();
+        }
         if (countdownInterval) clearInterval(countdownInterval);
 
         if (!data.success && !data.structured) {
@@ -2612,7 +4810,9 @@
         history.push({ role: 'assistant', content: data.rawReply });
 
       } catch (err) {
-        if (estimateBadge) estimateBadge.remove();
+        if (estimateBadge) {
+          estimateBadge.triggerShrinkFade();
+        }
         if (countdownInterval) clearInterval(countdownInterval);
         addBubble('⚠️ Agent error: could not reach server.', 'bot');
       }
@@ -2655,7 +4855,7 @@
       });
 
       chatEl.appendChild(wrapper);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     function renderAgentResponse(s) {
@@ -2719,12 +4919,21 @@
         chatEl.appendChild(note);
       }
 
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     async function showProgress() {
       const res  = await fetch('/progress');
       const data = await res.json();
+      const theme = document.body.getAttribute('data-theme') || 'intermediate';
+      const isAdvanced = theme === 'advanced';
+
+      // Theme-aware colors
+      const weakBg = isAdvanced ? 'rgba(248, 81, 73, 0.15)' : '#FCEBEB';
+      const weakText = isAdvanced ? '#F85149' : '#A32D2D';
+      const strongBg = isAdvanced ? 'rgba(63, 185, 80, 0.15)' : '#EAF3DE';
+      const strongText = isAdvanced ? '#3FB950' : '#27500A';
+      const resetColor = isAdvanced ? '#F85149' : '#A32D2D';
 
       const card = document.createElement('div');
       card.style.cssText = `
@@ -2762,12 +4971,12 @@
         ${data.weakAreas.length > 0 ? `
           <div style="margin-bottom:8px;">
             <span style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Needs review</span><br>
-            ${data.weakAreas.map(t => `<span style="display:inline-block;margin:3px 4px 3px 0;padding:2px 10px;border-radius:10px;font-size:12px;background:#FCEBEB;color:#A32D2D;">⬤ ${t}</span>`).join('')}
+            ${data.weakAreas.map(t => `<span style="display:inline-block;margin:3px 4px 3px 0;padding:2px 10px;border-radius:10px;font-size:12px;background:${weakBg};color:${weakText};">⬤ ${t}</span>`).join('')}
           </div>` : ''}
         ${data.strongAreas.length > 0 ? `
           <div style="margin-bottom:8px;">
             <span style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Mastered</span><br>
-            ${data.strongAreas.map(t => `<span style="display:inline-block;margin:3px 4px 3px 0;padding:2px 10px;border-radius:10px;font-size:12px;background:#EAF3DE;color:#27500A;">⬤ ${t}</span>`).join('')}
+            ${data.strongAreas.map(t => `<span style="display:inline-block;margin:3px 4px 3px 0;padding:2px 10px;border-radius:10px;font-size:12px;background:${strongBg};color:${strongText};">⬤ ${t}</span>`).join('')}
           </div>` : ''}
         ${data.recentTopics.length > 0 ? `
           <div>
@@ -2775,12 +4984,12 @@
             <span style="font-size:13px;color:var(--text-secondary);">${data.recentTopics.join(' → ')}</span>
           </div>` : ''}
         <div style="margin-top:12px;text-align:right;">
-          <button onclick="resetProgress()" style="font-size:12px;color:#A32D2D;background:none;border:none;cursor:pointer;padding:0;">Reset progress</button>
+          <button onclick="resetProgress()" style="font-size:12px;color:${resetColor};background:none;border:none;cursor:pointer;padding:0;">Reset progress</button>
         </div>
       `;
 
       chatEl.appendChild(card);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     async function resetProgress() {
@@ -3000,17 +5209,40 @@
         const inputElement = document.getElementById('input');
         if (inputElement) {
           inputElement.value = finalText;
-          console.log('[Voice] Text set in input element');
+          console.log('[Voice] Text set in input element:', finalText);
           updateVoicePreview(finalText);
+          hideVoiceStatusBar();
+          
           // Auto-send after a brief delay so UI updates are visible
-          setTimeout(() => {
-            console.log('[Voice] Attempting to send message...');
+          setTimeout(async () => {
+            console.log('[Voice] Attempting to send message at', new Date().toISOString());
             try {
-              // Call sendMessage - it should be available at this point
-              sendMessage();
-              console.log('[Voice] sendMessage() called successfully');
+              // Ensure sendMessage is complete before resetting
+              const result = await sendMessage();
+              console.log('[Voice] sendMessage() completed successfully at', new Date().toISOString(), 'Result:', result);
+              
+              // Reset voice state AFTER message is fully sent
+              voiceTranscript = '';
+              setTimeout(() => {
+                hideVoicePreview();
+                setMicState('idle');
+                console.log('[Voice] State reset to idle');
+              }, 500); // Delay to ensure UI has rendered
+              
             } catch (e) {
               console.error('[Voice] Error calling sendMessage:', e);
+              console.error('[Voice] Error stack:', e.stack);
+              
+              // Reset state on error too
+              voiceTranscript = '';
+              hideVoicePreview();
+              setMicState('idle');
+              
+              // Show error to user
+              const errorMsg = '⚠️ Voice message failed to send. Please try again.';
+              addBubble(errorMsg, 'bot');
+              announceToScreenReader(errorMsg);
+              
               // Fallback: trigger send button click
               const sendBtn = document.getElementById('send');
               console.log('[Voice] Trying fallback: clicking send button');
@@ -3018,14 +5250,10 @@
                 sendBtn.click();
               }
             }
-            // Reset voice state after message is sent
-            setTimeout(() => {
-              voiceTranscript = '';
-              hideVoicePreview();
-              setMicState('idle');
-              console.log('[Voice] State reset to idle');
-            }, 200);
           }, 200);
+        } else {
+          console.error('[Voice] Input element not found!');
+          setMicState('idle');
         }
       } else {
         announceToScreenReader('No speech was recognized');
@@ -3106,17 +5334,10 @@
     // Clean up voice state - reset after message is processed
     // Simple cleanup without wrapping sendMessage
 
-    // ── On load: fetch streak + due reviews + register SW ──
+    // ── On load: streak, due reviews, SW registration ──
     window.addEventListener('load', () => {
       loadStreak();
       loadDueReviews();
-
-      // Register service worker for offline PWA support
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-          .then(() => console.log('[SW] Registered — app is installable offline'))
-          .catch(err => console.warn('[SW] Registration failed:', err));
-      }
     });
 
     // Close concept map modal on Escape
@@ -3125,6 +5346,71 @@
         document.getElementById('concept-map-modal').classList.remove('active');
       }
     });
+  </script>
+
+  <!-- ============ PWA Service Worker Registration & Install Banner ============ -->
+  <script>
+    (function() {
+      'use strict';
+
+      // ── Service Worker Registration ────────────────────
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              console.log('[PWA] Service Worker registered:', reg.scope);
+              setInterval(() => {
+                reg.update().catch(err => console.warn('[PWA] SW update check failed:', err));
+              }, 5 * 60 * 1000);
+            })
+            .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[PWA] New Service Worker took control');
+        });
+      }
+
+      // ── Standalone Mode Detection ────────────────────
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.body.classList.add('pwa-standalone');
+        console.log('[PWA] Running in standalone mode');
+      }
+
+      // ── Install Prompt Banner ────────────────────
+      let deferredPrompt = null;
+      const banner     = document.getElementById('pwa-install-banner');
+      const installBtn = document.getElementById('pwa-install-btn');
+      const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(() => {
+          if (banner && !banner.classList.contains('show')) banner.classList.add('show');
+        }, 3000);
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener('click', () => {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((result) => {
+            if (result.outcome === 'accepted') hideBanner();
+            deferredPrompt = null;
+          });
+        });
+      }
+
+      if (dismissBtn) dismissBtn.addEventListener('click', hideBanner);
+
+      function hideBanner() { if (banner) banner.classList.remove('show'); }
+
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App installed successfully');
+        hideBanner();
+      });
+    })();
   </script>
 </body>
 </html>

@@ -1,0 +1,109 @@
+/* ============================================================
+   StudyBuddy — Multi-Level Color Theming System
+   Three distinct themes driven by [data-theme] on <body>
+   ============================================================ */
+
+/* ── Base variables (defaults to intermediate) ── */
+:root {
+  --bg: #F0F2F5;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --accent: #6C63FF;
+  --text: #1A1A2E;
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --radius: 12px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BEGINNER THEME — The Safety Zone
+   Soft, friendly feel with rounded corners and warm colours
+   Contrast ratios: Text #2D3B2D on #F7FFF7 = 10.5:1 ✓
+   ════════════════════════════════════════════════════════════ */
+[data-theme="beginner"] {
+  --primary: #A8E6CF;
+  --primary-dark: #7DCFB0;
+  --bg: #F7FFF7;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --accent: #A8E6CF;
+  --text: #2D3B2D;
+  --text-primary: #2D3B2D;
+  --text-secondary: #5A6B5A;
+  --bubble-bot-bg: #FFFFFF;
+  --highlight: #FFD3B6;
+  --success: #6BCB77;
+  --error: #FF8A8A;
+  --border: #D4EDDA;
+  --font-family: 'DM Sans', sans-serif;
+  --border-radius-lg: 24px;
+  --border-radius-md: 20px;
+  --border-radius-sm: 16px;
+  --radius: 24px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   INTERMEDIATE THEME — The Focus Flow
+   Clean, modern look with balanced aesthetics
+   Contrast ratios: Text #1F2937 on #F0F2F5 = 12.6:1 ✓
+   ════════════════════════════════════════════════════════════ */
+[data-theme="intermediate"] {
+  --primary: #6C63FF;
+  --primary-dark: #5A52E0;
+  --bg: #F0F2F5;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --accent: #6C63FF;
+  --text: #1F2937;
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --bubble-bot-bg: #FFFFFF;
+  --highlight: #A78BFA;
+  --success: #10B981;
+  --error: #EF4444;
+  --border: #E5E7EB;
+  --font-family: 'Inter', sans-serif;
+  --border-radius-lg: 12px;
+  --border-radius-md: 12px;
+  --border-radius-sm: 8px;
+  --radius: 12px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   ADVANCED THEME — The Mastery Peak
+   Sharp, pro-tool aesthetic with dark mode
+   Contrast ratios: Text #F0EFF8 on #0A0A0F = 17.3:1 ✓
+   ════════════════════════════════════════════════════════════ */
+[data-theme="advanced"] {
+  --primary: #00D2FF;
+  --primary-dark: #00A8CC;
+  --bg: #0A0A0F;
+  --surface: #14141A;
+  --card: #1A1A22;
+  --accent: #00D2FF;
+  --text: #F0EFF8;
+  --text-primary: #F0EFF8;
+  --text-secondary: #9CA3AF;
+  --bubble-bot-bg: #14141A;
+  --highlight: #7C3AED;
+  --success: #3FB950;
+  --error: #F85149;
+  --border: #2D2D3A;
+  --font-family: 'JetBrains Mono', monospace;
+  --border-radius-lg: 4px;
+  --border-radius-md: 4px;
+  --border-radius-sm: 2px;
+  --radius: 4px;
+}
+
+/* ── Theme transition — smooth colour blending on level change ── */
+body {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after {
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
