@@ -550,23 +550,96 @@ Format:
     }
     
     let responseText = data.message.content;
+    console.log('[/quiz] Raw response length:', responseText.length);
 
-    // Strip markdown code fences if present
+    // ─── Robust JSON extraction and repair ───
+    // Step 1: Strip markdown code fences if present
     responseText = responseText
-      .replace(/^```json\n?/i, '')
-      .replace(/^```\n?/i, '')
-      .replace(/\n?```$/i, '')
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
       .trim();
 
-    // Parse JSON
-    const questions = JSON.parse(responseText);
-
-    // Validate that we got an array
-    if (!Array.isArray(questions)) {
-      return res.status(500).json({ error: 'Invalid quiz format from model' });
+    // Step 2: Try to extract JSON array if there's extra text
+    const jsonArrayMatch = responseText.match(/\[[\s\S]*\]/);
+    if (jsonArrayMatch) {
+      responseText = jsonArrayMatch[0];
     }
 
-    res.json({ questions });
+    // Step 3: Repair common JSON issues
+    // Fix trailing commas before ] or }
+    responseText = responseText.replace(/,(\s*[\]\}])/g, '$1');
+    // Fix missing commas between objects
+    responseText = responseText.replace(/\}(\s*)\{/g, '},$1{');
+    // Fix unescaped quotes in strings (basic repair)
+    responseText = responseText.replace(/([^\\])\\([^"\\nrtbfu])/g, '$1\\\\$2');
+    // Remove any control characters
+    responseText = responseText.replace(/[\x00-\x1F\x7F]/g, (char) => {
+      if (char === '\n' || char === '\r' || char === '\t') return char;
+      return '';
+    });
+
+    // Step 4: Parse JSON with error recovery
+    let questions;
+    try {
+      questions = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('[/quiz] JSON parse error:', parseError.message);
+      console.error('[/quiz] Problematic JSON (first 500 chars):', responseText.substring(0, 500));
+      
+      // Try one more repair: find the last valid closing bracket
+      const lastBracket = responseText.lastIndexOf(']');
+      if (lastBracket > 0) {
+        const trimmed = responseText.substring(0, lastBracket + 1);
+        try {
+          questions = JSON.parse(trimmed);
+          console.log('[/quiz] Recovered by trimming to last ]');
+        } catch (e) {
+          throw new Error(`Invalid JSON from model: ${parseError.message}`);
+        }
+      } else {
+        throw new Error(`Invalid JSON from model: ${parseError.message}`);
+      }
+    }
+
+    // Step 5: Validate that we got an array
+    if (!Array.isArray(questions)) {
+      return res.status(500).json({ error: 'Invalid quiz format: expected array of questions' });
+    }
+
+    // Step 6: Validate and sanitize each question
+    const validatedQuestions = questions
+      .filter(q => q && typeof q === 'object')
+      .map((q, index) => {
+        // Ensure required fields exist with defaults
+        const validated = {
+          question: String(q.question || `Question ${index + 1}`).trim(),
+          options: Array.isArray(q.options) ? q.options.map(o => String(o).trim()) : ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
+          answer: String(q.answer || q.options?.[0] || 'A) Option 1').trim(),
+          explanation: String(q.explanation || 'No explanation provided').trim()
+        };
+        
+        // Ensure we have exactly 4 options
+        while (validated.options.length < 4) {
+          validated.options.push(`${String.fromCharCode(65 + validated.options.length)}) Option`);
+        }
+        validated.options = validated.options.slice(0, 4);
+        
+        // Ensure answer is one of the options
+        if (!validated.options.some(opt => opt.startsWith(validated.answer.charAt(0)))) {
+          validated.answer = validated.options[0];
+        }
+        
+        return validated;
+      })
+      .filter(q => q.question && q.question.length > 5); // Filter out empty questions
+
+    if (validatedQuestions.length === 0) {
+      return res.status(500).json({ error: 'No valid questions could be generated. Please try again.' });
+    }
+
+    console.log(`[/quiz] Successfully generated ${validatedQuestions.length} questions`);
+    res.json({ questions: validatedQuestions });
   } catch (err) {
     console.error('[/quiz] Error:', err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
