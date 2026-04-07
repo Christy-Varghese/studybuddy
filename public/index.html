@@ -1784,7 +1784,7 @@
         ⏳ Gemma 4 is building your concept map...
       </div>
       <div class="concept-map-svg-wrap" id="cm-svg-wrap" style="display:none;"></div>
-      <div id="cm-legend" style="display:none;font-size:11px;color:var(--text-secondary);display:flex;gap:16px;flex-wrap:wrap;">
+      <div id="cm-legend" style="display:none;font-size:11px;color:var(--text-secondary);gap:16px;flex-wrap:wrap;">
         <span>⬤ <span style="color:var(--primary)">Core concept</span></span>
         <span>⬤ <span style="color:var(--accent)">Key idea</span></span>
         <span>⬤ <span style="color:var(--success)">Example</span></span>
@@ -1935,90 +1935,6 @@
 
       sendBtn.disabled = false;
       inputEl.focus();
-    }
-
-    async function sendToChat(message) {
-      // Existing chat logic
-      let estimateBadge = null;
-      let countdownInterval = null;
-      try {
-        const estimateRes = await fetch('/estimate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message,
-            level: levelEl.value,
-            hasImage: !!pendingImage
-          })
-        });
-
-        if (estimateRes.ok) {
-          const estimate = await estimateRes.json();
-          const { badge, interval } = showEstimateBadge(estimate);
-          estimateBadge = badge;
-          countdownInterval = interval;
-        }
-      } catch (e) {
-        // Silently fail estimate - it's optional
-      }
-
-      try {
-        if (pendingImage) {
-          // Use /chat-with-image endpoint
-          const formData = new FormData();
-          formData.append('message', message);
-          formData.append('level', levelEl.value);
-          formData.append('history', JSON.stringify(history));
-          formData.append('image', pendingImage);
-
-          const res = await fetch('/chat-with-image', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await res.json();
-          if (estimateBadge) estimateBadge.remove();
-          if (countdownInterval) clearInterval(countdownInterval);
-
-          if (data.error) {
-            addBubble('⚠️ ' + data.error, 'bot');
-          } else {
-            renderBotResponse(data);
-            history.push({ role: 'user', content: message });
-            history.push({ role: 'assistant', content: data.reply });
-          }
-
-          pendingImage = null;
-          removeImage();
-        } else {
-          // Use /chat endpoint
-          const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message,
-              level: levelEl.value,
-              history
-            })
-          });
-
-          const data = await res.json();
-          if (estimateBadge) estimateBadge.remove();
-          if (countdownInterval) clearInterval(countdownInterval);
-
-          if (data.error) {
-            addBubble('⚠️ ' + data.error, 'bot');
-          } else {
-            renderBotResponse(data);
-            history.push({ role: 'user', content: message });
-            history.push({ role: 'assistant', content: data.reply });
-          }
-        }
-      } catch (e) {
-        if (estimateBadge) estimateBadge.remove();
-        if (countdownInterval) clearInterval(countdownInterval);
-        addBubble('⚠️ Could not reach the server.', 'bot');
-      }
     }
 
     // ============ Quiz Modal Handlers ============
@@ -2246,6 +2162,7 @@
       document.getElementById('concept-map-modal').classList.remove('active');
       document.getElementById('cm-svg-wrap').style.display = 'none';
       document.getElementById('cm-loading').style.display = 'none';
+      document.getElementById('cm-legend').style.display = 'none';
     }
 
     async function generateConceptMap() {
