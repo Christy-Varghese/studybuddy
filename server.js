@@ -434,26 +434,34 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
       history = [];
     }
 
-    // Build system prompt specifically for vision tasks
-    const visionSystemPrompt = `You are an expert tutor helping students understand homework problems.
-When analyzing images of homework or problems:
-1. Explain what you see in the image
-2. Break down the solution into clear steps
-3. Explain the concepts being tested
-4. Provide the final answer
+    // Build system prompt specifically for vision tasks - structured analysis format
+    const visionSystemPrompt = `You are an expert vision-based tutor. Analyze homework images with precision.
 
-Always respond in this EXACT JSON format (no markdown, pure JSON):
+RESPOND ONLY IN THIS EXACT JSON FORMAT (no markdown, pure JSON):
 {
-  "intro": "Brief overview of what's shown",
-  "steps": [
-    {"title": "Step title", "text": "Step explanation", "emoji": "👉"},
-    {"title": "Step title", "text": "Step explanation", "emoji": "👉"}
+  "visual_summary": "One sentence describing what you see in the image",
+  "extracted_data": [
+    "Key element 1 found (e.g., 'Math equation: 3x + 5 = 11')",
+    "Key element 2 found (e.g., 'Graph showing parabola y = x²')",
+    "Key element 3 found if applicable"
   ],
-  "answer": "The final answer or conclusion",
-  "followup": "Optional: A follow-up concept to explore"
+  "logic_steps": [
+    {"step": 1, "title": "Step title", "explanation": "Detailed step explanation"},
+    {"step": 2, "title": "Step title", "explanation": "Detailed step explanation"},
+    {"step": 3, "title": "Step title", "explanation": "Detailed step explanation"}
+  ],
+  "final_solution": "The clear, highlighted final answer or conclusion",
+  "confidence": "high|medium|low"
 }
 
-IMPORTANT: Respond ONLY with valid JSON, no other text or markdown.`;
+RULES:
+1. visual_summary: Describe the IMAGE content objectively (what type of problem, subject area)
+2. extracted_data: List ALL text, numbers, equations, or diagrams you can identify - be specific
+3. logic_steps: Provide pedagogical breakdown - teach the concept, don't just solve
+4. final_solution: State the answer clearly, boxed or highlighted format
+5. confidence: Rate how clearly you could read/interpret the image
+
+IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
 
     // Build messages array with vision capability
     // For Ollama, we need to use the 'images' field at the message level
@@ -491,8 +499,10 @@ IMPORTANT: Respond ONLY with valid JSON, no other text or markdown.`;
     
     let rawReply = data.message.content;
 
-    // Attempt to parse as structured JSON
+    // Attempt to parse as structured vision JSON
     let structured = null;
+    let isVisionResponse = false;
+    
     try {
       // Strip any accidental markdown code fences Gemma might add
       const cleaned = rawReply
@@ -501,16 +511,27 @@ IMPORTANT: Respond ONLY with valid JSON, no other text or markdown.`;
         .replace(/```\s*$/i, '')
         .trim();
       structured = JSON.parse(cleaned);
+      
+      // Check if it's the new vision format
+      if (structured.visual_summary && structured.extracted_data) {
+        isVisionResponse = true;
+      }
     } catch (e) {
       // Gemma failed to return valid JSON
-      // Try to construct a simple structured response from the raw text
+      // Construct a vision-compatible fallback from raw text
       if (rawReply && rawReply.trim().length > 0) {
         structured = {
-          intro: rawReply.substring(0, Math.min(150, rawReply.length)),
-          steps: [],
-          answer: rawReply.length > 150 ? rawReply.substring(150) : '',
-          followup: 'Would you like me to explain any part further?'
+          visual_summary: 'Image analyzed - see details below',
+          extracted_data: ['Unable to extract structured data from image'],
+          logic_steps: [{
+            step: 1,
+            title: 'Analysis',
+            explanation: rawReply
+          }],
+          final_solution: 'Please review the analysis above',
+          confidence: 'low'
         };
+        isVisionResponse = true;
       } else {
         structured = null;
       }
@@ -519,10 +540,11 @@ IMPORTANT: Respond ONLY with valid JSON, no other text or markdown.`;
     // Clean up uploaded temp file
     fs.unlinkSync(file.path);
 
-    // Return both structured and raw so frontend can handle either
+    // Return vision-specific response format
     res.json({
       reply: rawReply,           // raw text fallback
-      structured: structured     // parsed object or constructed fallback
+      structured: structured,    // parsed object or constructed fallback
+      isVision: isVisionResponse // flag for frontend to use vision renderer
     });
   } catch (err) {
     // Clean up file on error
