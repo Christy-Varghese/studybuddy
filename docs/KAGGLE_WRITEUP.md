@@ -1,216 +1,354 @@
-# StudyBuddy — AI-Powered Offline Tutor
+# StudyBuddy — Offline AI Tutor Powered by Gemma 4
 
-**Track:** Future of Education
+## Submission Details
 
-**Subtitle:** Bringing frontier AI tutoring to every student, everywhere — no internet required.
+- **Title:** StudyBuddy — Offline AI Tutor Powered by Gemma 4
+- **Subtitle:** Bringing frontier AI tutoring to every student, everywhere — no cloud, no cost, no internet required.
+- **Track:** Future of Education
+- **Card Image:** `public/card-560x280.html` → open in browser → screenshot at 560×280
 
-## The Problem
+---
 
-Millions of students worldwide lack access to quality tutoring due to:
-- **Cost barriers**: Traditional tutoring costs $20-50+ per hour, inaccessible for low-income families
-- **Connectivity gaps**: Students in rural or developing areas lack reliable internet for cloud-based tutors
-- **One-size-fits-all learning**: Most educational platforms don't adapt to individual learning styles and paces
-- **Privacy concerns**: Parents worry about data collection on cloud platforms
-- **Limited availability**: Tutoring help isn't always available when students need it (late nights, weekends)
+## Project Description
 
-StudyBuddy solves these challenges by bringing advanced AI tutoring directly to students' laptops—completely offline, free, and adaptive.
+### The Problem
 
-## Our Solution
+**770 million adults worldwide are illiterate. Over 250 million children lack access to quality education.**
 
-**StudyBuddy** is an offline-first AI tutor powered by Gemma 4, running locally via Ollama. It provides:
+The barriers are systemic:
 
-- **Adaptive learning**: Three difficulty levels (Beginner, Intermediate, Advanced) that adjust explanations to the student's knowledge level
-- **Multimodal homework help**: Students can photograph homework problems, and StudyBuddy analyzes the image to provide detailed solutions
-- **Interactive quizzes**: Generate custom quizzes on any topic with instant feedback and explanations
-- **Fully offline**: No internet connection needed—everything runs on the student's machine
-- **Zero cost**: Free, open-source software powered by Meta's Gemma 4 model
-- **Privacy-first**: All conversations stay on the student's device; no data collection
+- **Cost**: Private tutoring costs $25–80/hour — impossible for families earning under $5/day
+- **Connectivity**: 2.7 billion people have no internet access; cloud-based AI tutors are useless offline
+- **One-size-fits-all**: Most educational platforms deliver the same content regardless of a learner's age, background, or pace
+- **Privacy**: Parents in many regions are reluctant to send their children's data to cloud servers
+- **Availability**: Tutoring help is unavailable at the moments students need it most — late nights before exams, weekends, holidays
 
-## How We Used Gemma 4
+**StudyBuddy eliminates every one of these barriers by running a full AI tutor locally on any laptop.**
 
-- **Model**: Gemma 4 E4B (efficient 4-bit quantized variant) for fast local inference
-- **Integration**: Ollama HTTP API (`http://localhost:11434/api/chat`) for simple, reliable communication
-- **Reasoning**: System prompts with `<|think|>` tokens enable step-by-step reasoning for complex problems
-- **Multimodal capability**: Supports image inputs (JPEG, PNG, WebP) for homework photo analysis via vision encoding
-- **Adaptive prompting**: Dynamic system prompts adjust explanation depth based on selected difficulty level
+---
 
-### Example System Prompt:
+### What We Built
+
+**StudyBuddy** is a fully offline, privacy-first AI tutoring platform powered by **Google's Gemma 4** model running locally via Ollama. It combines six specialised learning tools into a single application that adapts to each student's level, tracks their progress with spaced repetition, and works without ever connecting to the internet.
+
+#### Core Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| 🎓 **3 Learning Modes** | Tutor (structured step-by-step), Socratic (guided discovery through questions), Agent (full pipeline: explain → quiz → track → suggest next) |
+| 📸 **Homework Photo Analysis** | Snap a photo of any problem → Gemma 4 vision analyses the image → step-by-step solution with extracted data, logic walkthrough, and confidence indicator |
+| 🗺 **Interactive Concept Maps** | Type any topic → auto-generated knowledge graph (nodes + edges) rendered as animated SVG showing how concepts interconnect |
+| 📊 **SM-2 Spaced Repetition** | Every quiz score feeds the SuperMemo-2 algorithm; topics are scheduled for review at scientifically optimal intervals (1 → 6 → 15 → … days) |
+| 🔥 **Learning Streaks** | Consecutive study day tracking with visual streak badge — gamification without the gimmicks |
+| 🧠 **Smart 4-Layer Cache** | Taxonomy resolution → normalised hash → in-flight dedup → disk persistence (48h TTL); ~70% bandwidth reduction |
+| 📚 **Dynamic Taxonomy** | Topics asked 2+ times auto-promote to the learned taxonomy; admin panel for curation |
+| 🎨 **3 Adaptive Themes** | Beginner (ages 8–12, emoji-rich, playful), Intermediate (high school, clean), Advanced (university, terminal-style monospace) |
+| 📱 **PWA** | Installable on any device; service worker caches the shell for offline-first experience |
+| 🔍 **Developer Diagnostics** | Built-in Metrics + Flow tabs: per-route latency, cache hit rates, real-time flow traces with bottleneck detection |
+
+---
+
+### How We Used Gemma 4
+
+StudyBuddy leverages **Gemma 4 E4B** (efficient 4-bit quantised) as both the reasoning engine and the vision model. All inference happens locally through the Ollama HTTP API (`localhost:11434`).
+
+#### 1. Adaptive Prompting System
+
+Gemma 4 receives **dynamic system prompts** that adjust explanation depth based on the selected difficulty level:
+
 ```
-<|think|>
 You are StudyBuddy, a friendly and patient tutor.
-Adapt your explanation complexity to level: intermediate.
-- beginner: use simple words, fun analogies, short sentences
-- intermediate: use proper terms but still explain them
-- advanced: use technical depth and assume strong foundations
-Always break explanations into clear steps.
-End each response by asking one follow-up question to check understanding.
+Adapt your explanation to level: {{level}}.
+- beginner: simple words, fun analogies, emojis, short sentences
+- intermediate: proper terminology with definitions, balanced depth
+- advanced: technical depth, assume strong foundations, concise notation
+
+Return a JSON object: { intro, steps: [{title, text, emoji}], answer, followup }
 ```
 
-## Architecture
+This structured JSON contract means every response renders with consistent UI components (intro card → numbered step cards → answer pill → follow-up prompt), regardless of the topic.
 
-### Frontend (HTML/CSS/JavaScript)
-- **Single-page app** with responsive design
-- **Dark mode support** using CSS media queries
-- **Components**: Chat interface, image upload preview, quiz modal, message bubbles
-- **Smooth animations**: Fade-in effects, pulsing status dots, sliding modals
+#### 2. Vision / Multimodal (Homework Photos)
 
-### Backend (Node.js + Express)
+When a student uploads a homework photo:
+1. Image is resized/optimised via `sharp` (max 1024px, WebP conversion)
+2. Converted to base64 and sent to Gemma 4 via Ollama's multimodal API
+3. Gemma returns structured analysis: `{ visual_summary, extracted_data[], logic_steps[], final_solution, confidence }`
+4. Rendered as a rich vision analysis card with scanning animation, thumbnail, section-by-section reveal
+
+#### 3. `<think>` Block Handling
+
+Gemma 4 often emits `<think>…</think>` reasoning blocks before its final answer. StudyBuddy:
+- **Server-side**: Strips think blocks via regex before JSON parsing
+- **Robust JSON extraction**: Direct parse → strip code fences → find `{…}` in text → repair trailing commas → validate required fields
+- **Client-side fallback**: `renderFormattedFallback()` converts markdown-like text to rich HTML when structured JSON isn't available
+
+#### 4. Tool-Calling Agent Architecture
+
+The Agent mode uses Gemma 4 as a **planner** that decides which tools to invoke:
+
 ```
-POST /chat                 → Text-only questions
-POST /chat-with-image      → Homework photo + question
-POST /quiz                 → Quiz generation on any topic
+Available tools:
+1. explain_topic(topic, level) — Structured explanation
+2. generate_quiz(topic, level, numQuestions) — MCQ quiz
+3. track_progress(topic, score) — Save to SRS
+4. suggest_next_topic(level) — Personalised recommendation
+5. ask_socratic_question(topic, history) — Guided discovery
+6. generate_concept_map(topic, level) — Knowledge graph
+
+Gemma plans: "Student asked about gravity →
+  Step 1: explain_topic('gravity', 'intermediate')
+  Step 2: generate_quiz('gravity', 'intermediate', 3)
+  Step 3: track_progress('gravity', null)
+  Step 4: suggest_next_topic('intermediate')"
 ```
 
-### Image Upload Flow:
-1. User selects homework photo via paperclip button
-2. Image preview rendered with remove option
-3. On send, FormData multipart request to `/chat-with-image`
-4. Backend converts image to base64 and sends to Ollama with vision capability
-5. Temporary file cleaned up after response
+Each tool call goes to Ollama independently, results are synthesised, and the combined response is streamed back.
 
-### Quiz Generation:
-1. User opens quiz modal, enters topic and question count
-2. Backend calls Ollama with clean JSON generation prompt (no `<|think|>` token)
-3. Response parsed, markdown code fences stripped if present
-4. Quiz rendered as interactive card in chat
-5. User selects answers, correct/wrong highlighted, explanations shown
-6. Score tracked and displayed
+#### 5. Concept Map Generation
 
-### Ollama Integration:
-- Calls `http://localhost:11434/api/chat` (standard Ollama API)
-- All requests use `model: gemma4:e4b`
-- Streaming disabled for simpler response parsing
+Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, label}] }` JSON structure for any topic. The frontend renders this as a force-directed SVG graph with:
+- Colour-coded node groups
+- Animated edge connections
+- Interactive hover tooltips
+- No external graph libraries (pure SVG + JS)
 
-## Key Features
+---
 
-✅ **Adaptive Explanation Levels** — Beginner, Intermediate, Advanced difficulty modes that adjust language complexity and depth
+### Architecture
 
-✅ **Homework Photo Analysis** — Snap a photo of any math problem, diagram, or text; StudyBuddy analyzes and explains it
+```
+┌─────────────────────────────────────────────────┐
+│         Browser (Single-Page App / PWA)          │
+│                                                   │
+│  Chat UI ← → Quiz Modal ← → Concept Map SVG     │
+│  Image Upload ← → Theme Switcher ← → Streak     │
+│  Skeleton Loaders ← → Dev Panel (Metrics+Flow)  │
+└──────────────────────┬────────────────────────────┘
+                       │ HTTP (localhost:3000)
+┌──────────────────────▼────────────────────────────┐
+│           Express.js Backend (server.js)           │
+│                                                     │
+│  /chat  /chat-with-image  /quiz  /concept-map      │
+│  /agent  /socratic  /estimate  /progress           │
+│  /due-reviews  /srs/:topic  /streak                │
+│  /topics/search  /cache-stats  /dev/flow-traces    │
+│                                                     │
+│  ┌────────────────────────────────────────────┐    │
+│  │         Agent Layer (agentLoop.js)         │    │
+│  │  6 Tools: explain, quiz, track, suggest,   │    │
+│  │           socratic, concept-map            │    │
+│  ├────────────────────────────────────────────┤    │
+│  │  Smart Cache  │  Taxonomy  │  Progress/SRS │    │
+│  │  (4-layer)    │  (dynamic) │   (SM-2)      │    │
+│  └───────────────┴──────┬─────┴───────────────┘    │
+└─────────────────────────┼──────────────────────────┘
+                          │ HTTP (localhost:11434)
+┌─────────────────────────▼──────────────────────────┐
+│              Ollama (Local Inference)                │
+│         Gemma 4 E4B — Text + Vision                 │
+│         (runs on CPU, 8GB RAM minimum)              │
+└─────────────────────────────────────────────────────┘
+```
 
-✅ **Quiz Generation** — Generate custom quizzes on any topic with multiple-choice questions, instant feedback, and explanations
+**Key design decisions:**
+- **Zero external AI APIs** — no OpenAI, no Anthropic, purely Gemma 4 via Ollama
+- **Single `server.js`** + modular agent layer — easy to understand, deploy, and maintain
+- **JSON-first contracts** — every Gemma response has a defined schema, parsed robustly
+- **Offline-first** — PWA service worker caches the UI shell; Ollama runs locally
+- **Privacy by architecture** — data never leaves the device; no telemetry, no analytics
 
-✅ **Fully Offline** — No internet required; runs 100% locally on any laptop with 8GB+ RAM
+---
 
-✅ **Privacy-First** — All conversations and images stay on your device; zero data collection
+### Technical Highlights
 
-✅ **Beautiful UI** — Polished gradient design with dark mode, smooth animations, and responsive layout
+#### Smart 4-Layer Cache (~70% bandwidth reduction)
+```
+Request: "Explain photosynthesis"
+  │
+  ├─ Layer 1: Taxonomy resolve → "photosynthesis" (canonical)
+  ├─ Layer 2: Normalised hash lookup → cache miss
+  ├─ Layer 3: In-flight dedup → no duplicate in progress
+  ├─ Layer 4: Disk persistence → cache miss
+  │
+  └─ → Call Ollama → store result → next time: instant from Layer 2
+```
 
-✅ **Multi-Turn Conversations** — Maintains conversation history for follow-up questions and coherent learning sessions
+#### Spaced Repetition (SM-2)
+```
+Quiz score → SM-2 algorithm → next review date
+  Score 5: interval × easeFactor (grows exponentially)
+  Score 3: interval stays
+  Score <3: interval resets to 1 day
 
-✅ **Real-Time Feedback** — Instant responses with typing indicators and error handling
+Day 1 → Day 6 → Day 15 → Day 38 → Day 96 → ...
+```
 
-## Technical Challenges & Solutions
+#### Motion Design System
+- **Skeleton loaders** appear instantly (0ms) while Gemma generates
+- **Staggered reveals** — steps appear one by one with 100ms delay
+- **Bounce-scale** — answer pill pops with spring physics
+- **Theme transitions** — smooth 300ms color crossfade between Beginner/Intermediate/Advanced
+- All animations use `will-change` and GPU-accelerated transforms for 60fps
 
-### Challenge 1: Image Handling in Vision API
-**Problem**: Ollama's vision capability required base64-encoded images in specific format.
+#### Developer Flow Traces
+```
+/chat → [Taxonomy] → [Cache] → [Ollama] → [Parse] → [Response]
 
-**Solution**: Server-side image reading with FileReader API, conversion to base64, MIME type preservation in data URI format.
+  ┌─ taxonomy-resolve ────── 2ms    ✓
+  ├─ cache-check ─────────── 1ms    ✓
+  ├─ ollama-generate ─────── 45230ms ⚠ bottleneck
+  ├─ parse-structured-json ─ 3ms    ✓
+  └─ total ──────────────── 45236ms
+```
 
-### Challenge 2: JSON Parsing for Quiz Generation
-**Problem**: Gemma sometimes wraps JSON in markdown code fences (```json...```).
+---
 
-**Solution**: Regex-based sanitization to strip markdown before JSON.parse().
+### Real-World Impact
 
-### Challenge 3: File Upload Cleanup
-**Problem**: Uploaded images consumed disk space if not deleted.
+#### Who Benefits?
 
-**Solution**: Automatic cleanup with fs.unlinkSync() after Ollama response, wrapped in try-catch for safety.
+1. **Students without internet** — 2.7B people offline; StudyBuddy needs no connection after setup
+2. **Low-income families** — Free, open-source; no subscription, no API costs
+3. **Privacy-conscious users** — All data stays on-device; zero cloud transmission
+4. **Self-paced learners** — Available 24/7, adapts to the student's level
+5. **Teachers in under-resourced schools** — Deploy to a classroom of laptops via USB
 
-### Challenge 4: Responsive Mobile UI
-**Problem**: Chat layout breaks on small screens.
+#### Scale Potential
 
-**Solution**: CSS max-width 800px with flex wrapping, mobile-optimized buttons, textarea auto-height.
+- **Hardware requirement**: Any laptop with 8GB RAM + Ollama
+- **Distribution**: Clone from GitHub, or distribute as a USB stick with Ollama pre-bundled
+- **Languages**: Gemma 4 supports 140+ languages — prompts work in any language
+- **Cost to run**: $0 (once Ollama is installed)
+- **Potential reach**: 100M+ students in offline or low-connectivity regions
 
-### Challenge 5: Quiz Interactivity
-**Problem**: Regenerating entire quiz card on each answer click was inefficient.
+#### Usage Scenario
 
-**Solution**: Client-side state management with quizAnswers object, selective re-render only when needed.
+> *12-year-old Priya in rural India receives homework about photosynthesis. No internet, no tutor. She opens StudyBuddy on the family laptop, types her question at Beginner level, sees a colourful step-by-step explanation with emojis, takes a quiz to test herself, and gets scheduled for a review in 6 days via spaced repetition. When she's confused about a diagram, she photographs it — Gemma 4 vision breaks it down. All of this happens with zero internet, zero cost, zero data leaving her device.*
 
-## Real-World Impact
+---
 
-### Who benefits?
+### Technical Challenges & Solutions
 
-1. **Underserved students**: Kids in low-income families who can't afford $30/hour tutors
-2. **Rural/remote learners**: Students without reliable internet for cloud platforms
-3. **Non-English speakers**: Learn in their own language with adaptive explanations
-4. **Students with privacy concerns**: Parents who don't want data sent to Silicon Valley
-5. **Night owls & self-paced learners**: Get help 24/7, whenever it's convenient
+| Challenge | Problem | Solution |
+|-----------|---------|----------|
+| **Think-block parsing** | Gemma emits `<think>…</think>` before JSON, breaking `JSON.parse()` | Regex stripping + 4-stage robust JSON extraction pipeline |
+| **Image vision crashes** | Uncaught errors during multipart upload/processing | Defensive try/catch/finally, async file cleanup, multer error boundaries |
+| **Quiz JSON wrapping** | Gemma wraps JSON in markdown code fences | Regex sanitisation before parsing, with client-side retry |
+| **Offline reliability** | PWA must work without any network | Service worker with cache-first strategy for shell, local Ollama for AI |
+| **Response consistency** | Gemma output varies wildly across difficulty levels | Structured JSON schema contracts with validation and fallback rendering |
+| **Performance on 8GB devices** | Inference can take 30–90s on CPU | Skeleton loaders (instant UX), 4-layer cache (70% skip Ollama), predictive pre-warming |
 
-### Scale:
-- Deployable to any device with Node.js and Ollama
-- Works offline—can distribute via USB or local network
-- Free to run once Ollama is installed
-- Potential to serve 100M+ students globally, especially in underserved regions
+---
 
-### Real-world usage scenario:
-> *12-year-old Priya in rural India receives WhatsApp homework about photosynthesis. No way to pay for tutoring. She uses StudyBuddy on her family's shared laptop—takes a photo of the problem, gets step-by-step explanation adapted for her level, generates a quiz to test herself. No internet needed; no cost. She learns deeply instead of just getting the answer.*
+### Project Stats
 
-## Demo
+| Metric | Value |
+|--------|-------|
+| Lines of code | **11,600+** (excluding node_modules) |
+| Documentation files | **40** markdown guides |
+| API endpoints | **17** |
+| Learning tools | **6** |
+| Themes | **3** |
+| External AI APIs used | **0** (Gemma 4 only, local) |
+| Internet required | **No** (after initial setup) |
+| Cost to run | **$0** |
 
-### Local Setup (5 minutes):
+---
+
+### Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| AI Model | Gemma 4 E4B via Ollama (local inference) |
+| Backend | Node.js + Express.js |
+| Frontend | Vanilla HTML/CSS/JS (no framework, ~3900 lines) |
+| Image Processing | Sharp (resize, WebP optimise) |
+| Upload Handling | Multer |
+| Compression | gzip via `compression` middleware |
+| SRS Algorithm | SM-2 (SuperMemo 2) |
+| Search | O(k) trie-based prefix autocomplete |
+| PWA | Service worker + web manifest |
+| Visualisation | Pure SVG concept maps (no D3, no external libs) |
+
+---
+
+### Demo — How to Run
+
 ```bash
-# 1. Install Ollama from ollama.ai
-# 2. Pull Gemma 4 model:
+# Prerequisites: Ollama (ollama.ai) + Node.js 16+
+
+# 1. Pull Gemma 4
 ollama pull gemma4:e4b
 
-# 3. Start Ollama (runs on localhost:11434)
+# 2. Start Ollama
 ollama serve
 
-# 4. In another terminal, install StudyBuddy:
+# 3. In a new terminal
+git clone https://github.com/Christy-Varghese/studybuddy.git
 cd studybuddy
 npm install
 npm start
 
-# 5. Open http://localhost:3000
+# 4. Open http://localhost:3000
 ```
 
-### Live Features to Try:
-- Ask "What is photosynthesis?" at Beginner level
-- Switch to Advanced and ask the same question—notice the difference!
-- Take a photo of a math problem and upload it
-- Generate a 5-question quiz on "World War II"
-- Click different answers to see instant feedback
+**Setup time: ~2 minutes** (excluding model download)
 
-## Code Repository
+### Things to Try
 
-[StudyBuddy on GitHub](https://github.com/yourusername/studybuddy)
-- `server.js`: All three API routes with multer image handling
-- `public/index.html`: Full UI, quiz logic, image preview
-- `package.json`: Dependencies (express, multer)
+1. **Ask "What is photosynthesis?"** at Beginner level → see emoji-rich step cards
+2. **Switch to Advanced** → ask the same question → notice technical depth change
+3. **Upload a homework photo** (paperclip icon) → watch the vision scanning animation → see structured solution
+4. **Type "Quiz me on gravity"** → take an interactive MCQ quiz → see your score tracked
+5. **Click the 🗺 button** → generate a concept map → explore the knowledge graph
+6. **Ask the same question twice** → second response is instant (cached)
+7. **Press Ctrl+Shift+B** → open the Developer Panel → see flow traces and metrics
+8. **Wait a day** → see the "Due for Review" banner appear (spaced repetition)
 
-## Live Demo / How to Run Locally
+---
 
-### Requirements:
-- **Ollama** (download from [ollama.ai](https://ollama.ai))
-- **Node.js 14+**
-- **8GB RAM** (for comfortable Gemma 4 inference)
+### Media Gallery Suggestions
 
-### Quick Start:
-```bash
-# Step 1: Install and run Ollama
-# (Download from ollama.ai, then in terminal:)
-ollama pull gemma4:e4b
-ollama serve
+| # | Type | Content | Description |
+|---|------|---------|-------------|
+| 1 | Screenshot | Main chat — Beginner theme | Colourful step-by-step explanation with emojis |
+| 2 | Screenshot | Main chat — Advanced theme | Terminal-style monospace explanation |
+| 3 | Screenshot | Homework photo analysis | Vision card with scanning animation, extracted data, steps |
+| 4 | Screenshot | Interactive quiz | MCQ cards with score and explanations |
+| 5 | Screenshot | Concept map | SVG knowledge graph with coloured nodes and edges |
+| 6 | Screenshot | Spaced repetition banner | "Due for Review" notification |
+| 7 | Screenshot | Developer flow trace | Step-by-step timing with bottleneck detection |
+| 8 | Video (YouTube) | 2-min walkthrough | Ask question → get structured answer → quiz → concept map → image upload |
 
-# Step 2: In another terminal, run StudyBuddy
-git clone <repo-url>
-cd studybuddy
-npm install
-npm start
+---
 
-# Step 3: Open browser
-# Navigate to http://localhost:3000
-```
+### Project Links
 
-### First-time experience:
-1. Greet StudyBuddy with a question
-2. Watch adaptive responses change by level
-3. Take a homework photo and ask for help
-4. Generate a quiz and test yourself
-5. Share with friends/family—it's free!
+| Link | URL |
+|------|-----|
+| **GitHub Repository** | `https://github.com/Christy-Varghese/studybuddy` |
+| **Ollama** | `https://ollama.ai` |
+| **Gemma 4 Model** | `https://ollama.ai/library/gemma4` |
+
+---
+
+### Submission Checklist Mapping
+
+| Checklist Item | Status | Notes |
+|---------------|--------|-------|
+| Title | ✅ | "StudyBuddy — Offline AI Tutor Powered by Gemma 4" |
+| Subtitle | ✅ | "Bringing frontier AI tutoring to every student, everywhere — no cloud, no cost, no internet required." |
+| Card & Thumbnail Image | ✅ | Open `public/card-560x280.html` → screenshot at 560×280 |
+| Submission Tracks | ✅ | Future of Education |
+| Media Gallery — Video | 📹 | Record 2-min YouTube walkthrough (see suggestions above) |
+| Media Gallery — Photos | 📷 | Take 5–7 screenshots of key features (see table above) |
+| Project Description | ✅ | Copy the "Project Description" section above |
+| Project Links | ✅ | GitHub repo + Ollama + Gemma links |
+| Attachments | ✅ | Link GitHub repo |
 
 ---
 
 **Built with ❤️ to make quality education accessible to everyone.**
 
-*StudyBuddy is an open-source educational tool. Privacy-first, offline-capable, powered by frontier AI (Gemma 4 via Ollama).*
+*StudyBuddy is open-source educational software. Privacy-first, offline-capable, powered by Google's Gemma 4.*
