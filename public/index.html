@@ -1233,7 +1233,7 @@
       max-width: 78%;
       align-self: flex-start;
       animation: fadeSlideUp 0.4s ease both;
-      overflow: hidden;
+      overflow: visible;
     }
     .vision-scanning {
       display: flex;
@@ -1357,6 +1357,39 @@
     .vision-confidence-dot.high   { background: #22c55e; }
     .vision-confidence-dot.medium { background: #f59e0b; }
     .vision-confidence-dot.low    { background: #ef4444; }
+
+    /* ── Collapsible vision sections ── */
+    .vision-collapse-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .vision-collapse-toggle {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      transition: transform 0.25s ease, color 0.2s;
+      line-height: 1;
+    }
+    .vision-collapse-toggle:hover { color: var(--accent); }
+    .vision-collapse-toggle.collapsed { transform: rotate(-90deg); }
+    .vision-collapsible {
+      overflow: hidden;
+      max-height: 2000px;
+      transition: max-height 0.35s ease, opacity 0.25s ease;
+      opacity: 1;
+    }
+    .vision-collapsible.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
 
     /* ═══════════ AGENT RESPONSE ═══════════ */
     .agent-response {
@@ -2518,7 +2551,7 @@
       chatEl.appendChild(factsContainer);
       scrollToBottom();
 
-      // Rotate facts every 4 seconds
+      // Rotate facts every 7 seconds so users can read them
       factsInterval = setInterval(() => {
         currentFactIndex = (currentFactIndex + 1) % learningFacts.length;
         const textEl = factsContainer.querySelector('.facts-loading-text');
@@ -2529,9 +2562,9 @@
             textEl.textContent = learningFacts[currentFactIndex];
             textEl.style.opacity = '1';
             textEl.style.transform = 'translateY(0)';
-          }, 200);
+          }, 300);
         }
-      }, 4000);
+      }, 7000);
 
       return factsContainer;
     }
@@ -2788,23 +2821,48 @@
         
         // Build content elements
         const contentElements = [];
+
+        // Helper: wrap a section with a collapsible header + body
+        function makeCollapsible(sectionEl, headerHtml, bodyHtml, startCollapsed = false) {
+          const collapseId = 'vc-' + Math.random().toString(36).slice(2, 8);
+          sectionEl.innerHTML = `
+            <div class="vision-collapse-header" data-collapse-target="${collapseId}">
+              ${headerHtml}
+              <button class="vision-collapse-toggle${startCollapsed ? ' collapsed' : ''}" aria-label="Toggle section">▾</button>
+            </div>
+            <div id="${collapseId}" class="vision-collapsible${startCollapsed ? ' collapsed' : ''}">
+              ${bodyHtml}
+            </div>
+          `;
+          // Wire up click
+          const header = sectionEl.querySelector('.vision-collapse-header');
+          header.addEventListener('click', () => {
+            const body = sectionEl.querySelector('.vision-collapsible');
+            const btn = sectionEl.querySelector('.vision-collapse-toggle');
+            const isCollapsed = body.classList.toggle('collapsed');
+            btn.classList.toggle('collapsed', isCollapsed);
+            // Scroll to bottom when expanding
+            if (!isCollapsed) setTimeout(() => scrollToBottom(), 360);
+          });
+        }
         
-        // 1. Visual Summary Section
+        // 1. Visual Summary Section (always expanded, collapsible)
         if (visionData.visual_summary) {
           const summarySection = document.createElement('div');
           summarySection.className = 'vision-summary-section';
-          summarySection.innerHTML = `
-            <div class="vision-section-header">
-              <span class="icon">${theme === 'beginner' ? '👀' : (theme === 'advanced' ? '◉' : '🔍')}</span>
+          const icon = theme === 'beginner' ? '👀' : (theme === 'advanced' ? '◉' : '🔍');
+          makeCollapsible(summarySection,
+            `<div class="vision-section-header" style="margin-bottom:0">
+              <span class="icon">${icon}</span>
               <span>${currentLabels.summary}</span>
-            </div>
-            <div class="vision-summary">${convertLatexToReadable(visionData.visual_summary)}</div>
-          `;
+            </div>`,
+            `<div class="vision-summary" style="margin-top:8px">${convertLatexToReadable(visionData.visual_summary)}</div>`
+          );
           summarySection.style.animation = 'visionFadeIn 0.4s ease forwards';
           contentElements.push(summarySection);
         }
         
-        // 2. Extracted Data Section (OCR-style)
+        // 2. Extracted Data Section (collapsible)
         if (visionData.extracted_data && visionData.extracted_data.length > 0) {
           const extractedSection = document.createElement('div');
           extractedSection.className = 'vision-extracted-section';
@@ -2814,19 +2872,19 @@
             `<div class="vision-extracted-item">${convertLatexToReadable(item)}</div>`
           ).join('');
           
-          extractedSection.innerHTML = `
-            <div class="vision-section-header">
+          makeCollapsible(extractedSection,
+            `<div class="vision-section-header" style="margin-bottom:0">
               <span class="icon">${headerIcon}</span>
               <span>${currentLabels.extracted}</span>
-            </div>
-            <div class="vision-extracted-data">${itemsHtml}</div>
-          `;
+            </div>`,
+            `<div class="vision-extracted-data" style="margin-top:8px">${itemsHtml}</div>`
+          );
           extractedSection.style.animation = 'visionFadeIn 0.4s ease 0.2s forwards';
           extractedSection.style.opacity = '0';
           contentElements.push(extractedSection);
         }
         
-        // 3. Logic Steps Section
+        // 3. Logic Steps Section (collapsible)
         if (visionData.logic_steps && visionData.logic_steps.length > 0) {
           const stepsSection = document.createElement('div');
           stepsSection.className = 'vision-steps-section';
@@ -2843,17 +2901,17 @@
             </div>
           `).join('');
           
-          stepsSection.innerHTML = `
-            <div class="vision-section-header">
+          makeCollapsible(stepsSection,
+            `<div class="vision-section-header" style="margin-bottom:0">
               <span class="icon">${stepsHeaderIcon}</span>
               <span>${currentLabels.steps}</span>
-            </div>
-            <div class="vision-logic-steps">${stepsHtml}</div>
-          `;
+            </div>`,
+            `<div class="vision-logic-steps" style="margin-top:8px">${stepsHtml}</div>`
+          );
           contentElements.push(stepsSection);
         }
         
-        // 4. Final Solution Section
+        // 4. Final Solution Section (always expanded, collapsible)
         if (visionData.final_solution) {
           const solutionSection = document.createElement('div');
           solutionSection.className = 'vision-solution-section';
@@ -2862,15 +2920,15 @@
           const stepCount = visionData.logic_steps ? visionData.logic_steps.length : 0;
           const solutionDelay = 0.4 + (stepCount * 0.15);
           
-          solutionSection.innerHTML = `
-            <div class="vision-section-header">
+          makeCollapsible(solutionSection,
+            `<div class="vision-section-header" style="margin-bottom:0">
               <span class="icon">${solutionIcon}</span>
               <span>${currentLabels.solution}</span>
-            </div>
-            <div class="vision-final-solution" style="animation-delay: ${solutionDelay}s">
+            </div>`,
+            `<div class="vision-final-solution" style="margin-top:8px;animation-delay:${solutionDelay}s">
               ${convertLatexToReadable(visionData.final_solution)}
-            </div>
-          `;
+            </div>`
+          );
           contentElements.push(solutionSection);
         }
         
@@ -2896,8 +2954,10 @@
           card.appendChild(el);
         });
         
-        // Final scroll
-        setTimeout(() => scrollToBottom(), 100);
+        // Scroll multiple times as staggered animations reveal content
+        scrollToBottom();
+        setTimeout(() => scrollToBottom(), 300);
+        setTimeout(() => scrollToBottom(), 800);
         
       }, 1500); // Scanning animation duration
     }
