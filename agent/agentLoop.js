@@ -9,6 +9,7 @@ async function runAgentLoop(studentMessage, level, conversationHistory, progress
 
   const toolCallLog = [];
   let explanation = null;
+  let conceptMap = null;
   let quiz = null;
   let nextTopic = null;
 
@@ -24,16 +25,28 @@ async function runAgentLoop(studentMessage, level, conversationHistory, progress
       // Extract topic from the message
       mainTopic = topicMatch[1].trim();
       
-      console.log(`[Agent] Explaining topic: ${mainTopic}`);
-      const expResult = await toolImplementations.explain_topic({
-        topic: mainTopic,
-        level: level,
-        context: studentMessage
-      });
-      
+      // STEP 1: Run explain_topic and generate_concept_map IN PARALLEL
+      console.log(`[Agent] Running explain + concept map in parallel for: ${mainTopic}`);
+      const [expResult, mapResult] = await Promise.all([
+        toolImplementations.explain_topic({
+          topic: mainTopic,
+          level: level,
+          context: studentMessage
+        }),
+        toolImplementations.generate_concept_map({
+          topic: mainTopic,
+          level: level
+        })
+      ]);
+
       if (expResult.success) {
         explanation = expResult.explanation;
         toolCallLog.push({ tool: 'explain_topic', args: { topic: mainTopic, level }, result: expResult });
+      }
+
+      if (mapResult.success) {
+        conceptMap = mapResult;
+        toolCallLog.push({ tool: 'generate_concept_map', args: { topic: mainTopic, level }, result: mapResult });
       }
 
       // STEP 2: Generate a quiz after explanation
@@ -103,6 +116,7 @@ async function runAgentLoop(studentMessage, level, conversationHistory, progress
         : 'Ready to help with your learning!',
       toolsUsed: toolCallLog.map(t => t.tool),
       explanation: explanation || null,
+      conceptMap: conceptMap || null,
       quiz: quiz || null,
       nextTopic: nextTopic || null,
       progressNote: generateProgressNote(summary, toolCallLog.length)
@@ -211,7 +225,8 @@ Example:
             { role: 'user',   content: planningPrompt }
           ],
           stream:   false,
-          options:  { num_predict: 300, temperature: 0.2 }
+          options:  { num_predict: 300, num_ctx: 4096, temperature: 0.2 },
+          speculative_model: 'gemma2:2b'
         })
       });
     } catch (err) {
@@ -303,7 +318,8 @@ Respond ONLY with valid JSON — no markdown, no preamble:
         { role: 'user',   content: synthesisPrompt }
       ],
       stream:   false,
-      options:  { num_predict: 700, temperature: 0.6 }
+      options:  { num_predict: 700, num_ctx: 4096, temperature: 0.6 },
+      speculative_model: 'gemma2:2b'
     })
   });
 

@@ -151,7 +151,9 @@ Rules:
 - For chemical formulas: Use subscript numbers directly (H2O not H₂O or \\textH₂\\textO)
 - For mathematical: Use plain text (x^2, square root, fractions as text)
 - For units: Write out (watts, meters, celsius not W, m, °C)
-- Plain text only. JSON must be valid.`;
+- Plain text only. JSON must be valid.
+
+Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not show your scratchpad work; move directly to providing the structured JSON.`;
 
     const userMsg = context
       ? `Explain "${topic}" to a ${level} student. Extra context: ${context}`
@@ -167,7 +169,8 @@ Rules:
           { role: 'user',   content: userMsg }
         ],
         stream: false,
-        options: { num_predict: 400, temperature: 0.7 }
+        options: { num_predict: 500, num_ctx: 4096, temperature: 0.7 },
+        speculative_model: 'gemma2:2b'
       })
     });
 
@@ -222,7 +225,8 @@ Format:
           { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.` }
         ],
         stream: false,
-        options: { num_predict: 500, temperature: 0.8 }
+        options: { num_predict: 500, num_ctx: 4096, temperature: 0.8 },
+        speculative_model: 'gemma2:2b'
       })
     });
 
@@ -286,7 +290,9 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
         { role: 'system', content: `You are a curriculum advisor. Based on the student's progress, suggest the SINGLE most beneficial next topic to study. Respond ONLY with valid JSON: { "nextTopic": "topic name", "reason": "one sentence why", "relatedTo": "how it connects to what they just studied" }` },
         { role: 'user',   content: context }
       ],
-      stream: false
+      stream: false,
+      options: { num_predict: 500, num_ctx: 4096 },
+      speculative_model: 'gemma2:2b'
     })
   });
 
@@ -340,7 +346,8 @@ Respond ONLY with valid JSON:
         { role: 'user',   content: userMsg }
       ],
       stream: false,
-      options: { num_predict: 250, temperature: 0.7 }
+      options: { num_predict: 250, num_ctx: 4096, temperature: 0.7 },
+      speculative_model: 'gemma2:2b'
     })
   });
 
@@ -402,7 +409,8 @@ Rules:
         { role: 'user',   content: `Generate a concept map for "${topic}" at ${level} level.` }
       ],
       stream: false,
-      options: { num_predict: 600, temperature: 0.3 }
+      options: { num_predict: 600, num_ctx: 4096, temperature: 0.3 },
+      speculative_model: 'gemma2:2b'
     })
   });
 

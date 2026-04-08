@@ -328,6 +328,8 @@ STRICT RULES:
 
 CRITICAL: If you cannot generate valid JSON, your response will fail parsing and the user will see an error.
 Always validate your JSON before responding. Test it mentally: can it be parsed by JSON.parse()?
+
+Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not show your scratchpad work; move directly to providing the structured JSON.
 `.trim();
 }
 
@@ -367,7 +369,9 @@ app.post('/chat', async (req, res) => {
       body: JSON.stringify({
         model: 'gemma4:e4b',
         messages: messages,
-        stream: false
+        stream: false,
+        options: { num_predict: 500, num_ctx: 4096 },
+        speculative_model: 'gemma2:2b'
       })
     });
     mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
@@ -472,13 +476,12 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
     let optimizedBuffer;
     try {
       optimizedBuffer = await sharp(imageBuffer)
-        .resize(1024, 1024, {     // Max 1024px on longest side
+        .resize(640, 640, {       // Max 640px on longest side (down from 1024 for faster inference)
           fit: 'inside',
           withoutEnlargement: true
         })
-        .jpeg({                    // Convert to JPEG for smaller size
-          quality: 80,
-          mozjpeg: true
+        .webp({                    // Convert to WebP for smaller size + better quality
+          quality: 80
         })
         .toBuffer();
       
@@ -489,7 +492,7 @@ app.post('/chat-with-image', upload.single('image'), async (req, res) => {
     }
     
     const base64Image = optimizedBuffer.toString('base64');
-    const mimeType = 'image/jpeg'; // Always JPEG after optimization
+    const mimeType = 'image/webp'; // Always WebP after optimization
 
     // Parse conversation history
     let history = [];
@@ -526,7 +529,9 @@ RULES:
 4. final_solution: State the answer clearly, boxed or highlighted format
 5. confidence: Rate how clearly you could read/interpret the image
 
-IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
+IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.
+
+Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not show your scratchpad work; move directly to providing the structured JSON.`;
 
     // Build messages array with vision capability
     // For Ollama, we need to use the 'images' field at the message level
@@ -548,7 +553,8 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
         model: 'gemma4:e4b',
         messages: messages,
         stream: false,
-        temperature: 0.3  // Lower temperature for consistent JSON output
+        options: { num_predict: 500, num_ctx: 4096, temperature: 0.3 },
+        speculative_model: 'gemma2:2b'
       })
     });
 
@@ -684,7 +690,9 @@ Format:
       body: JSON.stringify({
         model: 'gemma4:e4b',
         messages: [{ role: 'user', content: quizPrompt }],
-        stream: false
+        stream: false,
+        options: { num_predict: 500, num_ctx: 4096 },
+        speculative_model: 'gemma2:2b'
       })
     });
     mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
