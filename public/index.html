@@ -495,6 +495,85 @@
         border-bottom-left-radius: 6px;
       }
 
+      /* Vision Analysis Card - matches chat styling */
+      .vision-analysis-card {
+        max-width: 82%;
+        align-self: flex-start;
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        color: var(--text-primary);
+        border-radius: var(--radius-lg);
+        border-bottom-left-radius: 6px;
+        padding: 14px 18px;
+        animation: fadeSlideUp 0.35s ease both;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: auto;
+      }
+
+      .vision-thumbnail {
+        width: 48px;
+        height: 48px;
+        border-radius: 6px;
+        object-fit: cover;
+        opacity: 0.8;
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+
+      .vision-section-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--accent);
+        margin-top: 8px;
+      }
+
+      .vision-summary,
+      .vision-extracted-data,
+      .vision-logic-steps,
+      .vision-final-solution {
+        font-size: var(--font-size-base);
+        line-height: 1.6;
+        color: var(--text-primary);
+      }
+
+      .vision-extracted-item {
+        padding: 8px 12px;
+        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
+        color: var(--text-primary);
+        font-size: 14px;
+      }
+
+      .vision-step {
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        border: 1px solid var(--glass-border);
+      }
+
+      .vision-scanning {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        border-radius: var(--radius-lg);
+        background: var(--glass);
+      }
+
       /* Bubble content formatting */
       .bubble h1,
       .bubble h2,
@@ -562,9 +641,11 @@
 
       .bubble-image {
         max-width: 220px;
+        max-height: 280px;
         border-radius: var(--radius-md);
         margin: 8px 0;
         border: 1px solid var(--border-subtle);
+        object-fit: cover;
       }
 
       /* Empty state (greeting) */
@@ -735,6 +816,19 @@
       #imagePreviewContainer:not(:empty) {
         padding: 8px 10px;
         border-bottom: 1px solid var(--border-subtle);
+      }
+      .image-preview {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+      }
+      .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
       .image-preview-thumb {
         position: relative;
@@ -2759,16 +2853,6 @@
       `
         card.appendChild(scanning)
 
-        // Add micro-thumbnail if image available
-        if (imageDataUrl) {
-          const thumbnail = document.createElement("img")
-          thumbnail.className = "vision-thumbnail"
-          thumbnail.src = imageDataUrl
-          thumbnail.alt = "Uploaded image"
-          thumbnail.loading = "lazy"
-          card.appendChild(thumbnail)
-        }
-
         // Add card to chat immediately (shows scanning animation)
         chatEl.appendChild(card)
         scrollToBottom()
@@ -2778,7 +2862,6 @@
           // Remove scanning overlay with fade
           scanning.style.animation = "visionFadeIn 0.3s ease reverse forwards"
           setTimeout(() => scanning.remove(), 300)
-
           // Build content elements
           const contentElements = []
 
@@ -2813,7 +2896,7 @@
             <div class="vision-extracted-data">${itemsHtml}</div>
           `
             extractedSection.style.animation = "visionFadeIn 0.4s ease 0.2s forwards"
-            extractedSection.style.opacity = "0"
+
             contentElements.push(extractedSection)
           }
 
@@ -3189,6 +3272,8 @@
             const data = await res.json()
             pendingImage = null
             imagePreviewContainer.innerHTML = ""
+            imageInput.value = ""
+            attachBtn.classList.remove("active")
 
             if (estimateBadge) {
               estimateBadge.triggerShrinkFade()
