@@ -374,6 +374,16 @@
       color: var(--text-primary);
       border-bottom-left-radius: 6px;
     }
+    .bubble.bot.streaming::after {
+      content: '▌';
+      animation: blink-cursor 0.6s steps(2) infinite;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    @keyframes blink-cursor {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
 
     /* Bubble content formatting */
     .bubble h1, .bubble h2, .bubble h3 {
@@ -3233,7 +3243,8 @@
             hideFactsLoading();
           }
         } else {
-          // Use /chat endpoint
+          // Use /chat endpoint with SSE streaming
+          showFactsLoading();
           const res = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3245,21 +3256,88 @@
           });
 
           if (!res.ok) {
-            const error = await res.json();
-            addBubble('❌ Error: ' + (error.error || 'Failed to get response'), 'bot');
-            throw new Error(error.error || 'Chat failed');
+            hideFactsLoading();
+            let errorText = 'Failed to get response';
+            try { const ej = await res.json(); errorText = ej.error || errorText; } catch (_) {}
+            addBubble('❌ Error: ' + errorText, 'bot');
+            throw new Error(errorText);
           }
 
-          const data = await res.json();
+          // Create a live-streaming bot bubble
+          const streamBubble = addBubble('', 'bot', true);
+          streamBubble.classList.add('streaming');
 
-          if (estimateBadge) {
-            estimateBadge.triggerShrinkFade();
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let sseBuffer = '';
+          let fullStreamedText = '';
+          let finalData = null;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            sseBuffer += decoder.decode(value, { stream: true });
+            const sseLines = sseBuffer.split('\n');
+            sseBuffer = sseLines.pop(); // Keep incomplete line in buffer
+
+            for (const line of sseLines) {
+              if (!line.startsWith('data: ')) continue;
+              const jsonStr = line.slice(6);
+              try {
+                const evt = JSON.parse(jsonStr);
+                if (evt.error) {
+                  // Server-side error during stream
+                  hideFactsLoading();
+                  streamBubble.textContent = '❌ Error: ' + evt.error;
+                  streamBubble.classList.remove('streaming');
+                  throw new Error(evt.error);
+                }
+                if (evt.done) {
+                  // Final event with structured data
+                  finalData = evt;
+                } else if (evt.token) {
+                  fullStreamedText += evt.token;
+                  streamBubble.textContent = fullStreamedText;
+                  scrollToBottom();
+                }
+              } catch (parseErr) {
+                if (parseErr.message && !parseErr.message.startsWith('❌')) {
+                  // Ignore JSON parse errors on malformed SSE lines
+                }
+              }
+            }
           }
+
+          // Stream finished — hide loading UI
+          hideFactsLoading();
+          if (estimateBadge) estimateBadge.triggerShrinkFade();
           if (countdownInterval) clearInterval(countdownInterval);
+          streamBubble.classList.remove('streaming');
 
-          renderBotResponse(data);
+          // If server sent structured JSON, replace the raw-text bubble with rich cards
+          if (finalData && finalData.structured && finalData.structured.steps) {
+            streamBubble.remove(); // Remove raw text bubble
+            const converted = {
+              intro: convertLatexToReadable(finalData.structured.intro),
+              steps: (finalData.structured.steps || []).map(step => ({
+                title: convertLatexToReadable(step.title),
+                text: convertLatexToReadable(step.text),
+                emoji: step.emoji
+              })),
+              answer: convertLatexToReadable(finalData.structured.answer),
+              followup: convertLatexToReadable(finalData.structured.followup)
+            };
+            renderStructuredResponse(converted);
+          } else if (finalData && finalData.reply) {
+            // Use the clean reply (think-stripped) for the fallback render
+            streamBubble.remove();
+            renderFormattedFallback(finalData.reply);
+          }
+
+          const replyText = finalData ? (finalData.reply || fullStreamedText) : fullStreamedText;
           history.push({ role: 'user', content: message });
-          history.push({ role: 'assistant', content: data.reply });
+          history.push({ role: 'assistant', content: replyText });
         }
       } catch (err) {
         // Clean up any loading states

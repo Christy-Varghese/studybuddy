@@ -344,7 +344,7 @@ app.post('/estimate', (req, res) => {
   res.json(estimate);
 });
 
-// Main chat route
+// Main chat route — SSE streaming
 app.post('/chat', async (req, res) => {
   const chatStart = Date.now();
   const steps = [];
@@ -352,6 +352,13 @@ app.post('/chat', async (req, res) => {
 
   const { message, level, history } = req.body;
   console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, prompt: "${(message || '').slice(0, 60)}…"`);
+
+  // SSE headers — keep connection open for streaming
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering if present
+  res.flushHeaders();
 
   // Build the messages array for Gemma
   const messages = [
@@ -362,14 +369,14 @@ app.post('/chat', async (req, res) => {
   mark('Build prompt', `${messages.length} messages, level=${level || 'beginner'}`);
 
   try {
-    // Call Ollama running locally
+    // Call Ollama with streaming enabled
     const ollamaRes = await fetch('http://localhost:11434/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'gemma4:e4b',
         messages: messages,
-        stream: false,
+        stream: true,
         options: { num_predict: 500, num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
@@ -380,18 +387,73 @@ app.post('/chat', async (req, res) => {
       throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
     }
 
-    const data = await ollamaRes.json();
-    mark('Parse Ollama response');
-    
-    if (!data.message || !data.message.content) {
-      throw new Error('Invalid response from Ollama - no message content');
-    }
-    
-    let rawReply = data.message.content;
+    // Read Ollama's NDJSON stream and relay each token as SSE
+    let fullReply = '';
+    let insideThink = false;   // Track <think> block state for live stripping
 
-    // Strip <think>…</think> reasoning blocks before anything else
-    // (Gemma thinking mode emits these before the actual response)
-    rawReply = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const reader = ollamaRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      // Ollama sends one JSON object per line (NDJSON)
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const chunk = JSON.parse(line);
+          if (chunk.message && chunk.message.content) {
+            let token = chunk.message.content;
+            fullReply += token;
+
+            // Live-strip <think>…</think> blocks so they never reach the client
+            // Handle partial tags across chunk boundaries
+            if (insideThink) {
+              const endIdx = token.indexOf('</think>');
+              if (endIdx !== -1) {
+                insideThink = false;
+                token = token.slice(endIdx + '</think>'.length);
+              } else {
+                token = ''; // Still inside think block, suppress
+              }
+            }
+            // Check for opening <think> in remaining token
+            if (!insideThink) {
+              const startIdx = token.indexOf('<think>');
+              if (startIdx !== -1) {
+                const before = token.slice(0, startIdx);
+                const afterStart = token.slice(startIdx + '<think>'.length);
+                const endIdx = afterStart.indexOf('</think>');
+                if (endIdx !== -1) {
+                  // Entire think block in one token
+                  token = before + afterStart.slice(endIdx + '</think>'.length);
+                } else {
+                  insideThink = true;
+                  token = before;
+                }
+              }
+            }
+
+            // Only send non-empty tokens after stripping
+            if (token) {
+              res.write(`data: ${JSON.stringify({ token })}\n\n`);
+            }
+          }
+        } catch (_) {
+          // Skip malformed lines
+        }
+      }
+    }
+    mark('Stream complete', `${fullReply.length} chars total`);
+
+    // Strip <think> blocks from full reply for structured parse
+    let rawReply = fullReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     // Attempt to parse as structured JSON
     let structured = null;
@@ -420,22 +482,18 @@ app.post('/chat', async (req, res) => {
 
       // 5. Validate it has the expected shape (intro/steps/answer)
       if (structured && !structured.steps) {
-        // Not the expected structured format — discard
         structured = null;
       }
     } catch (e) {
-      // Gemma failed to return valid JSON — fall back to plain text
       console.warn('[/chat] JSON parse failed, using plaintext fallback:', e.message);
       structured = null;
     }
     mark('Parse structured JSON', structured ? 'success' : 'fallback to plain text');
 
-    // Return both structured and raw so frontend can handle either
-    res.json({
-      reply: rawReply,           // raw text fallback
-      structured: structured     // parsed object or null
-    });
-    mark('Send response', `${rawReply.length} chars`);
+    // Send final SSE event with structured data + raw reply, then close
+    res.write(`data: ${JSON.stringify({ done: true, reply: rawReply, structured })}\n\n`);
+    res.end();
+    mark('Send [DONE]', `structured=${!!structured}`);
 
     const chatMs = Date.now() - chatStart;
     console.log(`✅ [/chat] Done in ${(chatMs / 1000).toFixed(2)}s — reply length: ${rawReply.length} chars`);
@@ -453,7 +511,13 @@ app.post('/chat', async (req, res) => {
       input: (message || '').slice(0, 80), steps
     };
     console.error(`❌ [/chat] Error after ${(chatMs / 1000).toFixed(2)}s:`, err.message);
-    res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
+    // If headers already sent we can only write an error SSE event
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
+    }
   }
 });
 
