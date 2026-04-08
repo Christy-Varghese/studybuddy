@@ -617,8 +617,9 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
         model: 'gemma4:e4b',
         messages: messages,
         stream: false,
-        options: { num_predict: 500, num_ctx: 4096, temperature: 0.3 },
-        speculative_model: 'gemma2:2b'
+        options: { num_predict: 1024, num_ctx: 4096, temperature: 0.3 }
+        // NOTE: No speculative_model here — draft models are text-only
+        //       and can't process vision/image inputs.
       })
     });
 
