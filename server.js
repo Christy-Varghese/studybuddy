@@ -4,6 +4,8 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const { parse: csvParse } = require('csv-parse/sync');
+const XLSX = require('xlsx');
 const { runAgentLoop, runParallelAgent, runSocraticAgent } = require('./agent/agentLoop');
 const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak } = require('./agent/progressStore');
 const { toolImplementations } = require('./agent/tools');
@@ -1000,6 +1002,142 @@ app.post('/admin/taxonomy', (req, res) => {
   }
   const key = manuallyAddTopic(topic, keywords, subject);
   res.json({ success: true, addedKey: key });
+});
+
+// ── Bulk Upload (CSV / Excel) ──────────────────────────────────
+// Separate multer for spreadsheet files — stored temporarily in uploads/
+const spreadsheetUpload = multer({
+  dest: uploadsDir,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain'                           // some systems send csv as text/plain
+    ];
+    if (allowed.includes(file.mimetype) ||
+        file.originalname.match(/\.(csv|xlsx|xls)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV and Excel files (.csv, .xlsx, .xls) are allowed'), false);
+    }
+  }
+});
+
+// GET — download a CSV template teachers can fill in
+app.get('/admin/taxonomy/template.csv', (req, res) => {
+  const csv = [
+    'topic,keywords,subject',
+    'Photosynthesis,"photosynthesis, chloroplast, light reaction, calvin cycle",biology',
+    'Newton\'s Laws,"newton, force, motion, inertia, f=ma",physics',
+    'Quadratic Equations,"quadratic, parabola, discriminant, roots",mathematics',
+    'World War II,"ww2, world war 2, allied powers, axis powers",history'
+  ].join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="taxonomy_template.csv"');
+  res.send(csv);
+});
+
+// POST — bulk upload CSV or Excel file
+app.post('/admin/taxonomy/bulk-upload', spreadsheetUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded. Send a CSV or Excel file as the "file" field.' });
+  }
+
+  const filePath = req.file.path;
+  const originalName = req.file.originalname.toLowerCase();
+
+  try {
+    let rows = [];
+
+    if (originalName.endsWith('.csv') || originalName.endsWith('.txt')) {
+      // ── Parse CSV ──
+      const raw = fs.readFileSync(filePath, 'utf8');
+      rows = csvParse(raw, {
+        columns: true,          // first row = headers
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true
+      });
+    } else {
+      // ── Parse Excel (.xlsx / .xls) ──
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+    }
+
+    // Clean up the temp file
+    fs.unlink(filePath, () => {});
+
+    if (!rows.length) {
+      return res.status(400).json({ error: 'File is empty or has no data rows.' });
+    }
+
+    // Normalise column names (case-insensitive, trim whitespace)
+    rows = rows.map(row => {
+      const norm = {};
+      for (const [k, v] of Object.entries(row)) {
+        norm[k.toLowerCase().trim()] = typeof v === 'string' ? v.trim() : String(v);
+      }
+      return norm;
+    });
+
+    // Validate: must have a "topic" column
+    if (!rows[0].hasOwnProperty('topic')) {
+      return res.status(400).json({
+        error: 'Missing "topic" column. The file must have a header row with at least: topic, keywords, subject',
+        columns_found: Object.keys(rows[0])
+      });
+    }
+
+    // Process each row
+    const results = { added: [], skipped: [], errors: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // +2 because row 1 is the header, data starts at row 2
+
+      const topic = (row.topic || '').trim();
+      if (!topic) {
+        results.skipped.push({ row: rowNum, reason: 'Empty topic name' });
+        continue;
+      }
+
+      // Parse keywords: comma-separated string → array
+      let keywords = [];
+      if (row.keywords) {
+        keywords = row.keywords.split(',').map(k => k.trim()).filter(Boolean);
+      }
+      // Auto-generate keywords from topic words if none provided
+      if (keywords.length === 0) {
+        keywords = topic.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      }
+
+      const subject = (row.subject || 'general').trim().toLowerCase();
+
+      try {
+        const key = manuallyAddTopic(topic, keywords, subject);
+        results.added.push({ row: rowNum, topic, key, keywords_count: keywords.length });
+      } catch (err) {
+        results.errors.push({ row: rowNum, topic, error: err.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      total_rows: rows.length,
+      added: results.added.length,
+      skipped: results.skipped.length,
+      errors: results.errors.length,
+      details: results
+    });
+
+  } catch (err) {
+    // Clean up on error
+    fs.unlink(filePath, () => {});
+    res.status(500).json({ error: 'Failed to parse file: ' + err.message });
+  }
 });
 
 // POST approve a pending topic

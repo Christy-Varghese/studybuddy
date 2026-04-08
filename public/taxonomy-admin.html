@@ -63,6 +63,86 @@
   .empty { text-align: center; padding: 32px; color: #7A7990; }
   .search { padding: 8px 14px; border: 1px solid #E5E3FF; border-radius: 8px;
             font-size: 13px; width: 240px; margin-bottom: 14px; }
+
+  /* ── Bulk Upload Styles ── */
+  .upload-zone {
+    border: 2px dashed #D5D1F7;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: white;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #6C63FF;
+    background: #F5F3FF;
+  }
+  .upload-zone.dragover {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 4px rgba(108,99,255,0.1);
+  }
+  .upload-zone-icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-zone-text { color: #7A7990; font-size: 13px; line-height: 1.6; }
+  .upload-zone-text strong { color: #6C63FF; }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .upload-actions {
+    display: flex; gap: 10px; justify-content: center;
+    margin-top: 16px; flex-wrap: wrap;
+  }
+  .btn-outline {
+    padding: 8px 18px; border-radius: 8px; border: 1px solid #D5D1F7;
+    background: white; color: #6C63FF; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-outline:hover { background: #F5F3FF; }
+  .upload-results {
+    margin-top: 20px; background: white; border: 1px solid #E5E3FF;
+    border-radius: 10px; overflow: hidden; display: none;
+  }
+  .upload-results.visible { display: block; }
+  .upload-results-header {
+    padding: 14px 18px; display: flex; gap: 14px; align-items: center;
+    border-bottom: 1px solid #E5E3FF; background: #FAFAFF;
+  }
+  .result-pill {
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .result-pill.green { background: #EAF3DE; color: #27500A; }
+  .result-pill.amber { background: #FFF8E1; color: #633806; }
+  .result-pill.red   { background: #FCEBEB; color: #A32D2D; }
+  .upload-results-body { padding: 14px 18px; max-height: 300px; overflow-y: auto; }
+  .result-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0; border-bottom: 1px solid #F5F3FF; font-size: 13px;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-icon { width: 20px; text-align: center; }
+  .template-preview {
+    margin-top: 16px; background: #FAFAFF; border: 1px solid #E5E3FF;
+    border-radius: 8px; overflow: hidden;
+  }
+  .template-preview table { font-size: 12px; width: 100%; }
+  .template-preview th { font-size: 10px; padding: 8px 12px; }
+  .template-preview td { padding: 6px 12px; font-size: 12px; }
+  .upload-spinner {
+    display: none; align-items: center; justify-content: center;
+    gap: 10px; padding: 24px; color: #6C63FF; font-size: 14px;
+  }
+  .upload-spinner.visible { display: flex; }
+  .upload-spinner .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #6C63FF;
+    animation: dotBounce 0.6s infinite alternate;
+  }
+  .upload-spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+  .upload-spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotBounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-6px); }
+  }
 </style>
 </head>
 <body>
@@ -101,6 +181,7 @@
     <div class="tab active" onclick="showTab('pending')">Pending Review</div>
     <div class="tab" onclick="showTab('learned')">Learned Topics</div>
     <div class="tab" onclick="showTab('add')">Add Manually</div>
+    <div class="tab" onclick="showTab('bulk')">📁 Bulk Upload</div>
   </div>
 
   <!-- Pending panel -->
@@ -174,17 +255,82 @@
     </div>
   </div>
 
+  <!-- Bulk Upload panel -->
+  <div class="panel" id="panel-bulk">
+    <div class="add-form">
+      <h3>📁 Bulk Upload — Add Topics from a Spreadsheet</h3>
+      <p style="font-size:13px;color:#7A7990;margin-bottom:16px;">
+        Upload a <strong>.csv</strong> or <strong>.xlsx</strong> (Excel) file with your topics.
+        Each row becomes a topic in the taxonomy — no need to add them one by one.
+      </p>
+
+      <!-- Template preview -->
+      <div class="template-preview">
+        <table>
+          <thead>
+            <tr><th>topic</th><th>keywords</th><th>subject</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Photosynthesis</td>
+              <td>photosynthesis, chloroplast, light reaction, calvin cycle</td>
+              <td>biology</td>
+            </tr>
+            <tr>
+              <td>Newton's Laws</td>
+              <td>newton, force, motion, inertia, f=ma</td>
+              <td>physics</td>
+            </tr>
+            <tr>
+              <td>Quadratic Equations</td>
+              <td>quadratic, parabola, discriminant, roots</td>
+              <td>mathematics</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="upload-actions" style="margin-top:12px;margin-bottom:18px;">
+        <a href="/admin/taxonomy/template.csv" download class="btn-outline">⬇ Download CSV Template</a>
+      </div>
+
+      <!-- Drop zone -->
+      <div class="upload-zone" id="drop-zone">
+        <input type="file" id="bulk-file" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+        <div class="upload-zone-icon">📄</div>
+        <div class="upload-zone-text">
+          <strong>Click to browse</strong> or drag & drop your file here<br>
+          Supports <strong>.csv</strong> and <strong>.xlsx</strong> (Excel)
+        </div>
+      </div>
+
+      <!-- Spinner -->
+      <div class="upload-spinner" id="upload-spinner">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span>Uploading and processing…</span>
+      </div>
+
+      <!-- Results -->
+      <div class="upload-results" id="upload-results">
+        <div class="upload-results-header" id="results-header"></div>
+        <div class="upload-results-body" id="results-body"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
   let allLearned = [];
+  const TAB_NAMES  = ['pending', 'learned', 'add', 'bulk'];
+  const PANEL_IDS  = ['panel-pending', 'panel-learned', 'panel-add', 'panel-bulk'];
 
   function showTab(name) {
-    document.querySelectorAll('.tab').forEach((t,i) => {
-      t.classList.toggle('active', ['pending','learned','add'][i] === name);
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', TAB_NAMES[i] === name);
     });
-    document.querySelectorAll('.panel').forEach((p,i) => {
-      p.classList.toggle('active', ['panel-pending','panel-learned','panel-add'][i] === 'panel-' + name);
+    document.querySelectorAll('.panel').forEach((p, i) => {
+      p.classList.toggle('active', PANEL_IDS[i] === 'panel-' + name);
     });
   }
 
@@ -293,6 +439,145 @@
   loadData();
   // Auto-refresh every 10 seconds
   setInterval(loadData, 10000);
+
+  // ── Bulk Upload Logic ────────────────────────────────────
+
+  // Drag-and-drop handling
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  });
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) uploadFile(file);
+  }
+
+  async function uploadFile(file) {
+    // Validate file type
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+      alert('Please upload a .csv or .xlsx file');
+      return;
+    }
+
+    // Show spinner, hide previous results
+    document.getElementById('upload-spinner').classList.add('visible');
+    document.getElementById('upload-results').classList.remove('visible');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/admin/taxonomy/bulk-upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      // Hide spinner
+      document.getElementById('upload-spinner').classList.remove('visible');
+
+      if (!res.ok) {
+        showUploadError(data.error || 'Upload failed');
+        return;
+      }
+
+      // Show results
+      showUploadResults(data, file.name);
+
+      // Refresh the taxonomy data
+      loadData();
+
+    } catch (err) {
+      document.getElementById('upload-spinner').classList.remove('visible');
+      showUploadError('Network error: ' + err.message);
+    }
+
+    // Reset file input so the same file can be re-uploaded
+    document.getElementById('bulk-file').value = '';
+  }
+
+  function showUploadResults(data, fileName) {
+    const resultsEl = document.getElementById('upload-results');
+    const headerEl  = document.getElementById('results-header');
+    const bodyEl    = document.getElementById('results-body');
+
+    // Header with summary pills
+    headerEl.innerHTML = `
+      <span style="font-weight:600;font-size:13px;">📄 ${fileName}</span>
+      <span class="result-pill green">✓ ${data.added} added</span>
+      ${data.skipped > 0 ? `<span class="result-pill amber">⊘ ${data.skipped} skipped</span>` : ''}
+      ${data.errors > 0 ? `<span class="result-pill red">✕ ${data.errors} errors</span>` : ''}
+      <span style="font-size:12px;color:#7A7990;margin-left:auto;">${data.total_rows} rows processed</span>
+    `;
+
+    // Body with per-row details
+    let html = '';
+
+    // Added topics
+    if (data.details.added.length > 0) {
+      html += '<div style="font-size:11px;font-weight:600;color:#27500A;margin-bottom:6px;margin-top:8px;">ADDED</div>';
+      data.details.added.forEach(r => {
+        html += `<div class="result-row">
+          <span class="result-icon">✅</span>
+          <span><b>${r.topic}</b></span>
+          <span class="tag green">${r.keywords_count} keywords</span>
+          <span style="font-size:11px;color:#7A7990;">Row ${r.row}</span>
+        </div>`;
+      });
+    }
+
+    // Skipped
+    if (data.details.skipped.length > 0) {
+      html += '<div style="font-size:11px;font-weight:600;color:#633806;margin-bottom:6px;margin-top:12px;">SKIPPED</div>';
+      data.details.skipped.forEach(r => {
+        html += `<div class="result-row">
+          <span class="result-icon">⚠️</span>
+          <span style="color:#7A7990;">${r.reason}</span>
+          <span style="font-size:11px;color:#7A7990;">Row ${r.row}</span>
+        </div>`;
+      });
+    }
+
+    // Errors
+    if (data.details.errors.length > 0) {
+      html += '<div style="font-size:11px;font-weight:600;color:#A32D2D;margin-bottom:6px;margin-top:12px;">ERRORS</div>';
+      data.details.errors.forEach(r => {
+        html += `<div class="result-row">
+          <span class="result-icon">❌</span>
+          <span><b>${r.topic}</b>: ${r.error}</span>
+          <span style="font-size:11px;color:#7A7990;">Row ${r.row}</span>
+        </div>`;
+      });
+    }
+
+    bodyEl.innerHTML = html;
+    resultsEl.classList.add('visible');
+  }
+
+  function showUploadError(message) {
+    const resultsEl = document.getElementById('upload-results');
+    const headerEl  = document.getElementById('results-header');
+    const bodyEl    = document.getElementById('results-body');
+
+    headerEl.innerHTML = `<span class="result-pill red">Upload Failed</span>`;
+    bodyEl.innerHTML = `<div class="result-row">
+      <span class="result-icon">❌</span>
+      <span>${message}</span>
+    </div>`;
+    resultsEl.classList.add('visible');
+  }
 </script>
 </body>
 </html>
