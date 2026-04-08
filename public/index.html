@@ -204,6 +204,14 @@
       33%  { opacity: 0; transform: translateY(-10px); }
       100% { opacity: 0; transform: translateY(-10px); }
     }
+    @keyframes visionFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scanBar {
+      0%   { width: 0; }
+      100% { width: 100%; }
+    }
 
     /* GPU hints */
     .bubble, .skeleton-loader, .facts-loading-container, .quiz-loading-container,
@@ -405,6 +413,38 @@
     .bubble em { color: var(--text-secondary); font-style: italic; }
     .bubble a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
+    /* Formatted fallback styles (plain-text responses rendered as rich HTML) */
+    .bubble .fallback-h {
+      font-family: var(--font-display);
+      margin: 10px 0 4px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .bubble h4.fallback-h { font-size: var(--font-size-base); }
+    .bubble .fallback-list {
+      padding-left: 18px;
+      margin: 4px 0;
+    }
+    .bubble .fallback-code {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+    }
+    .bubble .fallback-inline-code {
+      font-family: var(--font-mono);
+      background: rgba(255,255,255,0.08);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.88em;
+      color: var(--accent);
+    }
+
     .bubble-image {
       max-width: 220px;
       border-radius: var(--radius-md);
@@ -428,6 +468,9 @@
       animation: fadeSlideUp 0.35s ease both;
     }
     .resp-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
       background: var(--glass);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
@@ -436,6 +479,7 @@
     }
     .resp-step-num {
       display: inline-block;
+      flex-shrink: 0;
       background: var(--accent-soft);
       color: var(--accent);
       font-weight: 700;
@@ -444,7 +488,6 @@
       line-height: 22px;
       text-align: center;
       border-radius: 50%;
-      margin-right: 8px;
     }
     .resp-answer {
       background: var(--accent-soft);
@@ -454,6 +497,67 @@
       animation: scaleUp 0.3s ease both;
     }
     .resp-answer strong { color: var(--accent); }
+
+    /* ── Structured-response sub-elements ── */
+    .resp-step-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .resp-step-title {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+    }
+    .resp-step-text {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .resp-step-emoji {
+      font-size: 18px;
+      margin-top: 4px;
+    }
+    .resp-followup {
+      font-size: var(--font-size-sm);
+      color: var(--text-tertiary);
+      font-style: italic;
+      padding: 6px 0 0 0;
+    }
+
+    /* ── Due-Reviews Banner ── */
+    .due-reviews-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-glow);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      animation: fadeSlideUp 0.35s ease both;
+    }
+    .due-reviews-banner button {
+      white-space: nowrap;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 6px 14px;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .due-reviews-banner button:hover { opacity: 0.85; }
+
+    /* ── Structured-response entrance animations ── */
+    .animate-greeting { animation: greetFade 0.4s ease both; }
+    .animate-in       { animation: fadeSlideUp 0.35s ease both; }
+    .animate-bounce-scale { animation: scaleUp 0.4s cubic-bezier(.34,1.56,.64,1) both; }
 
     /* ── Skeleton Loader ── */
     .skeleton-loader {
@@ -470,6 +574,58 @@
     .skeleton-line:nth-child(1) { width: 80%; }
     .skeleton-line:nth-child(2) { width: 95%; }
     .skeleton-line:nth-child(3) { width: 60%; }
+
+    /* ── Skeleton sub-elements (structured response ghost) ── */
+    .skeleton-block {
+      border-radius: var(--radius-md);
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+    .skeleton-intro {
+      height: 18px;
+      width: 65%;
+    }
+    .skeleton-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    .skeleton-step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+    .skeleton-step-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .skeleton-step-title {
+      height: 14px;
+      width: 45%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+    .skeleton-step-text {
+      height: 12px;
+      width: 90%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite;
+    }
+    .skeleton-answer {
+      height: 40px;
+      width: 50%;
+    }
 
     /* ── Facts Loading ── */
     .facts-loading-container {
@@ -1054,6 +1210,144 @@
     .vision-section ul { padding-left: 18px; }
     .vision-section li { margin: 3px 0; }
 
+    /* ═══════════ VISION ANALYSIS CARD v2 ═══════════ */
+    .vision-analysis-card {
+      position: relative;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 78%;
+      align-self: flex-start;
+      animation: fadeSlideUp 0.4s ease both;
+      overflow: hidden;
+    }
+    .vision-scanning {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 16px;
+      animation: visionFadeIn 0.3s ease both;
+    }
+    .vision-scanning-icon { font-size: 28px; }
+    .vision-scanning-text {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .vision-scanning-bar {
+      height: 3px;
+      border-radius: 3px;
+      background: var(--accent);
+      animation: scanBar 1.4s ease-in-out infinite alternate;
+    }
+    .vision-thumbnail {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      object-fit: cover;
+      border: 1px solid var(--border-subtle);
+    }
+    .vision-section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .vision-section-header .icon { font-size: 16px; }
+    .vision-summary-section,
+    .vision-extracted-section,
+    .vision-steps-section,
+    .vision-solution-section {
+      padding: 12px 16px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      animation: visionFadeIn 0.4s ease both;
+    }
+    .vision-summary {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .vision-extracted-data {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .vision-extracted-item {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      background: var(--glass);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono, monospace);
+    }
+    .vision-logic-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .vision-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: visionFadeIn 0.35s ease both;
+      opacity: 0;
+    }
+    .vision-step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: var(--font-size-xs);
+    }
+    .vision-step-content { flex: 1; }
+    .vision-step-title {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+    }
+    .vision-step-explanation {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .vision-final-solution {
+      font-weight: 600;
+      font-size: var(--font-size-base);
+      color: var(--text-primary);
+      animation: visionFadeIn 0.4s ease both;
+      opacity: 0;
+    }
+    .vision-confidence {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+      padding-top: 4px;
+    }
+    .vision-confidence-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .vision-confidence-dot.high   { background: #22c55e; }
+    .vision-confidence-dot.medium { background: #f59e0b; }
+    .vision-confidence-dot.low    { background: #ef4444; }
+
     /* ═══════════ AGENT RESPONSE ═══════════ */
     .agent-response {
       display: flex; flex-direction: column; gap: 10px;
@@ -1394,6 +1688,7 @@
       </div>
     </div>
   </div>
+
 
 
   <script>
@@ -2329,14 +2624,89 @@
         };
         renderStructuredResponse(converted);
       } else {
-        // Fallback: render as plain text bubble (existing behaviour)
-        // Strip any raw markdown bold/italic and convert LaTeX
-        const cleaned = convertLatexToReadable((data.reply || '')
-          .replace(/\*\*(.*?)\*\*/g, '$1')   // remove **bold**
-          .replace(/\*(.*?)\*/g, '$1')        // remove *italic*
-          .trim());
-        addBubble(cleaned, 'bot');
+        // Fallback: render reply as formatted rich-text bubble
+        renderFormattedFallback(data.reply || '');
       }
+    }
+
+    /**
+     * renderFormattedFallback — Converts a raw markdown-ish reply into a nicely
+     * formatted HTML bubble so advanced-mode plain-text responses aren't a wall of text.
+     */
+    function renderFormattedFallback(raw) {
+      // 1. Strip stray <think>…</think> blocks that leaked through
+      let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      // 2. Strip markdown code fences that wrap the entire reply
+      text = text
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+
+      // 3. Try one last shot at parsing JSON — the server might have missed it
+      try {
+        const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
+        if (parsed && parsed.steps) {
+          const converted = {
+            intro: convertLatexToReadable(parsed.intro || ''),
+            steps: (parsed.steps || []).map(step => ({
+              title: convertLatexToReadable(step.title || ''),
+              text: convertLatexToReadable(step.text || ''),
+              emoji: step.emoji || ''
+            })),
+            answer: convertLatexToReadable(parsed.answer || ''),
+            followup: convertLatexToReadable(parsed.followup || '')
+          };
+          renderStructuredResponse(converted);
+          return;
+        }
+      } catch (_) { /* not JSON — render as formatted text */ }
+
+      // 4. Convert lightweight markdown → HTML
+      let html = escapeHtml(text);
+
+      // Code blocks (``` … ```)
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g,
+        '<pre class="fallback-code"><code>$2</code></pre>');
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code class="fallback-inline-code">$1</code>');
+      // Bold
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Italic
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      // Headers  ### → <h4>, ## → <h3>
+      html = html.replace(/^### (.+)$/gm, '<h4 class="fallback-h">$1</h4>');
+      html = html.replace(/^## (.+)$/gm, '<h3 class="fallback-h">$1</h3>');
+      html = html.replace(/^# (.+)$/gm, '<h3 class="fallback-h">$1</h3>');
+      // Unordered lists  - item  or * item
+      html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul class="fallback-list">$1</ul>');
+      // Merge adjacent <ul> blocks
+      html = html.replace(/<\/ul>\s*<ul class="fallback-list">/g, '');
+      // Numbered lists  1. item
+      html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+      // Paragraphs: double newline → <p>
+      html = html.replace(/\n{2,}/g, '</p><p>');
+      // Single newlines → <br>
+      html = html.replace(/\n/g, '<br>');
+      // Wrap in opening <p>
+      html = '<p>' + html + '</p>';
+      // Clean empty paragraphs
+      html = html.replace(/<p>\s*<\/p>/g, '');
+
+      // Convert any LaTeX
+      html = convertLatexToReadable(html);
+
+      addBubble(html, 'bot', true);
+    }
+
+    /** Minimal HTML-entity escaper for user-generated text */
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     }
 
     /**
@@ -2581,7 +2951,7 @@
       const skeleton = container.querySelector('[data-skeleton="true"]');
       if (skeleton) {
         // Fade out skeleton
-        skeleton.style.animation = 'skeletonFadeOut 0.3s ease forwards';
+        skeleton.style.animation = 'skeleton-fade 0.3s ease forwards';
         setTimeout(() => skeleton.remove(), 300);
       }
     }
@@ -2740,96 +3110,128 @@
 
       try {
         if (pendingImage) {
+          // Defensive image flow: capture file locally so pendingImage can't be mutated mid-flight
+          const fileForUpload = pendingImage;
           // Capture image data URL for vision response thumbnail
           let capturedImageDataUrl = null;
-          
-          // Display user message with image first
+
+          // Display user message with image first (non-blocking)
           const reader = new FileReader();
           const imageLoadPromise = new Promise((resolve) => {
             reader.onload = (e) => {
               capturedImageDataUrl = e.target.result;
-              
-              const bubbleContainer = document.createElement('div');
-              bubbleContainer.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                align-self: flex-end;
-                max-width: 65%;
-              `;
-              
-              const imageBubble = document.createElement('img');
-              imageBubble.src = e.target.result;
-              imageBubble.className = 'bubble-image';
-              imageBubble.loading = 'lazy'; // Lazy load for performance
-              imageBubble.decoding = 'async'; // Non-blocking decode
-              imageBubble.style.cssText = `
-                width: 120px;
-                height: 120px;
-                border-radius: 8px;
-                object-fit: cover;
-              `;
-              bubbleContainer.appendChild(imageBubble);
-              
-              if (message) {
-                const textBubble = document.createElement('div');
-                textBubble.className = 'bubble user';
-                textBubble.textContent = message;
-                bubbleContainer.appendChild(textBubble);
+
+              try {
+                const bubbleContainer = document.createElement('div');
+                bubbleContainer.style.cssText = `
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                  align-self: flex-end;
+                  max-width: 65%;
+                `;
+
+                const imageBubble = document.createElement('img');
+                imageBubble.src = e.target.result;
+                imageBubble.className = 'bubble-image';
+                imageBubble.loading = 'lazy'; // Lazy load for performance
+                imageBubble.decoding = 'async'; // Non-blocking decode
+                imageBubble.style.cssText = `
+                  width: 120px;
+                  height: 120px;
+                  border-radius: 8px;
+                  object-fit: cover;
+                `;
+                bubbleContainer.appendChild(imageBubble);
+
+                if (message) {
+                  const textBubble = document.createElement('div');
+                  textBubble.className = 'bubble user';
+                  textBubble.textContent = message;
+                  bubbleContainer.appendChild(textBubble);
+                }
+
+                chatEl.appendChild(bubbleContainer);
+                scrollToBottom();
+              } catch (e) {
+                console.error('[Image UI] failed to render preview:', e);
               }
-              
-              chatEl.appendChild(bubbleContainer);
-              scrollToBottom();
+              resolve();
+            };
+            reader.onerror = (err) => {
+              console.warn('[Image] FileReader error', err);
               resolve();
             };
           });
-          reader.readAsDataURL(pendingImage);
-          
-          // Wait for image to be read
-          await imageLoadPromise;
+          try {
+            reader.readAsDataURL(fileForUpload);
+            // Wait for image to be read (preview)
+            await imageLoadPromise;
 
-          // Show engaging facts loading screen for image processing
-          showFactsLoading();
+            // Show engaging facts loading screen for image processing
+            showFactsLoading();
 
-          // Use /chat-with-image endpoint
-          const formData = new FormData();
-          formData.append('message', message);
-          formData.append('level', levelEl.value);
-          formData.append('history', JSON.stringify(history));
-          formData.append('image', pendingImage);
+            // Use /chat-with-image endpoint
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('level', levelEl.value);
+            formData.append('history', JSON.stringify(history));
+            formData.append('image', fileForUpload);
 
-          const res = await fetch('/chat-with-image', {
-            method: 'POST',
-            body: formData
-          });
-          
-          // Hide facts loading when response arrives
-          hideFactsLoading();
-          
-          if (!res.ok) {
-            const error = await res.json();
-            addBubble('❌ Error: ' + (error.error || 'Failed to process image'), 'bot');
-            throw new Error(error.error);
+            let res;
+            try {
+              res = await fetch('/chat-with-image', {
+                method: 'POST',
+                body: formData
+              });
+            } catch (networkErr) {
+              // Network level failure
+              hideFactsLoading();
+              addBubble('❌ Network error while uploading image. Check connection.', 'bot');
+              throw networkErr;
+            }
+
+            // Hide facts loading when response arrives
+            hideFactsLoading();
+
+            if (!res.ok) {
+              let errorText = 'Failed to process image';
+              try {
+                const errorJson = await res.json();
+                errorText = errorJson.error || errorText;
+              } catch (e) {}
+              addBubble('❌ Error: ' + errorText, 'bot');
+              throw new Error(errorText);
+            }
+
+            let data = null;
+            try {
+              data = await res.json();
+            } catch (e) {
+              addBubble('❌ Error parsing server response for image.', 'bot');
+              throw e;
+            }
+
+            // Only clear pendingImage after successful upload and parsing
+            pendingImage = null;
+            imagePreviewContainer.innerHTML = '';
+
+            if (estimateBadge) estimateBadge.triggerShrinkFade();
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            // Ensure we have a valid response to render - pass image data URL for vision card
+            if (data && (data.structured || data.reply)) {
+              try { renderBotResponse(data, capturedImageDataUrl); } catch (e) { console.error('[Image] render error', e); addBubble('❌ Error rendering image response', 'bot'); }
+            } else {
+              addBubble('Unable to process image. Please try again.', 'bot');
+            }
+
+            history.push({ role: 'user', content: message || '[Image uploaded]' });
+            history.push({ role: 'assistant', content: data?.reply || 'Image analyzed' });
+          } finally {
+            // Ensure loading UI is hidden in unexpected cases
+            hideFactsLoading();
           }
-
-          const data = await res.json();
-          pendingImage = null;
-          imagePreviewContainer.innerHTML = '';
-
-          if (estimateBadge) {
-            estimateBadge.triggerShrinkFade();
-          }
-          if (countdownInterval) clearInterval(countdownInterval);
-
-          // Ensure we have a valid response to render - pass image data URL for vision card
-          if (data && (data.structured || data.reply)) {
-            renderBotResponse(data, capturedImageDataUrl);
-          } else {
-            addBubble('Unable to process image. Please try again.', 'bot');
-          }
-
-          history.push({ role: 'user', content: message || '[Image uploaded]' });
-          history.push({ role: 'assistant', content: data.reply || 'Image analyzed' });
         } else {
           // Use /chat endpoint
           const res = await fetch('/chat', {

@@ -69,7 +69,7 @@
       background: #0D1117;
       border: 1px solid #30363D;
       border-radius: 8px;
-      width: 300px;
+      width: 340px;
       margin-top: 4px;
       overflow: hidden;
       display: none;
@@ -79,15 +79,33 @@
                   padding:6px 10px;display:flex;align-items:center;gap:6px;">
         <div id="sb-hdr-dot" style="width:8px;height:8px;border-radius:50%;
                                      background:#3FB950;flex-shrink:0;"></div>
-        <span style="color:#8B949E;flex:1;">StudyBuddy benchmark</span>
+        <span style="color:#8B949E;flex:1;">StudyBuddy Diagnostics</span>
         <span style="background:#1C2128;border:1px solid #30363D;border-radius:4px;
                      padding:1px 6px;font-size:10px;color:#8B949E;">DEV</span>
         <span id="sb-close" style="color:#484F58;cursor:pointer;font-size:9px;
                                     margin-left:4px;">✕</span>
       </div>
 
+      <!-- Tab bar -->
+      <div id="sb-tab-bar" style="display:flex;border-bottom:1px solid #21262D;background:#0D1117;">
+        <div class="sb-tab active" data-tab="metrics"
+             style="flex:1;text-align:center;padding:5px 0;font-size:10px;
+                    cursor:pointer;color:#E6EDF3;border-bottom:2px solid #388BFD;">
+          📊 Metrics
+        </div>
+        <div class="sb-tab" data-tab="flow"
+             style="flex:1;text-align:center;padding:5px 0;font-size:10px;
+                    cursor:pointer;color:#484F58;border-bottom:2px solid transparent;">
+          🔀 Flow
+        </div>
+      </div>
+
       <div id="sb-body" style="padding:8px 0;">
         <div style="padding:6px 10px;color:#484F58;font-size:10px;">Loading metrics...</div>
+      </div>
+
+      <div id="sb-flow-body" style="padding:8px 0;display:none;max-height:420px;overflow-y:auto;">
+        <div style="padding:6px 10px;color:#484F58;font-size:10px;">No flow traces yet. Send a chat, quiz, or generate a map first.</div>
       </div>
 
       <div style="border-top:1px solid #21262D;padding:4px 10px;
@@ -108,8 +126,13 @@
     // Wire up buttons
     document.getElementById('sb-close').addEventListener('click',    closePanel);
     document.getElementById('sb-collapse').addEventListener('click', closePanel);
-    document.getElementById('sb-run-now').addEventListener('click',  fetchAndRender);
+    document.getElementById('sb-run-now').addEventListener('click',  () => { fetchAndRender(); fetchFlowTraces(); });
     document.getElementById('sb-clear').addEventListener('click',    clearMetrics);
+
+    // Wire up tab switching
+    document.querySelectorAll('#sb-tab-bar .sb-tab').forEach(t => {
+      t.addEventListener('click', () => switchTab(t.dataset.tab));
+    });
 
     // Restore open/closed state from localStorage
     const wasOpen = localStorage.getItem(PANEL_KEY) === 'true';
@@ -127,7 +150,8 @@
     document.getElementById('sb-dev-expanded').style.display = 'block';
     document.getElementById('sb-tab-arrow').textContent = '▲';
     localStorage.setItem(PANEL_KEY, 'true');
-    fetchAndRender();
+    if (activeTab === 'metrics') fetchAndRender();
+    else fetchFlowTraces();
   }
 
   function closePanel() {
@@ -309,13 +333,210 @@
     fetchAndRender();
   }
 
+  // ── Tab switching ──
+  let activeTab = 'metrics';
+
+  function switchTab(tabName) {
+    activeTab = tabName;
+    const metricsBody = document.getElementById('sb-body');
+    const flowBody    = document.getElementById('sb-flow-body');
+    if (!metricsBody || !flowBody) return;
+
+    document.querySelectorAll('#sb-tab-bar .sb-tab').forEach(t => {
+      const isActive = t.dataset.tab === tabName;
+      t.style.color = isActive ? '#E6EDF3' : '#484F58';
+      t.style.borderBottomColor = isActive ? '#388BFD' : 'transparent';
+    });
+
+    if (tabName === 'metrics') {
+      metricsBody.style.display = 'block';
+      flowBody.style.display    = 'none';
+      fetchAndRender();
+    } else {
+      metricsBody.style.display = 'none';
+      flowBody.style.display    = 'block';
+      fetchFlowTraces();
+    }
+  }
+
+  // ── Flow Traces ──
+  async function fetchFlowTraces() {
+    try {
+      const res  = await fetch('/dev/flow-traces');
+      const data = await res.json();
+      renderFlowBody(data);
+    } catch {
+      const fb = document.getElementById('sb-flow-body');
+      if (fb) fb.innerHTML = '<div style="padding:10px;color:#F85149;font-size:10px;">Failed to load flow traces</div>';
+    }
+  }
+
+  function renderFlowBody(traces) {
+    const fb = document.getElementById('sb-flow-body');
+    if (!fb) return;
+
+    const routes = ['/chat', '/quiz', '/concept-map'];
+    const icons  = { '/chat': '💬', '/quiz': '🧠', '/concept-map': '🗺️' };
+    const labels = { '/chat': 'Chat', '/quiz': 'Quiz', '/concept-map': 'Concept Map' };
+
+    let html = '';
+
+    // Architecture overview — static flow diagram
+    html += `
+      <div style="padding:6px 10px 2px;">
+        <div style="font-size:9px;color:#484F58;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">
+          Architecture Overview
+        </div>
+        <pre style="font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.5;
+                    color:#8B949E;margin:0;white-space:pre;overflow-x:auto;padding:6px 0;">` +
+`<span style="color:#388BFD;">┌─────────────┐</span>     <span style="color:#388BFD;">┌──────────────┐</span>     <span style="color:#A371F7;">┌──────────────┐</span>
+<span style="color:#388BFD;">│   Browser   │</span>────▶<span style="color:#388BFD;">│  Express.js  │</span>────▶<span style="color:#A371F7;">│  Ollama API  │</span>
+<span style="color:#388BFD;">│  (Frontend) │</span>◀────<span style="color:#388BFD;">│   Server     │</span>◀────<span style="color:#A371F7;">│  gemma4:e4b  │</span>
+<span style="color:#388BFD;">└─────────────┘</span>     <span style="color:#388BFD;">└──────┬───────┘</span>     <span style="color:#A371F7;">└──────────────┘</span>
+                           <span style="color:#484F58;">│</span>
+                    <span style="color:#484F58;">┌──────┴───────┐</span>
+                    <span style="color:#484F58;">│  Post-process│</span>
+                    <span style="color:#484F58;">│  JSON parse  │</span>
+                    <span style="color:#484F58;">│  Validation  │</span>
+                    <span style="color:#484F58;">└──────────────┘</span></pre>
+      </div>
+      <div style="border-top:1px solid #21262D;margin:6px 0;"></div>
+    `;
+
+    // Per-route flow diagrams
+    let hasTraces = false;
+    for (const route of routes) {
+      const trace = traces[route];
+      if (!trace) continue;
+      hasTraces = true;
+
+      const icon  = icons[route] || '📡';
+      const label = labels[route] || route;
+      const statusIcon = trace.status === 'ok' ? '✅' : '❌';
+      const statusCol  = trace.status === 'ok' ? '#3FB950' : '#F85149';
+      const ago = formatAgo(trace.ts);
+
+      html += `
+        <div style="padding:6px 10px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span>${icon}</span>
+            <span style="color:#E6EDF3;font-weight:600;font-size:11px;">${label}</span>
+            <span style="color:${statusCol};font-size:10px;">${statusIcon} ${fmt(trace.totalMs)}</span>
+            <span style="margin-left:auto;color:#484F58;font-size:9px;">${ago}</span>
+          </div>
+          <div style="color:#484F58;font-size:9px;margin-bottom:6px;">
+            Input: <span style="color:#8B949E;">${escHtml(trace.input || '—')}</span>
+          </div>
+      `;
+
+      // Render the step-by-step flow
+      html += renderStepFlow(trace.steps, trace.totalMs);
+      html += `</div><div style="border-top:1px solid #21262D;margin:2px 0;"></div>`;
+    }
+
+    if (!hasTraces) {
+      html += `
+        <div style="padding:16px 10px;text-align:center;">
+          <div style="color:#484F58;font-size:11px;margin-bottom:4px;">No flow traces yet</div>
+          <div style="color:#30363D;font-size:10px;">Send a chat message, generate a quiz, or create a concept map to see the flow.</div>
+        </div>
+      `;
+    }
+
+    fb.innerHTML = html;
+  }
+
+  function renderStepFlow(steps, totalMs) {
+    if (!steps || steps.length === 0) return '<div style="color:#484F58;font-size:9px;padding:4px 0;">No steps recorded</div>';
+
+    let html = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9.5px;line-height:1.7;">';
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const prevMs = i > 0 ? steps[i - 1].ms : 0;
+      const delta  = step.ms - prevMs;
+      const isLast = i === steps.length - 1;
+      const isError = step.name === 'ERROR';
+
+      // Determine colour based on delta (time since previous step)
+      const deltaCol = isError ? '#F85149' : delta < 50 ? '#3FB950' : delta < 5000 ? '#F59E0B' : '#F85149';
+      const nameCol  = isError ? '#F85149' : '#E6EDF3';
+
+      // Bar: proportional to time taken for this step relative to total
+      const pct = totalMs > 0 ? Math.min(100, Math.round((delta / totalMs) * 100)) : 0;
+
+      // Connector line
+      const connector = isLast ? '└' : '├';
+      const pipe = isLast ? ' ' : '│';
+
+      html += `
+        <div style="display:flex;align-items:flex-start;gap:0;">
+          <span style="color:#30363D;min-width:14px;">${connector}─</span>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="color:${nameCol};">${escHtml(step.name)}</span>
+              <span style="color:${deltaCol};font-size:9px;font-weight:600;">+${fmt(delta)}</span>
+              <span style="color:#484F58;font-size:8px;">@ ${fmt(step.ms)}</span>
+            </div>
+            ${step.detail ? `<div style="color:#484F58;font-size:8px;margin-top:1px;">${escHtml(step.detail)}</div>` : ''}
+            <div style="width:100%;height:3px;background:#21262D;border-radius:2px;margin:2px 0 1px;">
+              <div style="width:${pct}%;height:3px;border-radius:2px;background:${deltaCol};
+                          transition:width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Summary: which step took the longest?
+    if (steps.length > 1) {
+      let maxDelta = 0, bottleneck = '';
+      for (let i = 0; i < steps.length; i++) {
+        const prevMs = i > 0 ? steps[i - 1].ms : 0;
+        const delta  = steps[i].ms - prevMs;
+        if (delta > maxDelta) {
+          maxDelta = delta;
+          bottleneck = steps[i].name;
+        }
+      }
+      if (bottleneck) {
+        const bnCol = maxDelta < 5000 ? '#F59E0B' : '#F85149';
+        html += `
+          <div style="margin-top:4px;padding:3px 6px;background:#161B22;border:1px solid #21262D;
+                      border-radius:4px;font-size:9px;">
+            <span style="color:#484F58;">⚡ Bottleneck:</span>
+            <span style="color:${bnCol};font-weight:600;">${escHtml(bottleneck)}</span>
+            <span style="color:${bnCol};">(${fmt(maxDelta)} — ${totalMs > 0 ? Math.round((maxDelta / totalMs) * 100) : 0}% of total)</span>
+          </div>
+        `;
+      }
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function formatAgo(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 5000)  return 'just now';
+    if (diff < 60000) return Math.round(diff / 1000) + 's ago';
+    if (diff < 3600000) return Math.round(diff / 60000) + 'm ago';
+    return Math.round(diff / 3600000) + 'h ago';
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   // ── Auto-refresh loop ──
   function startAutoRefresh() {
     setInterval(() => {
       // Only fetch if panel is expanded — no background polling when collapsed
       const exp = document.getElementById('sb-dev-expanded');
       if (exp && exp.style.display !== 'none') {
-        fetchAndRender();
+        if (activeTab === 'metrics') fetchAndRender();
+        else fetchFlowTraces();
       } else {
         // Still update the tab time even when collapsed
         fetch('/dev/metrics')

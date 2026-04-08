@@ -60,6 +60,35 @@ Then visit http://localhost:3000 and look for the dark tab in the top-right corn
 
 ---
 
+## Tabs
+
+The Dev Panel has two main tabs:
+
+### Metrics Tab
+Shows real-time performance counters: request latency, cache hit rates, error counts, per-route timing bars, and tool breakdown for agent requests.
+
+### Flow Tab
+Shows **flow traces** for every API request. Each trace displays:
+- An ASCII architecture diagram of the request pipeline
+- A per-step timeline with millisecond precision
+- **Bottleneck detection** — the slowest step is highlighted
+- Success/failure status for each step
+
+Example flow for `/chat`:
+```
+[Client] → [Taxonomy] → [Cache] → [Ollama] → [Parse JSON] → [Response]
+
+  ┌─ taxonomy-resolve ────── 2ms    ✓
+  ├─ cache-check ─────────── 1ms    ✓
+  ├─ ollama-generate ─────── 45230ms ⚠ bottleneck
+  ├─ parse-structured-json ─ 3ms    ✓
+  └─ total ──────────────── 45236ms
+```
+
+Access flow traces programmatically: `GET /dev/flow-traces`
+
+---
+
 ## Keyboard Shortcut
 
 **Ctrl+Shift+B** — Toggle panel open/closed

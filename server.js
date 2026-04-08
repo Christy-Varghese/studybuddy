@@ -22,6 +22,11 @@ const devMetrics = {
   startedAt:  Date.now()
 };
 
+// ── Flow Trace store ─────────────────────────────────
+// Stores the last request's step-by-step timing for each route type.
+// Each trace: { route, ts, totalMs, status, steps: [{ name, ms, detail? }] }
+const flowTraces = {};  // keyed by route e.g. '/chat', '/quiz', '/concept-map'
+
 const app = express();
 
 // ── Performance: Enable gzip compression ──
@@ -192,6 +197,14 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
 });
 
+// Graceful handler for multer errors (e.g., file too large, invalid mime)
+app.use((err, req, res, next) => {
+  if (err && err.name === 'MulterError') {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
 // ============ Response Cache ============
 // Smart cache system — 4-layer waterfall (taxonomy → normalised hash → dedup → Ollama)
 // Replaces the old simple Map() cache.
@@ -330,6 +343,9 @@ app.post('/estimate', (req, res) => {
 // Main chat route
 app.post('/chat', async (req, res) => {
   const chatStart = Date.now();
+  const steps = [];
+  const mark = (name, detail) => steps.push({ name, ms: Date.now() - chatStart, detail });
+
   const { message, level, history } = req.body;
   console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, prompt: "${(message || '').slice(0, 60)}…"`);
 
@@ -339,6 +355,7 @@ app.post('/chat', async (req, res) => {
     ...history,                          // past conversation
     { role: 'user', content: message }  // new question
   ];
+  mark('Build prompt', `${messages.length} messages, level=${level || 'beginner'}`);
 
   try {
     // Call Ollama running locally
@@ -351,43 +368,84 @@ app.post('/chat', async (req, res) => {
         stream: false
       })
     });
+    mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
 
     if (!ollamaRes.ok) {
       throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
     }
 
     const data = await ollamaRes.json();
+    mark('Parse Ollama response');
     
     if (!data.message || !data.message.content) {
       throw new Error('Invalid response from Ollama - no message content');
     }
     
-    const rawReply = data.message.content;
+    let rawReply = data.message.content;
+
+    // Strip <think>…</think> reasoning blocks before anything else
+    // (Gemma thinking mode emits these before the actual response)
+    rawReply = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     // Attempt to parse as structured JSON
     let structured = null;
     try {
-      // Strip any accidental markdown code fences Gemma might add
-      const cleaned = rawReply
+      let cleaned = rawReply;
+
+      // 1. Strip markdown code fences
+      cleaned = cleaned
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim();
-      structured = JSON.parse(cleaned);
+
+      // 3. Try direct parse first
+      try {
+        structured = JSON.parse(cleaned);
+      } catch (_) {
+        // 4. Extract the first JSON object {...} from the text
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          // Repair trailing commas before } or ]
+          let candidate = objMatch[0].replace(/,(\s*[\]\}])/g, '$1');
+          structured = JSON.parse(candidate);
+        }
+      }
+
+      // 5. Validate it has the expected shape (intro/steps/answer)
+      if (structured && !structured.steps) {
+        // Not the expected structured format — discard
+        structured = null;
+      }
     } catch (e) {
       // Gemma failed to return valid JSON — fall back to plain text
+      console.warn('[/chat] JSON parse failed, using plaintext fallback:', e.message);
       structured = null;
     }
+    mark('Parse structured JSON', structured ? 'success' : 'fallback to plain text');
 
     // Return both structured and raw so frontend can handle either
     res.json({
       reply: rawReply,           // raw text fallback
       structured: structured     // parsed object or null
     });
+    mark('Send response', `${rawReply.length} chars`);
+
     const chatMs = Date.now() - chatStart;
     console.log(`✅ [/chat] Done in ${(chatMs / 1000).toFixed(2)}s — reply length: ${rawReply.length} chars`);
+
+    // Store flow trace
+    flowTraces['/chat'] = {
+      route: '/chat', ts: Date.now(), totalMs: chatMs, status: 'ok',
+      input: (message || '').slice(0, 80), steps
+    };
   } catch (err) {
     const chatMs = Date.now() - chatStart;
+    mark('ERROR', err.message);
+    flowTraces['/chat'] = {
+      route: '/chat', ts: Date.now(), totalMs: chatMs, status: 'error',
+      input: (message || '').slice(0, 80), steps
+    };
     console.error(`❌ [/chat] Error after ${(chatMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
   }
@@ -504,21 +562,36 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
     
     let rawReply = data.message.content;
 
+    // Strip <think>…</think> reasoning blocks before anything else
+    rawReply = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
     // Attempt to parse as structured vision JSON
     let structured = null;
     let isVisionResponse = false;
     
     try {
+      // Strip <think>…</think> reasoning blocks (Gemma thinking mode)
+      let cleaned = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
       // Strip any accidental markdown code fences Gemma might add
-      const cleaned = rawReply
+      cleaned = cleaned
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim();
-      structured = JSON.parse(cleaned);
+
+      // Try direct parse; if that fails, extract the first JSON object
+      try {
+        structured = JSON.parse(cleaned);
+      } catch (_) {
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          structured = JSON.parse(objMatch[0].replace(/,(\s*[\]\}])/g, '$1'));
+        }
+      }
       
       // Check if it's the new vision format
-      if (structured.visual_summary && structured.extracted_data) {
+      if (structured && structured.visual_summary && structured.extracted_data) {
         isVisionResponse = true;
       }
     } catch (e) {
@@ -542,8 +615,11 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
       }
     }
 
-    // Clean up uploaded temp file
-    fs.unlinkSync(file.path);
+    // Clean up uploaded temp file asynchronously so any cleanup failure
+    // doesn't interfere with the already-sent response.
+    fs.unlink(file.path, (err) => {
+      if (err) console.warn('[image] cleanup failed:', err.message);
+    });
 
     // Return vision-specific response format
     res.json({
@@ -552,11 +628,11 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
       isVision: isVisionResponse // flag for frontend to use vision renderer
     });
   } catch (err) {
-    // Clean up file on error
+    // Clean up file on error (async, best-effort)
     if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {}
+      fs.unlink(req.file.path, (e) => {
+        if (e) console.warn('[image] cleanup failed:', e.message);
+      });
     }
     console.error('[/chat-with-image] Error:', err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
@@ -566,6 +642,9 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
 // ============ POST /quiz — Quiz generation endpoint ============
 app.post('/quiz', async (req, res) => {
   const quizStart = Date.now();
+  const steps = [];
+  const mark = (name, detail) => steps.push({ name, ms: Date.now() - quizStart, detail });
+
   const { topic, level, numQuestions } = req.body;
   console.log(`\n⏱  [/quiz] Started — topic: "${topic}", level: ${level}, questions: ${numQuestions}`);
 
@@ -577,6 +656,7 @@ app.post('/quiz', async (req, res) => {
   if (isNaN(numQuestionsInt) || numQuestionsInt < 3 || numQuestionsInt > 10) {
     return res.status(400).json({ error: 'numQuestions must be between 3 and 10' });
   }
+  mark('Validate input', `topic="${topic}", ${numQuestionsInt} questions`);
 
   // System prompt for quiz generation (no <|think|> token)
   const quizPrompt = `You are a quiz generator. Generate exactly ${numQuestionsInt} multiple choice questions about ${topic} suitable for ${level} level.
@@ -592,6 +672,7 @@ Format:
     "explanation": "Brief explanation of why this is correct"
   }
 ]`;
+  mark('Build prompt', `${quizPrompt.length} chars`);
 
   try {
     // Call Ollama
@@ -604,12 +685,14 @@ Format:
         stream: false
       })
     });
+    mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
 
     if (!ollamaRes.ok) {
       throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
     }
 
     const data = await ollamaRes.json();
+    mark('Parse Ollama response');
     
     if (!data.message || !data.message.content) {
       throw new Error('Invalid response from Ollama - no message content');
@@ -619,41 +702,31 @@ Format:
     console.log('[/quiz] Raw response length:', responseText.length);
 
     // ─── Robust JSON extraction and repair ───
-    // Step 1: Strip markdown code fences if present
     responseText = responseText
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
       .replace(/\s*```$/i, '')
       .trim();
-
-    // Step 2: Try to extract JSON array if there's extra text
     const jsonArrayMatch = responseText.match(/\[[\s\S]*\]/);
-    if (jsonArrayMatch) {
-      responseText = jsonArrayMatch[0];
-    }
+    if (jsonArrayMatch) responseText = jsonArrayMatch[0];
+    mark('Extract JSON array', `${responseText.length} chars`);
 
-    // Step 3: Repair common JSON issues
-    // Fix trailing commas before ] or }
+    // Repair common JSON issues
     responseText = responseText.replace(/,(\s*[\]\}])/g, '$1');
-    // Fix missing commas between objects
     responseText = responseText.replace(/\}(\s*)\{/g, '},$1{');
-    // Fix unescaped quotes in strings (basic repair)
     responseText = responseText.replace(/([^\\])\\([^"\\nrtbfu])/g, '$1\\\\$2');
-    // Remove any control characters
     responseText = responseText.replace(/[\x00-\x1F\x7F]/g, (char) => {
       if (char === '\n' || char === '\r' || char === '\t') return char;
       return '';
     });
+    mark('Repair JSON');
 
-    // Step 4: Parse JSON with error recovery
+    // Parse JSON with error recovery
     let questions;
     try {
       questions = JSON.parse(responseText);
     } catch (parseError) {
       console.error('[/quiz] JSON parse error:', parseError.message);
-      console.error('[/quiz] Problematic JSON (first 500 chars):', responseText.substring(0, 500));
-      
-      // Try one more repair: find the last valid closing bracket
       const lastBracket = responseText.lastIndexOf(']');
       if (lastBracket > 0) {
         const trimmed = responseText.substring(0, lastBracket + 1);
@@ -667,49 +740,55 @@ Format:
         throw new Error(`Invalid JSON from model: ${parseError.message}`);
       }
     }
+    mark('Parse JSON', Array.isArray(questions) ? `${questions.length} raw questions` : 'not an array');
 
-    // Step 5: Validate that we got an array
     if (!Array.isArray(questions)) {
       return res.status(500).json({ error: 'Invalid quiz format: expected array of questions' });
     }
 
-    // Step 6: Validate and sanitize each question
+    // Validate and sanitize each question
     const validatedQuestions = questions
       .filter(q => q && typeof q === 'object')
       .map((q, index) => {
-        // Ensure required fields exist with defaults
         const validated = {
           question: String(q.question || `Question ${index + 1}`).trim(),
           options: Array.isArray(q.options) ? q.options.map(o => String(o).trim()) : ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
           answer: String(q.answer || q.options?.[0] || 'A) Option 1').trim(),
           explanation: String(q.explanation || 'No explanation provided').trim()
         };
-        
-        // Ensure we have exactly 4 options
         while (validated.options.length < 4) {
           validated.options.push(`${String.fromCharCode(65 + validated.options.length)}) Option`);
         }
         validated.options = validated.options.slice(0, 4);
-        
-        // Ensure answer is one of the options
         if (!validated.options.some(opt => opt.startsWith(validated.answer.charAt(0)))) {
           validated.answer = validated.options[0];
         }
-        
         return validated;
       })
-      .filter(q => q.question && q.question.length > 5); // Filter out empty questions
+      .filter(q => q.question && q.question.length > 5);
 
     if (validatedQuestions.length === 0) {
       return res.status(500).json({ error: 'No valid questions could be generated. Please try again.' });
     }
+    mark('Validate questions', `${validatedQuestions.length} valid of ${questions.length} raw`);
 
     console.log(`[/quiz] Successfully generated ${validatedQuestions.length} questions`);
     const quizMs = Date.now() - quizStart;
     console.log(`✅ [/quiz] Done in ${(quizMs / 1000).toFixed(2)}s — ${validatedQuestions.length} questions generated`);
     res.json({ questions: validatedQuestions });
+    mark('Send response');
+
+    flowTraces['/quiz'] = {
+      route: '/quiz', ts: Date.now(), totalMs: quizMs, status: 'ok',
+      input: `${topic} (${numQuestionsInt}q, ${level})`, steps
+    };
   } catch (err) {
     const quizMs = Date.now() - quizStart;
+    mark('ERROR', err.message);
+    flowTraces['/quiz'] = {
+      route: '/quiz', ts: Date.now(), totalMs: quizMs, status: 'error',
+      input: `${topic} (${numQuestions}q, ${level})`, steps
+    };
     console.error(`❌ [/quiz] Error after ${(quizMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
   }
@@ -779,20 +858,37 @@ app.post('/socratic', async (req, res) => {
 // Generates a JSON concept map (nodes + edges) for a topic
 app.post('/concept-map', async (req, res) => {
   const mapStart = Date.now();
+  const steps = [];
+  const mark = (name, detail) => steps.push({ name, ms: Date.now() - mapStart, detail });
+
   const { topic, level } = req.body;
   console.log(`\n⏱  [/concept-map] Started — topic: "${topic}", level: ${level || 'intermediate'}`);
   if (!topic) return res.status(400).json({ error: 'topic is required' });
+  mark('Validate input', `topic="${topic}", level=${level || 'intermediate'}`);
 
   try {
     const result = await toolImplementations.generate_concept_map({
       topic,
       level: level || 'intermediate'
     });
+    mark('generate_concept_map tool', `nodes=${result?.nodes?.length || 0}, edges=${result?.edges?.length || 0}`);
+
     const mapMs = Date.now() - mapStart;
     console.log(`✅ [/concept-map] Done in ${(mapMs / 1000).toFixed(2)}s — nodes: ${result?.nodes?.length || '?'}, edges: ${result?.edges?.length || '?'}`);
     res.json(result);
+    mark('Send response');
+
+    flowTraces['/concept-map'] = {
+      route: '/concept-map', ts: Date.now(), totalMs: mapMs, status: 'ok',
+      input: `${topic} (${level || 'intermediate'})`, steps
+    };
   } catch (err) {
     const mapMs = Date.now() - mapStart;
+    mark('ERROR', err.message);
+    flowTraces['/concept-map'] = {
+      route: '/concept-map', ts: Date.now(), totalMs: mapMs, status: 'error',
+      input: `${topic} (${level || 'intermediate'})`, steps
+    };
     console.error(`❌ [/concept-map] Error after ${(mapMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ success: false, error: err.message });
   }
@@ -1001,6 +1097,12 @@ if (IS_DEV) {
     devMetrics.cacheHits  = 0;
     devMetrics.startedAt  = Date.now();
     res.json({ success: true });
+  });
+
+  // ── Flow Traces API ──────────────────────────────
+  // Returns the last request's step-by-step timing for each instrumented route
+  app.get('/dev/flow-traces', (req, res) => {
+    res.json(flowTraces);
   });
 }
 

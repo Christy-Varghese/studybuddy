@@ -59,7 +59,17 @@ Tracks consecutive study days. Streak badge appears in the header — turns oran
 Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin.html` for manual curation.
 
 ### 📸 Homework Photo Analysis
-Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step.
+Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step. Robust error handling with defensive retry logic, async file cleanup, and multer error boundaries.
+
+### 🔍 Developer Diagnostics Panel
+Built-in **Metrics** and **Flow** tabs (press the 🛠 button):
+- **Metrics**: Request counts, latency percentiles, cache hit rates per route
+- **Flow**: Real-time flow traces showing every internal step (taxonomy lookup → cache check → Ollama call → JSON parse) with millisecond-level timing and bottleneck detection
+
+### 📝 Advanced Formatting Engine
+- Strips `<think>…</think>` reasoning blocks emitted by Gemma models before parsing
+- Robust JSON extraction: direct parse → code-fence strip → brace extraction → trailing-comma repair
+- Rich fallback renderer converts markdown-like text to formatted HTML (headers, bold, italic, code blocks, inline code, lists) when structured JSON isn't available
 
 ### 🎨 Three Adaptive Themes
 - **Beginner** (ages 8–12): playful, colourful, emoji-rich
@@ -86,6 +96,7 @@ studybuddy/
 │   └── trie.js                 — O(k) prefix search for autocomplete
 ├── public/
 │   ├── index.html              — Full single-page UI (~5000 lines)
+│   ├── devpanel.js             — Developer diagnostics panel (Metrics + Flow tabs)
 │   ├── manifest.json           — PWA manifest
 │   ├── sw.js                   — Service worker (offline-first)
 │   ├── offline.html            — Offline fallback page
@@ -114,6 +125,8 @@ studybuddy/
 | `GET`  | `/streak` | Current + longest learning streak |
 | `GET`  | `/topics/search?q=` | Trie-based topic autocomplete |
 | `GET`  | `/cache-stats` | Cache performance metrics |
+| `GET`  | `/dev/metrics` | Developer diagnostics: latency, cache stats |
+| `GET`  | `/dev/flow-traces` | Per-route flow traces with step timing |
 
 ---
 
