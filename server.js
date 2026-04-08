@@ -329,7 +329,9 @@ app.post('/estimate', (req, res) => {
 
 // Main chat route
 app.post('/chat', async (req, res) => {
+  const chatStart = Date.now();
   const { message, level, history } = req.body;
+  console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, prompt: "${(message || '').slice(0, 60)}…"`);
 
   // Build the messages array for Gemma
   const messages = [
@@ -382,8 +384,11 @@ app.post('/chat', async (req, res) => {
       reply: rawReply,           // raw text fallback
       structured: structured     // parsed object or null
     });
+    const chatMs = Date.now() - chatStart;
+    console.log(`✅ [/chat] Done in ${(chatMs / 1000).toFixed(2)}s — reply length: ${rawReply.length} chars`);
   } catch (err) {
-    console.error('[/chat] Error:', err.message);
+    const chatMs = Date.now() - chatStart;
+    console.error(`❌ [/chat] Error after ${(chatMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running. Start Ollama first!' });
   }
 });
@@ -560,7 +565,9 @@ IMPORTANT: Output ONLY valid JSON. No explanatory text before or after.`;
 
 // ============ POST /quiz — Quiz generation endpoint ============
 app.post('/quiz', async (req, res) => {
+  const quizStart = Date.now();
   const { topic, level, numQuestions } = req.body;
+  console.log(`\n⏱  [/quiz] Started — topic: "${topic}", level: ${level}, questions: ${numQuestions}`);
 
   if (!topic || !level || !numQuestions) {
     return res.status(400).json({ error: 'Missing topic, level, or numQuestions' });
@@ -698,9 +705,12 @@ Format:
     }
 
     console.log(`[/quiz] Successfully generated ${validatedQuestions.length} questions`);
+    const quizMs = Date.now() - quizStart;
+    console.log(`✅ [/quiz] Done in ${(quizMs / 1000).toFixed(2)}s — ${validatedQuestions.length} questions generated`);
     res.json({ questions: validatedQuestions });
   } catch (err) {
-    console.error('[/quiz] Error:', err.message);
+    const quizMs = Date.now() - quizStart;
+    console.error(`❌ [/quiz] Error after ${(quizMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ error: err.message || 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
   }
 });
@@ -768,7 +778,9 @@ app.post('/socratic', async (req, res) => {
 // ─── Concept map endpoint ───────────────────────
 // Generates a JSON concept map (nodes + edges) for a topic
 app.post('/concept-map', async (req, res) => {
+  const mapStart = Date.now();
   const { topic, level } = req.body;
+  console.log(`\n⏱  [/concept-map] Started — topic: "${topic}", level: ${level || 'intermediate'}`);
   if (!topic) return res.status(400).json({ error: 'topic is required' });
 
   try {
@@ -776,8 +788,12 @@ app.post('/concept-map', async (req, res) => {
       topic,
       level: level || 'intermediate'
     });
+    const mapMs = Date.now() - mapStart;
+    console.log(`✅ [/concept-map] Done in ${(mapMs / 1000).toFixed(2)}s — nodes: ${result?.nodes?.length || '?'}, edges: ${result?.edges?.length || '?'}`);
     res.json(result);
   } catch (err) {
+    const mapMs = Date.now() - mapStart;
+    console.error(`❌ [/concept-map] Error after ${(mapMs / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <style>
     /* ============ DARK GLASS INTELLIGENCE — Master Theme ============ */
     :root {
@@ -115,11 +116,10 @@
       color: var(--text-primary);
       background: var(--bg-base);
       line-height: 1.6;
-      min-height: 100dvh;
+      height: 100dvh;
       overflow: hidden;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
@@ -221,6 +221,7 @@
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
       border-bottom: 1px solid var(--glass-border);
+      flex-shrink: 0;
     }
     header h1 {
       font-family: var(--font-display);
@@ -267,6 +268,7 @@
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
       z-index: 90;
+      flex-shrink: 0;
     }
     .controls label {
       font-size: var(--font-size-sm);
@@ -317,6 +319,7 @@
     /* ═══════════ CHAT AREA ═══════════ */
     #chat, .chat-area {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
       padding: 24px 20px 12px;
       display: flex;
@@ -527,6 +530,7 @@
       background: var(--bg-surface);
       border-top: 1px solid var(--border-subtle);
       z-index: 80;
+      flex-shrink: 0;
     }
     .input-container {
       flex: 1; display: flex; flex-direction: column;
@@ -633,7 +637,7 @@
       position: relative;
     }
     #mic-btn:hover { background: var(--accent-soft); color: var(--accent); }
-    #mic-btn.recording {
+    #mic-btn.listening {
       background: rgba(239,68,68,0.15);
       border-color: rgba(239,68,68,0.4);
       color: #ef4444;
@@ -658,6 +662,7 @@
       background: var(--bg-elevated);
       border-top: 1px solid var(--border-subtle);
       animation: slideDown 0.3s ease;
+      flex-shrink: 0;
     }
     #voice-status-bar.active { display: flex; }
     .voice-wave {
@@ -825,17 +830,20 @@
       background: var(--accent-soft);
     }
     .quiz-option.correct {
-      background: rgba(52,211,153,0.15);
+      background: rgba(52,211,153,0.20);
       border-color: var(--success);
       color: var(--success);
+      font-weight: 600;
+      opacity: 1 !important;
     }
     .quiz-option.wrong {
       background: rgba(248,113,113,0.15);
       border-color: var(--error);
       color: var(--error);
+      opacity: 1 !important;
     }
     .quiz-option.disabled {
-      pointer-events: none; opacity: 0.6;
+      pointer-events: none; opacity: 0.45;
     }
     .quiz-explanation {
       margin-top: 16px;
@@ -897,16 +905,70 @@
       animation: fadeSlideUp 0.4s ease both;
     }
     .quiz-loading-spinner {
-      width: 36px; height: 36px;
+      position: relative;
+      width: 56px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .quiz-loading-spinner::before {
+      content: '';
+      position: absolute; inset: 0;
       border-radius: 50%;
       border: 3px solid var(--border-subtle);
       border-top-color: var(--accent);
       animation: spin 0.8s linear infinite;
     }
+    .quiz-loading-book {
+      font-size: 24px;
+      z-index: 1;
+    }
+    .quiz-loading-dots {
+      display: flex; gap: 4px;
+    }
+    .quiz-loading-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: dotBounce 1.2s infinite;
+    }
+    .quiz-loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .quiz-loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+    .quiz-loading-dots span:nth-child(4) { animation-delay: 0.45s; }
     .quiz-loading-text {
+      font-family: var(--font-display);
+      font-size: var(--font-size-md);
+      color: var(--text-primary);
+      font-weight: 600;
+      text-align: center;
+    }
+    .quiz-loading-subtext {
       font-size: var(--font-size-sm);
       color: var(--text-secondary);
       text-align: center;
+    }
+    .quiz-loading-message {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      text-align: center;
+      transition: opacity 0.2s ease;
+      min-height: 1.5em;
+      line-height: 1.5;
+      width: 100%;
+      max-width: 300px;
+    }
+    .quiz-loading-progress {
+      width: 180px; height: 4px;
+      background: var(--border-subtle);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .quiz-loading-progress-bar {
+      height: 100%;
+      width: 30%;
+      background: var(--accent);
+      border-radius: 4px;
+      animation: shimmer 1.5s infinite;
+      background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 60%, #fff) 50%, var(--accent) 100%);
+      background-size: 200% 100%;
     }
 
     /* ═══════════ CONCEPT MAP MODAL ═══════════ */
@@ -1366,7 +1428,7 @@
     }
 
     // ============ Message Bubble Helper ============
-    function addBubble(content, role, isHTML = false) {
+    function addBubble(content, role, isHTML = false, autoScroll = true) {
       const div = document.createElement('div');
       div.className = `bubble ${role}`;
       if (isHTML) {
@@ -1375,7 +1437,7 @@
         div.textContent = content;
       }
       chatEl.appendChild(div);
-      scrollToBottom();
+      if (autoScroll) scrollToBottom();
       return div;
     }
 
@@ -1488,12 +1550,12 @@
         <div class="quiz-loading-container">
           <div class="quiz-loading-spinner">
             <div class="quiz-loading-book">📖</div>
-            <div class="quiz-loading-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+          </div>
+          <div class="quiz-loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
           <div class="quiz-loading-text">Generating Your Quiz</div>
           <div class="quiz-loading-subtext">Creating questions about <strong>${topic}</strong></div>
@@ -1506,16 +1568,19 @@
 
       // Cycle through loading messages
       let messageIndex = 0;
+      let isTransitioning = false;
       window.quizLoadingInterval = setInterval(() => {
-        messageIndex = (messageIndex + 1) % quizLoadingMessages.length;
+        if (isTransitioning) return;
         const msgEl = document.getElementById('quizLoadingMessage');
-        if (msgEl) {
-          msgEl.style.opacity = '0';
-          setTimeout(() => {
-            msgEl.textContent = quizLoadingMessages[messageIndex];
-            msgEl.style.opacity = '1';
-          }, 200);
-        }
+        if (!msgEl) return;
+        isTransitioning = true;
+        msgEl.style.opacity = '0';
+        setTimeout(() => {
+          messageIndex = (messageIndex + 1) % quizLoadingMessages.length;
+          msgEl.textContent = quizLoadingMessages[messageIndex];
+          msgEl.style.opacity = '1';
+          setTimeout(() => { isTransitioning = false; }, 250);
+        }, 250);
       }, 2500);
     }
 
@@ -1594,7 +1659,7 @@
       currentQuiz.forEach((q, idx) => {
         const qNum = idx + 1;
         quizHTML += `
-          <div style="margin-bottom: 24px;">
+          <div id="quiz-q-${idx}" style="margin-bottom: 24px;">
             <div class="quiz-question">${qNum}. ${q.question}</div>
             <div class="quiz-options">
         `;
@@ -1604,10 +1669,11 @@
           const isCorrect = option === q.answer;
           const wasSelected = quizAnswers[idx] === option;
 
-          let btnClass = 'option-btn';
+          let btnClass = 'quiz-option';
           if (answered) {
             if (isCorrect) btnClass += ' correct';
             else if (wasSelected && !isCorrect) btnClass += ' wrong';
+            btnClass += ' disabled';
           }
 
           quizHTML += `
@@ -1625,7 +1691,7 @@
 
         // Show explanation if answered
         if (quizAnswers[idx] !== undefined) {
-          quizHTML += `<div class="explanation">✓ ${q.explanation}</div>`;
+          quizHTML += `<div class="quiz-explanation">✓ ${q.explanation}</div>`;
         }
 
         quizHTML += `</div>`;
@@ -1648,16 +1714,34 @@
 
       quizHTML += `</div>`;
 
-      // Clear existing quiz if any
+      // Clear existing quiz bubble if any
       const existingQuiz = chatEl.querySelector('.quiz-card');
-      if (existingQuiz) existingQuiz.remove();
+      if (existingQuiz) {
+        const parentBubble = existingQuiz.closest('.bubble');
+        if (parentBubble) parentBubble.remove();
+        else existingQuiz.remove();
+      }
 
-      addBubble(quizHTML, 'bot', true);
+      addBubble(quizHTML, 'bot', true, false);
     }
 
     function selectAnswer(questionIdx, option) {
       quizAnswers[questionIdx] = option;
       renderQuizCard();
+
+      // Smoothly scroll to the next unanswered question, or to the score
+      setTimeout(() => {
+        const nextIdx = questionIdx + 1;
+        let target;
+        if (nextIdx < currentQuiz.length) {
+          target = document.getElementById('quiz-q-' + nextIdx);
+        } else {
+          target = chatEl.querySelector('.quiz-score');
+        }
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
 
     function restartQuiz() {
@@ -1785,7 +1869,8 @@
           alert('⚠️ Could not generate concept map. Try a different topic.');
         } else {
           const svgWrap = document.getElementById('cm-svg-wrap');
-          svgWrap.innerHTML = buildConceptMapSVG(data);
+          svgWrap.innerHTML = '';
+          buildConceptMapSVG(data, svgWrap);
           svgWrap.style.display = 'block';
           document.getElementById('cm-legend').style.display = 'flex';
         }
@@ -1798,84 +1883,166 @@
       btn.textContent = 'Generate Map';
     }
 
-    function buildConceptMapSVG(data) {
+    function buildConceptMapSVG(data, container) {
       const W = 640, H = 460;
-      const cx = W / 2, cy = H / 2;
-      const pos = {};
 
-      // Place central node
-      pos['central'] = { x: cx, y: cy };
-
-      // Sort nodes by type
-      const mains    = (data.nodes || []).filter(n => n.type === 'main');
-      const related  = (data.nodes || []).filter(n => n.type === 'related');
-      const examples = (data.nodes || []).filter(n => n.type === 'example');
-
-      const placeRing = (nodes, radius, offset) => {
-        nodes.forEach((n, i) => {
-          const angle = (2 * Math.PI * i / nodes.length) - Math.PI / 2 + offset;
-          pos[n.id] = { x: cx + radius * Math.cos(angle), y: cy + (radius * 0.75) * Math.sin(angle) };
-        });
+      // ── Build node & link arrays for D3 ──
+      const nodeColors = {
+        central: { fill: '#6C63FF', text: '#ffffff', r: 46 },
+        main:    { fill: '#A78BFA', text: '#ffffff', r: 36 },
+        related: { fill: '#2a2a3a', text: '#f0f0f5', r: 30, stroke: '#555570' },
+        example: { fill: '#10B981', text: '#ffffff', r: 28 }
       };
 
-      placeRing(mains,    145, 0);
-      placeRing(related,  240, Math.PI / (related.length || 1));
-      placeRing(examples, 195, Math.PI / 4);
-
-      let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;font-family:inherit;">
-        <defs>
-          <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="#9ca3af"/>
-          </marker>
-        </defs>`;
-
-      // Edges
-      (data.edges || []).forEach((edge, ei) => {
-        const f = pos[edge.from], t = pos[edge.to];
-        if (!f || !t) return;
-        svg += `<line class="cm-edge" style="animation-delay:${ei * 0.05}s"
-          x1="${f.x.toFixed(1)}" y1="${f.y.toFixed(1)}"
-          x2="${t.x.toFixed(1)}" y2="${t.y.toFixed(1)}"
-          stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="4,3"
-          marker-end="url(#arr)"/>`;
-        const mx = ((f.x + t.x) / 2).toFixed(1);
-        const my = ((f.y + t.y) / 2 - 5).toFixed(1);
-        svg += `<text class="cm-edge" style="animation-delay:${ei * 0.05}s"
-          x="${mx}" y="${my}" text-anchor="middle" font-size="9" fill="#9ca3af">${edge.label || ''}</text>`;
-      });
+      const nodes = [];
+      const links = [];
 
       // Central node
-      const p = pos['central'];
-      const clabel = trunc(data.central || 'Topic', 14);
-      svg += `<g class="cm-node" style="animation-delay:0s">
-        <circle cx="${p.x}" cy="${p.y}" r="46" fill="#6C63FF"/>
-        <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="central"
-          font-size="12" font-weight="700" fill="white">${clabel}</text>
-      </g>`;
-
-      // Other nodes
-      const nodeColors = {
-        main:    { fill: '#A78BFA', text: 'white', r: 36 },
-        related: { fill: 'white',   text: '#1A1A2E', r: 30, stroke: '#d1d5db' },
-        example: { fill: '#10B981', text: 'white',  r: 28 }
-      };
-
-      (data.nodes || []).forEach((node, ni) => {
-        const np = pos[node.id];
-        if (!np) return;
-        const c = nodeColors[node.type] || nodeColors.related;
-        const delay = (ni + 1) * 0.07;
-        const label = trunc(node.label, 11);
-        svg += `<g class="cm-node" style="animation-delay:${delay}s">
-          <circle cx="${np.x.toFixed(1)}" cy="${np.y.toFixed(1)}" r="${c.r}"
-            fill="${c.fill}" ${c.stroke ? `stroke="${c.stroke}" stroke-width="1.5"` : ''}/>
-          <text x="${np.x.toFixed(1)}" y="${np.y.toFixed(1)}" text-anchor="middle"
-            dominant-baseline="central" font-size="10" fill="${c.text}">${label}</text>
-        </g>`;
+      nodes.push({
+        id: 'central',
+        label: data.central || 'Topic',
+        type: 'central',
+        ...nodeColors.central
       });
 
-      svg += '</svg>';
-      return svg;
+      // Other nodes
+      (data.nodes || []).forEach(n => {
+        const c = nodeColors[n.type] || nodeColors.related;
+        nodes.push({ id: n.id, label: n.label, type: n.type, ...c });
+      });
+
+      // Links
+      (data.edges || []).forEach(e => {
+        links.push({ source: e.from, target: e.to, label: e.label || '' });
+      });
+
+      // ── Clear container & create SVG via D3 ──
+      container.innerHTML = '';
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('viewBox', `0 0 ${W} ${H}`)
+        .attr('width', '100%')
+        .style('font-family', 'inherit');
+
+      // Arrow marker
+      svg.append('defs').append('marker')
+        .attr('id', 'arr-d3')
+        .attr('markerWidth', 6).attr('markerHeight', 6)
+        .attr('refX', 5).attr('refY', 3)
+        .attr('orient', 'auto')
+        .append('path').attr('d', 'M0,0 L6,3 L0,6 Z').attr('fill', '#9ca3af');
+
+      // ── Force simulation ──
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(W / 2, H / 2))
+        .force('collide', d3.forceCollide(d => d.r + 5));
+
+      // ── Links (edges) ──
+      const linkGroup = svg.append('g');
+      const link = linkGroup.selectAll('line')
+        .data(links).enter().append('line')
+        .attr('stroke', '#555570')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '4,3')
+        .attr('marker-end', 'url(#arr-d3)');
+
+      // Edge labels
+      const edgeLabel = linkGroup.selectAll('text')
+        .data(links).enter().append('text')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 9)
+        .attr('fill', '#9ca3af')
+        .text(d => d.label);
+
+      // ── Nodes ──
+      const node = svg.append('g').selectAll('g')
+        .data(nodes).enter().append('g')
+        .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended)
+        )
+        .style('cursor', 'grab');
+
+      // Circles
+      node.append('circle')
+        .attr('r', d => d.r)
+        .attr('fill', d => d.fill)
+        .attr('stroke', d => d.stroke || 'none')
+        .attr('stroke-width', d => d.stroke ? 1.5 : 0);
+
+      // foreignObject for text wrapping
+      node.append('foreignObject')
+        .attr('width', d => d.r * 2)
+        .attr('height', d => d.r * 2)
+        .attr('x', d => -d.r)
+        .attr('y', d => -d.r)
+        .append('xhtml:div')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('justify-content', 'center')
+        .style('width', '100%')
+        .style('height', '100%')
+        .style('text-align', 'center')
+        .style('word-wrap', 'break-word')
+        .style('overflow', 'hidden')
+        .style('font-size', d => d.type === 'central' ? '12px' : '10px')
+        .style('font-weight', d => d.type === 'central' ? '700' : '500')
+        .style('color', d => d.text)
+        .style('padding', '4px')
+        .style('box-sizing', 'border-box')
+        .style('line-height', '1.2')
+        .style('pointer-events', 'none')
+        .text(d => d.label);
+
+      // ── Tick: update positions each frame ──
+      simulation.on('tick', () => {
+        // Keep nodes within bounds
+        nodes.forEach(d => {
+          d.x = Math.max(d.r, Math.min(W - d.r, d.x));
+          d.y = Math.max(d.r, Math.min(H - d.r, d.y));
+        });
+
+        link
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => {
+            const dx = d.target.x - d.source.x;
+            const dy = d.target.y - d.source.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            return d.target.x - (dx / dist) * d.target.r;
+          })
+          .attr('y2', d => {
+            const dx = d.target.x - d.source.x;
+            const dy = d.target.y - d.source.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            return d.target.y - (dy / dist) * d.target.r;
+          });
+
+        edgeLabel
+          .attr('x', d => (d.source.x + d.target.x) / 2)
+          .attr('y', d => (d.source.y + d.target.y) / 2 - 6);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
+
+      // ── Drag handlers ──
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
     }
 
     function trunc(str, len) {
@@ -3160,47 +3327,25 @@
         if (inputElement) {
           inputElement.value = finalText;
           console.log('[Voice] Text set in input element:', finalText);
-          updateVoicePreview(finalText);
-          hideVoiceStatusBar();
           
-          // Auto-send after a brief delay so UI updates are visible
+          // Reset mic immediately — clear preview, go idle, hide status bar
+          voiceTranscript = '';
+          hideVoicePreview();
+          hideVoiceStatusBar();
+          setMicState('idle');
+          
+          // Now send the message (answer generates in background)
           setTimeout(async () => {
             console.log('[Voice] Attempting to send message at', new Date().toISOString());
             try {
-              // Ensure sendMessage is complete before resetting
-              const result = await sendMessage();
-              console.log('[Voice] sendMessage() completed successfully at', new Date().toISOString(), 'Result:', result);
-              
-              // Reset voice state AFTER message is fully sent
-              voiceTranscript = '';
-              setTimeout(() => {
-                hideVoicePreview();
-                setMicState('idle');
-                console.log('[Voice] State reset to idle');
-              }, 500); // Delay to ensure UI has rendered
-              
+              await sendMessage();
+              console.log('[Voice] sendMessage() completed successfully');
             } catch (e) {
               console.error('[Voice] Error calling sendMessage:', e);
-              console.error('[Voice] Error stack:', e.stack);
-              
-              // Reset state on error too
-              voiceTranscript = '';
-              hideVoicePreview();
-              setMicState('idle');
-              
-              // Show error to user
-              const errorMsg = '⚠️ Voice message failed to send. Please try again.';
-              addBubble(errorMsg, 'bot');
-              announceToScreenReader(errorMsg);
-              
-              // Fallback: trigger send button click
-              const sendBtn = document.getElementById('send');
-              console.log('[Voice] Trying fallback: clicking send button');
-              if (sendBtn) {
-                sendBtn.click();
-              }
+              addBubble('⚠️ Voice message failed to send. Please try again.', 'bot');
+              announceToScreenReader('Voice message failed to send');
             }
-          }, 200);
+          }, 100);
         } else {
           console.error('[Voice] Input element not found!');
           setMicState('idle');
@@ -3236,6 +3381,7 @@
     function hideVoicePreview() {
       const preview = document.getElementById('voice-preview');
       if (preview) {
+        preview.textContent = '';
         preview.classList.remove('visible');
       }
     }
@@ -3257,27 +3403,6 @@
       const announcer = document.getElementById('sr-announcer');
       if (announcer) {
         announcer.textContent = message;
-      }
-    }
-
-    // Keyboard shortcut: Ctrl+Shift+V to toggle voice input
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
-        e.preventDefault();
-        toggleVoice();
-      }
-    });
-
-    // Show voice shortcut hint (desktop only)
-    if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      const controlsBar = document.querySelector('[class*="controls"]') || document.querySelector('.chat-header');
-      if (controlsBar && recognition) {
-        const hint = document.createElement('span');
-        hint.textContent = ' • Ctrl+Shift+V: Voice';
-        hint.style.fontSize = '12px';
-        hint.style.color = 'var(--text-secondary, #6B7280)';
-        hint.style.marginLeft = '8px';
-        controlsBar.appendChild(hint);
       }
     }
 
