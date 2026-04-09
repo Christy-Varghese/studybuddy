@@ -142,11 +142,10 @@ The report reads the full SM-2 progress data, streak info, and due reviews — t
 
 #### 7. Concept Map Generation
 
-Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, label}] }` JSON structure for any topic. The frontend renders this as a force-directed SVG graph with:
+Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, label}] }` JSON structure for any topic. The frontend renders this as a D3.js force-directed SVG graph with:
 - Colour-coded node groups
 - Animated edge connections
 - Interactive hover tooltips
-- No external graph libraries (pure SVG + JS)
 
 ---
 
@@ -294,8 +293,8 @@ Every Ollama request is tuned for speed without sacrificing quality:
 | Metric | Value |
 |--------|-------|
 | Lines of code | **12,000+** (excluding node_modules) |
-| Documentation files | **40+** markdown guides |
-| API endpoints | **18** |
+| Documentation files | **3** (README, Master Blueprint, Kaggle Writeup) |
+| API endpoints | **27** |
 | Learning tools | **7** |
 | Taxonomy topics | **76** (across 9 subjects, 1,223 keywords) |
 | Themes | **3** |
@@ -311,21 +310,21 @@ Every Ollama request is tuned for speed without sacrificing quality:
 |-----------|------------|
 | AI Model | Gemma 4 E4B via Ollama (local inference) |
 | Backend | Node.js + Express.js |
-| Frontend | Vanilla HTML/CSS/JS (no framework, ~4400 lines) |
+| Frontend | Vanilla HTML/CSS/JS (SPA shell ~190 lines + 14 CSS + 15 JS modules) |
 | Image Processing | Sharp (resize, WebP optimise) |
 | Upload Handling | Multer |
-| Compression | gzip via `compression` middleware |
+| Compression | gzip via `compression` middleware (SSE excluded) |
 | SRS Algorithm | SM-2 (SuperMemo 2) |
 | Search | O(k) trie-based prefix autocomplete |
 | PWA | Service worker + web manifest |
-| Visualisation | Pure SVG concept maps (no D3, no external libs) |
+| Visualisation | D3.js force-directed concept maps |
 
 ---
 
 ### Demo — How to Run
 
 ```bash
-# Prerequisites: Ollama (ollama.ai) + Node.js 16+
+# Prerequisites: Ollama (ollama.ai) + Node.js 18+
 
 # 1. Pull Gemma 4
 ollama pull gemma4:e4b

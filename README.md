@@ -10,7 +10,7 @@ Built for the [Gemma 4 Good Hackathon](https://kaggle.com/competitions/gemma-4-g
 
 ### Prerequisites
 - **Ollama** with `gemma4:e4b` — download from [ollama.ai](https://ollama.ai)
-- **Node.js 16+**
+- **Node.js 18+**
 - **8GB RAM** minimum (16GB recommended for best performance)
 
 ### Setup (2 minutes)
@@ -50,7 +50,7 @@ Click the **📈 Evaluation Report** button to get a personalised 5-section lear
 - **Micro-Mission** — a specific 2-minute task to do right now
 
 ### 🗺 Concept Maps
-Generate an interactive knowledge graph for any topic. Gemma 4 produces a nodes-and-edges map showing how concepts connect, rendered as an animated SVG — no external libraries.
+Generate an interactive knowledge graph for any topic. Gemma 4 produces a nodes-and-edges map showing how concepts connect, rendered as an animated force-directed graph using D3.js.
 
 ### 📊 Spaced Repetition (SM-2)
 Every quiz score feeds the SM-2 algorithm. Topics are scheduled for review at scientifically optimal intervals (Day 1 → 6 → exponential). A **"Due for Review"** banner appears automatically on your study days.
@@ -67,7 +67,7 @@ Tracks consecutive study days. Streak badge appears in the header — turns oran
 ~70% bandwidth reduction via gzip. Predictive pre-warming caches your next suggested topic in the background.
 
 ### 📚 Dynamic Topic Taxonomy
-76 topics with 1,223 keywords across 9 subjects. Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin.html` for manual curation.
+76 topics with 1,223 keywords across 9 subjects. Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin` for manual curation + bulk CSV/Excel upload.
 
 ### 📸 Homework Photo Analysis
 Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step. Robust error handling with defensive retry logic, async file cleanup, and multer error boundaries. Collapsible sections for easy scanning.
@@ -148,7 +148,10 @@ studybuddy/
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `POST` | `/chat` | Direct Gemma 4 chat with structured response |
+| `POST` | `/auth/login` | PIN-based login (returns role + redirect) |
+| `POST` | `/auth/logout` | End session |
+| `GET`  | `/auth/me` | Current session info (role, name) |
+| `POST` | `/chat` | Direct Gemma 4 chat with structured response (SSE streaming) |
 | `POST` | `/chat-with-image` | Vision: homework photo analysis |
 | `POST` | `/agent` | Full agent pipeline (explain + quiz + track + suggest) |
 | `POST` | `/socratic` | Socratic dialogue — guided discovery mode |
@@ -156,15 +159,22 @@ studybuddy/
 | `POST` | `/quiz` | Standalone quiz generation |
 | `POST` | `/estimate` | Response time prediction (no LLM call) |
 | `POST` | `/progress-report` | Dynamic Progress Evaluation Report (AI-generated) |
-| `GET`  | `/progress` | Student progress summary |
-| `DELETE` | `/progress` | Clear all progress |
+| `GET`  | `/progress` | Student progress summary (`?studentId=X` optional) |
+| `DELETE` | `/progress` | Clear progress (`?all=true` or `?studentId=X`) |
 | `GET`  | `/due-reviews` | Topics due for spaced repetition review |
 | `PUT`  | `/srs/:topic` | Update SRS state after a review session |
 | `GET`  | `/streak` | Current + longest learning streak |
+| `GET`  | `/api/students` | List all student profiles |
+| `GET`  | `/api/class-data` | Full class data for teacher dashboard |
 | `GET`  | `/topics/search?q=` | Trie-based topic autocomplete |
 | `GET`  | `/cache-stats` | Cache performance metrics |
+| `DELETE` | `/cache` | Clear response cache |
 | `GET`  | `/dev/metrics` | Developer diagnostics: latency, cache stats |
 | `GET`  | `/dev/flow-traces` | Per-route flow traces with step timing |
+| `GET`  | `/admin/taxonomy` | View learned + pending topics |
+| `POST` | `/admin/taxonomy` | Add topic manually |
+| `POST` | `/admin/taxonomy/bulk-upload` | Bulk CSV/Excel upload |
+| `GET`  | `/api/events` | SSE stream for live teacher dashboard |
 
 ---
 

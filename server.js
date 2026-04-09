@@ -29,11 +29,16 @@ const app = express();
 
 // ── Performance: Enable gzip compression ──
 // Compresses all responses >1KB, reduces bandwidth by ~70%
+// IMPORTANT: SSE / streaming endpoints must be excluded — compression
+// buffers small chunks, preventing real-time token delivery to the client
+const SSE_PATHS = ['/chat', '/api/events'];
 app.use(compression({
   level: 6,
   threshold: 1024,
   filter: (req, res) => {
     if (req.headers['x-no-compression']) return false;
+    // Never compress streaming SSE endpoints
+    if (SSE_PATHS.includes(req.path)) return false;
     return compression.filter(req, res);
   }
 }));

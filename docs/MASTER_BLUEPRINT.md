@@ -320,7 +320,7 @@ Visible only in `NODE_ENV=development`. Injected automatically via middleware.
 
 ## 2.16 Bulk CSV/Excel Upload
 
-`POST /admin/upload-progress` — Upload a CSV or Excel file to bulk-import student progress records. Uses Multer for file handling with the `xlsx` library for parsing.
+`POST /admin/taxonomy/bulk-upload` — Upload a CSV or Excel file to bulk-import topics into the taxonomy. Uses Multer for file handling with the `xlsx` library for parsing.
 
 ---
 
@@ -347,6 +347,13 @@ A consolidated ledger of every significant bug fix applied to the codebase, orde
 | 15 | Ollama 400 Bad Request intermittent | Malformed request body (missing `model` field in edge cases) | Hardened request construction with explicit `model` field and payload validation | `routes/chat.js` |
 | 16 | Image preview too large in input area | `.image-preview` class had no size constraint | Created `.image-preview-thumb` class (56×56 px, `object-fit: cover`) | `public/scripts/image.js`, `public/styles/input.css` |
 | 17 | Image preview persists after send | Preview container not cleared when user clicks Send | `sendMessage()` now clears `imagePreviewContainer.innerHTML` immediately on send | `public/scripts/chat.js` |
+| 18 | Socratic turn ordering broken | Shared history array polluted backend turn counter | Send explicit `socraticTurn` from frontend; server uses it instead of counting history | `routes/socratic.js`, `public/scripts/socratic.js` |
+| 19 | Static file bypass — unauthed HTML access | `express.static` served protected HTML before auth check | Added redirect guards (`/index.html` → `/app`, etc.) before `express.static` | `server.js` |
+| 20 | Taxonomy nav link broken + wrong model | Taxonomy admin linked to `#taxonomy`; agent used non-existent model | Fixed nav link to `/taxonomy-admin`; corrected model to `gemma4:e4b` | `public/teacher.html`, `agent/tools.js` |
+| 21 | Null guard crash on `#loadingState` | `render()` replaces dashboard innerHTML, destroying `#loadingState` element | Added null guards: `if (el)` before accessing `#loadingState` | `public/teacher.html` |
+| 22 | Light/dark theme inconsistency | `taxonomy-admin.html` and `offline.html` had light themes while rest was dark | Rethemed both pages to unified dark design tokens (`#0a0a0f`, `#6C63FF`, etc.) | `public/taxonomy-admin.html`, `public/offline.html` |
+| 23 | No responsive design for mobile | All pages lacked comprehensive mobile breakpoints | Added multi-breakpoint responsive CSS (480px, 360px, landscape) to all pages + `pwa.css` | `public/styles/pwa.css`, `public/teacher.html`, `public/taxonomy-admin.html`, `public/login.html`, `public/offline.html` |
+| 24 | SSE streaming broken — no chat response displayed | `compression()` middleware buffered SSE `text/event-stream` responses, preventing real-time token delivery | Excluded `/chat` and `/api/events` from compression via `filter` function | `server.js` |
 
 ---
 
@@ -372,6 +379,14 @@ npm run dev                  # NODE_ENV=development OLLAMA_KEEP_ALIVE=60m node s
 
 ## 4.2 API Endpoint Reference
 
+### Authentication
+
+| Method | Endpoint | Body | Purpose |
+|--------|----------|------|---------|
+| `POST` | `/auth/login` | `{ pin, studentName? }` | PIN login → returns `{ success, role, redirect }` |
+| `POST` | `/auth/logout` | — | End session |
+| `GET` | `/auth/me` | — | `{ authenticated, role, studentName? }` |
+
 ### Learning Endpoints
 
 | Method | Endpoint | Body | Purpose |
@@ -388,12 +403,14 @@ npm run dev                  # NODE_ENV=development OLLAMA_KEEP_ALIVE=60m node s
 
 | Method | Endpoint | Body | Purpose |
 |--------|----------|------|---------|
-| `GET` | `/progress` | — | Full progress summary |
-| `DELETE` | `/progress` | — | Clear all progress |
-| `GET` | `/progress-report` | — | Formatted progress report |
-| `GET` | `/due-reviews` | — | Topics due for SRS review today |
+| `GET` | `/progress` | `?studentId=X` (optional) | Full progress summary |
+| `DELETE` | `/progress` | `?all=true` or `?studentId=X` | Clear all or per-student progress |
+| `POST` | `/progress-report` | — | AI-generated evaluation report |
+| `GET` | `/due-reviews` | `?studentId=X` (optional) | Topics due for SRS review today |
 | `PUT` | `/srs/:topic` | `{ grade: 0-5 }` or `{ score: 0-100 }` | Update SRS after review |
-| `GET` | `/streak` | — | `{ current, longest, studiedToday }` |
+| `GET` | `/streak` | `?studentId=X` (optional) | `{ current, longest, studiedToday }` |
+| `GET` | `/api/students` | — | List all student profiles |
+| `GET` | `/api/class-data` | — | Full class data for teacher dashboard |
 
 ### Cache & Search
 
@@ -409,18 +426,26 @@ npm run dev                  # NODE_ENV=development OLLAMA_KEEP_ALIVE=60m node s
 |--------|----------|---------|
 | `GET` | `/admin/taxonomy` | View learned + pending |
 | `POST` | `/admin/taxonomy` | Add topic manually |
+| `GET` | `/admin/taxonomy/template.csv` | Download CSV template |
+| `POST` | `/admin/taxonomy/bulk-upload` | Bulk CSV/Excel upload |
 | `POST` | `/admin/taxonomy/pending/:topic/approve` | Promote pending → learned |
 | `DELETE` | `/admin/taxonomy/pending/:topic` | Reject pending topic |
 | `DELETE` | `/admin/taxonomy/learned/:topic` | Remove learned topic |
 | `POST` | `/admin/taxonomy/rebuild` | Rebuild taxonomy live |
-| `POST` | `/admin/upload-progress` | Bulk CSV/Excel upload |
 
 ### Dev (development only)
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | `GET` | `/dev/metrics` | Aggregated request metrics |
+| `DELETE` | `/dev/metrics` | Reset metrics |
 | `GET` | `/dev/flow-traces` | Per-request flow traces |
+
+### Real-Time (SSE)
+
+| Method | Endpoint | Auth | Purpose |
+|--------|----------|------|---------|
+| `GET` | `/api/events` | Teacher | Server-Sent Events stream for live dashboard updates |
 
 ## 4.3 Caching System
 
@@ -736,7 +761,7 @@ The teacher dashboard topbar was replaced with a proper navigation bar:
 | Tab | Behaviour |
 |---|---|
 | **📈 Live Dashboard** | Active tab — shows the real-time class/student dashboard |
-| **🏷️ Taxonomy Admin** | Navigates to `/teacher#taxonomy` (placeholder for future admin panel) |
+| **🏷️ Taxonomy Admin** | Navigates to `/taxonomy-admin` (taxonomy management panel) |
 | **🟢 Live** | SSE connection status badge with pulse animation |
 | **🚪 Logout** | Calls `POST /auth/logout` and redirects to `/login` |
 
