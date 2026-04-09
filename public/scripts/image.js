@@ -35,10 +35,10 @@ function renderImagePreview() {
   const reader = new FileReader();
   reader.onload = (e) => {
     const container = document.createElement('div');
-    container.className = 'image-preview';
+    container.className = 'image-preview-thumb';
     container.innerHTML = `
       <img src="${e.target.result}" alt="Preview">
-      <button class="remove-btn" onclick="removeImage()">✕</button>
+      <button class="image-preview-remove" onclick="removeImage()">✕</button>
     `;
     imagePreviewContainer.appendChild(container);
   };

@@ -7,6 +7,10 @@ async function sendMessage() {
   inputEl.value = '';
   sendBtn.disabled = true;
 
+  // Clear image preview from input area immediately on send
+  imagePreviewContainer.innerHTML = '';
+  attachBtn.classList.remove('active');
+
   // Show user message with optional image (handled by sendToChat)
   if (!pendingImage) {
     addBubble(message, 'user');
