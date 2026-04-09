@@ -12,14 +12,14 @@ router.post('/socratic', async (req, res) => {
   const steps    = [];
   const mark     = (name, detail) => steps.push({ name, ms: Date.now() - socStart, detail });
 
-  const { message, level, history, turn } = req.body;
+  const { message, level, language, history, turn } = req.body;
   if (!message) return res.status(400).json({ error: 'message is required' });
 
-  console.log(`\n⏱  [/socratic] Started — level: ${level || 'intermediate'}, turn: ${turn || '?'}, prompt: "${(message || '').slice(0, 60)}…"`);
-  mark('Received request', `level=${level || 'intermediate'}, turn=${turn || '?'}, history=${(history || []).length} msgs`);
+  console.log(`\n⏱  [/socratic] Started — level: ${level || 'intermediate'}, lang: ${language || 'English'}, turn: ${turn || '?'}, prompt: "${(message || '').slice(0, 60)}…"`);
+  mark('Received request', `level=${level || 'intermediate'}, lang=${language || 'English'}, turn=${turn || '?'}, history=${(history || []).length} msgs`);
 
   try {
-    const result = await runSocraticAgent(message, level || 'intermediate', history || [], turn);
+    const result = await runSocraticAgent(message, level || 'intermediate', history || [], turn, language);
     mark('Socratic agent done', `turn=${result?.structured?.agentSummary || '?'}`);
 
     const socMs = Date.now() - socStart;

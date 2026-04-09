@@ -1,10 +1,11 @@
-const { toolDefinitions, toolImplementations } = require('./tools');
+const { toolDefinitions, toolImplementations, setActiveLanguage } = require('./tools');
 const { getProgressSummary } = require('./progressStore');
 const { preWarm } = require('./smartCache');
 
 // The main agent loop - simplified version
 // Directly executes tools based on the student message and synthesizes results
-async function runAgentLoop(studentMessage, level, conversationHistory, progressSummary) {
+async function runAgentLoop(studentMessage, level, conversationHistory, progressSummary, language) {
+  setActiveLanguage(language);
   const summary = progressSummary || getProgressSummary();
 
   const toolCallLog = [];
@@ -183,7 +184,8 @@ function extractTopic(message) {
 }
 
 // Fast parallel agent — runs independent tools concurrently
-async function runParallelAgent(studentMessage, level, conversationHistory) {
+async function runParallelAgent(studentMessage, level, conversationHistory, language) {
+  setActiveLanguage(language);
   const summary = getProgressSummary();
   const toolCallLog = [];
 
@@ -403,7 +405,8 @@ Respond ONLY with valid JSON — no markdown, no preamble:
 // Drives a guided-discovery conversation instead of explaining.
 // Each turn asks a question rather than giving the answer.
 // ─────────────────────────────────────────────────────────────
-async function runSocraticAgent(studentMessage, level, conversationHistory, explicitTurn) {
+async function runSocraticAgent(studentMessage, level, conversationHistory, explicitTurn, language) {
+  setActiveLanguage(language);
   const toolCallLog = [];
 
   try {

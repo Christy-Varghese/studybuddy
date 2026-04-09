@@ -322,6 +322,56 @@ Visible only in `NODE_ENV=development`. Injected automatically via middleware.
 
 `POST /admin/taxonomy/bulk-upload` — Upload a CSV or Excel file to bulk-import topics into the taxonomy. Uses Multer for file handling with the `xlsx` library for parsing.
 
+## 2.17 Native Multilingual Engine (Zero-Lag)
+
+**Goal:** Maximise digital equity by letting every student learn in their native language.
+
+**How it works:** Gemma 4 natively supports 140+ languages. The language selector injects a high-priority directive into the system prompt — no translation API, no extra model, no additional latency. The same Ollama call that would take 10 seconds in English takes 10 seconds in Hindi, Arabic, or Mandarin.
+
+### UI
+
+A `🌐` language selector in the app header (inside a `.status-badge` pill). Persists to `localStorage` so the student's choice survives page reloads.
+
+**Starter languages:** English, Hindi (हिन्दी), Spanish (Español), Arabic (العربية), Mandarin (中文), French (Français), Portuguese (Português), Bengali (বাংলা), Tamil (தமிழ்), Swahili (Kiswahili).
+
+### Architecture
+
+```
+languageSelector.value
+  → currentLanguage (state.js, localStorage)
+    → sent in every POST body (chat.js, socratic.js, agent.js)
+      → route handler reads req.body.language
+        → buildSystemPrompt(level, language)  — lib/helpers.js
+        → setActiveLanguage(language)          — agent/tools.js (for agent/socratic/concept-map tools)
+```
+
+When `language !== 'English'`, a `CRITICAL` directive is prepended to **every** system prompt:
+
+> _"CRITICAL: The student has requested to learn in [language]. You MUST provide ALL explanations, feedback, questions … in [language] only."_
+
+This covers:
+- Direct chat (`/chat`) — SSE-streamed responses
+- Homework vision (`/chat-with-image`) — vision system prompt
+- Agent mode (`/agent`) — all 7 tool system prompts
+- Socratic mode (`/socratic`) — guided discovery questions
+- Concept maps & quizzes — node labels, questions, explanations
+
+### Affected Files
+
+| File | Change |
+|------|--------|
+| `lib/helpers.js` | `buildSystemPrompt(level, selectedLanguage)` — prepends language directive |
+| `agent/tools.js` | `setActiveLanguage()` + `langPrefix()` — injects into all 7 tool prompts |
+| `agent/agentLoop.js` | All 3 agent functions accept `language` param, call `setActiveLanguage()` |
+| `routes/chat.js` | Reads `req.body.language`, passes to `buildSystemPrompt()` and vision prompt |
+| `routes/agent.js` | Reads `req.body.language`, passes to agent runners |
+| `routes/socratic.js` | Reads `req.body.language`, passes to `runSocraticAgent()` |
+| `public/index.html` | `<select id="languageSelector">` in header |
+| `public/scripts/state.js` | `currentLanguage` state variable + `languageEl` DOM ref |
+| `public/scripts/init.js` | Event listener, localStorage persist/restore |
+| `public/scripts/agent.js` | Sends `language` in `/chat`, `/chat-with-image`, `/agent` POST bodies |
+| `public/scripts/socratic.js` | Sends `language` in `/socratic` POST body |
+
 ---
 
 # 3. System Fix Log
@@ -354,6 +404,7 @@ A consolidated ledger of every significant bug fix applied to the codebase, orde
 | 22 | Light/dark theme inconsistency | `taxonomy-admin.html` and `offline.html` had light themes while rest was dark | Rethemed both pages to unified dark design tokens (`#0a0a0f`, `#6C63FF`, etc.) | `public/taxonomy-admin.html`, `public/offline.html` |
 | 23 | No responsive design for mobile | All pages lacked comprehensive mobile breakpoints | Added multi-breakpoint responsive CSS (480px, 360px, landscape) to all pages + `pwa.css` | `public/styles/pwa.css`, `public/teacher.html`, `public/taxonomy-admin.html`, `public/login.html`, `public/offline.html` |
 | 24 | SSE streaming broken — no chat response displayed | `compression()` middleware buffered SSE `text/event-stream` responses, preventing real-time token delivery | Excluded `/chat` and `/api/events` from compression via `filter` function | `server.js` |
+| 25 | Phase 5: Localisation & Digital Equity — Native Language Selector | Students in non-English-speaking regions had no way to receive explanations in their native language | Injected language-specific `CRITICAL` directive into every system prompt (chat, vision, agent, socratic, tools). Gemma 4 handles native inference — zero extra infrastructure or latency | `lib/helpers.js`, `agent/tools.js`, `agent/agentLoop.js`, `routes/chat.js`, `routes/agent.js`, `routes/socratic.js`, `public/index.html`, `public/scripts/state.js`, `public/scripts/init.js`, `public/scripts/agent.js`, `public/scripts/socratic.js` |
 
 ---
 
@@ -391,10 +442,10 @@ npm run dev                  # NODE_ENV=development OLLAMA_KEEP_ALIVE=60m node s
 
 | Method | Endpoint | Body | Purpose |
 |--------|----------|------|---------|
-| `POST` | `/chat` | `{ message, level, history }` | Direct tutor chat (SSE) |
-| `POST` | `/chat-with-image` | `FormData { message, level, image }` | Homework photo analysis |
-| `POST` | `/agent` | `{ message, level, history, fast? }` | Full agent pipeline |
-| `POST` | `/socratic` | `{ message, level, history }` | Socratic dialogue |
+| `POST` | `/chat` | `{ message, level, language?, history }` | Direct tutor chat (SSE) |
+| `POST` | `/chat-with-image` | `FormData { message, level, language?, image }` | Homework photo analysis |
+| `POST` | `/agent` | `{ message, level, language?, history, fast? }` | Full agent pipeline |
+| `POST` | `/socratic` | `{ message, level, language?, history }` | Socratic dialogue |
 | `POST` | `/concept-map` | `{ topic, level }` | Concept map generation |
 | `POST` | `/quiz` | `{ topic, level, numQuestions }` | Quiz generation |
 | `POST` | `/estimate` | `{ message, level, hasImage? }` | Time estimate (no LLM) |

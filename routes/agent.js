@@ -7,7 +7,7 @@ const router  = express.Router();
 const { runAgentLoop, runParallelAgent } = require('../agent/agentLoop');
 
 router.post('/agent', async (req, res) => {
-  const { message, level, history, fast } = req.body;
+  const { message, level, language, history, fast } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: 'message is required' });
@@ -16,8 +16,8 @@ router.post('/agent', async (req, res) => {
   try {
     // Use parallel agent by default (fast: true), fall back to sequential if needed
     const result = fast === false
-      ? await runAgentLoop(message, level || 'intermediate', history || [], null)
-      : await runParallelAgent(message, level || 'intermediate', history || []);
+      ? await runAgentLoop(message, level || 'intermediate', history || [], null, language)
+      : await runParallelAgent(message, level || 'intermediate', history || [], language);
     res.json(result);
   } catch (err) {
     res.status(500).json({

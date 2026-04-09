@@ -27,8 +27,8 @@ router.post('/chat', async (req, res) => {
   const steps = [];
   const mark = (name, detail) => steps.push({ name, ms: Date.now() - chatStart, detail });
 
-  const { message, level, history } = req.body;
-  console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, prompt: "${(message || '').slice(0, 60)}…"`);
+  const { message, level, language, history } = req.body;
+  console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, lang: ${language || 'English'}, prompt: "${(message || '').slice(0, 60)}…"`);
 
   // SSE headers — keep connection open for streaming
   res.setHeader('Content-Type', 'text/event-stream');
@@ -39,7 +39,7 @@ router.post('/chat', async (req, res) => {
 
   // Build the messages array for Gemma
   const messages = [
-    { role: 'system', content: buildSystemPrompt(level || 'beginner') },
+    { role: 'system', content: buildSystemPrompt(level || 'beginner', language) },
     ...history,                          // past conversation
     { role: 'user', content: message }  // new question
   ];
@@ -200,7 +200,7 @@ router.post('/chat', async (req, res) => {
 
 // ============ POST /chat-with-image — Homework photo analysis with vision ============
 router.post('/chat-with-image', upload.single('image'), async (req, res) => {
-  const { message, level, history: historyStr } = req.body;
+  const { message, level, language, history: historyStr } = req.body;
   const file = req.file;
 
   // Validate image upload
@@ -244,8 +244,11 @@ router.post('/chat-with-image', upload.single('image'), async (req, res) => {
     }
 
     // Build system prompt specifically for vision tasks - structured analysis format
+    const langNote = language && language.toLowerCase() !== 'english'
+      ? `\nCRITICAL: Respond ENTIRELY in ${language}. All fields (visual_summary, extracted_data, explanations, final_solution) MUST be in ${language}.\n`
+      : '';
     const visionSystemPrompt = `You are an expert vision-based tutor. Analyze homework images with precision.
-
+${langNote}
 RESPOND ONLY IN THIS EXACT JSON FORMAT (no markdown, pure JSON):
 {
   "visual_summary": "One sentence describing what you see in the image",

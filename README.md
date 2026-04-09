@@ -80,6 +80,9 @@ Built-in **Metrics** and **Flow** tabs (press the 🛠 button):
 - **Metrics**: Request counts, latency percentiles, cache hit rates per route
 - **Flow**: Real-time flow traces showing every internal step (taxonomy lookup → cache check → Ollama call → JSON parse) with millisecond-level timing and bottleneck detection
 
+### 🌐 Native Multilingual Engine (Zero-Lag)
+Learn in any of 140+ languages. Select your language from the 🌐 header dropdown — the system prompt is dynamically rewritten so Gemma 4 responds entirely in your chosen language. No translation API, no extra model, no additional latency. Starter set: English, Hindi, Spanish, Arabic, Mandarin, French, Portuguese, Bengali, Tamil, Swahili.
+
 ### 📝 Advanced Formatting Engine
 - Strips `<think>…</think>` reasoning blocks emitted by Gemma models before parsing
 - Robust JSON extraction: direct parse → code-fence strip → brace extraction → trailing-comma repair

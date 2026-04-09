@@ -1,6 +1,21 @@
 const { saveProgress, getProgressSummary, getDueReviews, getLearningStreak } = require('./progressStore');
 const { smartGet, smartSet, registerInFlight } = require('./smartCache');
 
+// ─────────────────────────────────────────────
+// LANGUAGE HELPER
+// Returns a high-priority directive that is prepended to every
+// tool system prompt when the student selects a non-English language.
+// Gemma 4 handles 140+ languages natively — zero extra latency.
+// ─────────────────────────────────────────────
+let _activeLanguage = 'English';
+
+function setActiveLanguage(lang) { _activeLanguage = lang || 'English'; }
+
+function langPrefix() {
+  if (!_activeLanguage || _activeLanguage.toLowerCase() === 'english') return '';
+  return `CRITICAL: Respond ENTIRELY in ${_activeLanguage}. All text fields (explanations, questions, hints, answers, follow-ups) MUST be in ${_activeLanguage}. Do not use English unless translating a specific term.\n\n`;
+}
+
 
 // ─────────────────────────────────────────────
 // TIMING WRAPPER FOR DEV METRICS
@@ -135,7 +150,7 @@ async function explain_topic({ topic, level, context }) {
 
   // Build the Ollama promise and register as in-flight
   const promise = (async () => {
-    const systemPrompt = `You are StudyBuddy, a clear and patient tutor.
+    const systemPrompt = `${langPrefix()}You are StudyBuddy, a clear and patient tutor.
 Respond ONLY with valid JSON matching this exact structure:
 {
   "intro": "1-2 sentence opener",
@@ -203,7 +218,7 @@ async function generate_quiz({ topic, level, numQuestions }) {
   if (lookup.inFlight) return lookup.inFlight;
 
   const promise = (async () => {
-    const systemPrompt = `You are a quiz generator.
+    const systemPrompt = `${langPrefix()}You are a quiz generator.
 Respond ONLY with a valid JSON array. No markdown. No explanation. Just the raw JSON.
 Format:
 [
@@ -287,7 +302,7 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
     body: JSON.stringify({
       model:    'gemma4:e4b',
       messages: [
-        { role: 'system', content: `You are a curriculum advisor. Based on the student's progress, suggest the SINGLE most beneficial next topic to study. Respond ONLY with valid JSON: { "nextTopic": "topic name", "reason": "one sentence why", "relatedTo": "how it connects to what they just studied" }` },
+        { role: 'system', content: `${langPrefix()}You are a curriculum advisor. Based on the student's progress, suggest the SINGLE most beneficial next topic to study. Respond ONLY with valid JSON: { "nextTopic": "topic name", "reason": "one sentence why", "relatedTo": "how it connects to what they just studied" }` },
         { role: 'user',   content: context }
       ],
       stream: false,
@@ -315,7 +330,7 @@ async function ask_socratic_question({ topic, level, studentResponse, turnNumber
   const turn = turnNumber || 1;
   const isFinalTurn = turn >= 5;
 
-  const systemPrompt = `You are an expert Socratic Tutor with a witty, high-energy personality. Think of yourself as the cool teacher every student wishes they had — someone who mixes pop-culture references, funny analogies, and contagious enthusiasm.
+  const systemPrompt = `${langPrefix()}You are an expert Socratic Tutor with a witty, high-energy personality. Think of yourself as the cool teacher every student wishes they had — someone who mixes pop-culture references, funny analogies, and contagious enthusiasm.
 
 CURRENT TURN: ${turn} of 5
 
@@ -390,7 +405,7 @@ Respond ONLY with valid JSON (no markdown fences):
 // Returns nodes and edges representing how concepts relate
 // ─────────────────────────────────────────────
 async function generate_concept_map({ topic, level }) {
-  const systemPrompt = `You are a knowledge graph builder. Given a topic, generate a concept map showing how key ideas connect.
+  const systemPrompt = `${langPrefix()}You are a knowledge graph builder. Given a topic, generate a concept map showing how key ideas connect.
 
 Respond ONLY with valid JSON in exactly this format — no markdown, no extra text:
 {
@@ -561,4 +576,4 @@ const toolImplementations = {
   generate_evaluation_report
 };
 
-module.exports = { toolDefinitions, toolImplementations };
+module.exports = { toolDefinitions, toolImplementations, setActiveLanguage };

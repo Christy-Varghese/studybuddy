@@ -108,6 +108,7 @@ async function sendToChat(message) {
         const formData = new FormData();
         formData.append('message', message);
         formData.append('level', levelEl.value);
+        formData.append('language', currentLanguage);
         formData.append('history', JSON.stringify(history));
         formData.append('image', fileForUpload);
 
@@ -174,6 +175,7 @@ async function sendToChat(message) {
         body: JSON.stringify({
           message,
           level: levelEl.value,
+          language: currentLanguage,
           history
         })
       });
@@ -297,8 +299,9 @@ async function sendToAgent(message) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
-        level:   levelEl.value,
-        history: history.slice(-6)   // last 3 turns only — keep context manageable
+        level:    levelEl.value,
+        language: currentLanguage,
+        history:  history.slice(-6)   // last 3 turns only — keep context manageable
       })
     });
 

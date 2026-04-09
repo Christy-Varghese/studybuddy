@@ -39,9 +39,10 @@ async function sendToSocratic(message) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
-        level:   levelEl.value,
-        history: history.slice(-12),
-        turn:    socraticTurn
+        level:    levelEl.value,
+        language: currentLanguage,
+        history:  history.slice(-12),
+        turn:     socraticTurn
       })
     });
     thinkingBubble.remove();
