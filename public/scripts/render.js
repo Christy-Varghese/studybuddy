@@ -1,4 +1,29 @@
 /**
+ * typewriterEffect — types out text one character at a time, then reveals (removes blur)
+ * @param {HTMLElement} element - The DOM element to type into (should have .typewriter-text)
+ * @param {string} text - The text to type
+ * @param {number} speed - ms per character (default 30)
+ * @returns {Promise} Resolves when typing is complete
+ */
+function typewriterEffect(element, text, speed = 30) {
+  return new Promise(resolve => {
+    element.textContent = '';
+    element.classList.remove('active-typing');
+    let i = 0;
+    function typeNext() {
+      if (i < text.length) {
+        element.textContent += text[i];
+        i++;
+        setTimeout(typeNext, speed);
+      } else {
+        element.classList.add('active-typing');
+        resolve();
+      }
+    }
+    typeNext();
+  });
+}
+/**
  * renderResponse — Blur & Render pipeline entrypoint
  * Accepts a structured JSON object (steps, answer, etc) and renders cards/answer block.
  * Handles missing/partial data gracefully. Uses theme colors.
@@ -22,9 +47,32 @@ function renderResponse(jsonData) {
       followup: convertLatexToReadable(s.followup || '')
     };
     renderStructuredResponse(converted);
+  } else if (s.socraticQuestion) {
+    // Socratic agent: typewriter effect on the question
+    const container = document.createElement('div');
+    container.className = 'structured-response';
+    const qEl = document.createElement('div');
+    qEl.className = 'resp-answer';
+    const twSpan = document.createElement('span');
+    twSpan.className = 'typewriter-text';
+    qEl.appendChild(twSpan);
+    container.appendChild(qEl);
+    chatEl.appendChild(container);
+    scrollToBottom();
+    typewriterEffect(twSpan, convertLatexToReadable(s.socraticQuestion), 22);
   } else if (s.answer) {
-    // No steps, but has an answer — show as a single answer card
-    renderStructuredResponse({ intro: '', steps: [], answer: convertLatexToReadable(s.answer), followup: '' });
+    // No steps, but has an answer — show as a single answer card with typewriter
+    const container = document.createElement('div');
+    container.className = 'structured-response';
+    const answerEl = document.createElement('div');
+    answerEl.className = 'resp-answer';
+    const twSpan = document.createElement('span');
+    twSpan.className = 'typewriter-text';
+    answerEl.appendChild(twSpan);
+    container.appendChild(answerEl);
+    chatEl.appendChild(container);
+    scrollToBottom();
+    typewriterEffect(twSpan, convertLatexToReadable(s.answer), 22);
   } else {
     renderFormattedFallback('⚠️ No structured response.');
   }
@@ -548,14 +596,21 @@ function renderStructuredResponse(s) {
       });
     }
 
-    // 3. ANSWER pill/card — final element with bounce scale
+    // 3. ANSWER pill/card — final element with bounce scale and typewriter effect
     if (s.answer) {
       const answerEl = document.createElement('div');
       answerEl.className = 'resp-answer animate-bounce-scale';
-      answerEl.textContent = s.answer;
+      // Add typewriter-text span
+      const twSpan = document.createElement('span');
+      twSpan.className = 'typewriter-text';
+      answerEl.appendChild(twSpan);
       // Answer appears after all steps, with bounce effect
       const delay = (s.steps ? s.steps.length : 0) * 0.1 + 0.2;
       answerEl.style.animationDelay = `${delay}s`;
+      // Start typewriter after skeleton fade
+      setTimeout(() => {
+        typewriterEffect(twSpan, s.answer, 22);
+      }, 350 + delay * 1000); // 350ms skeleton + animation delay
       contentElements.push(answerEl);
     }
 
