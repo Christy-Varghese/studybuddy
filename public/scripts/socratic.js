@@ -40,7 +40,8 @@ async function sendToSocratic(message) {
       body: JSON.stringify({
         message,
         level:   levelEl.value,
-        history: history.slice(-12)
+        history: history.slice(-12),
+        turn:    socraticTurn
       })
     });
     thinkingBubble.remove();

@@ -403,12 +403,13 @@ Respond ONLY with valid JSON — no markdown, no preamble:
 // Drives a guided-discovery conversation instead of explaining.
 // Each turn asks a question rather than giving the answer.
 // ─────────────────────────────────────────────────────────────
-async function runSocraticAgent(studentMessage, level, conversationHistory) {
+async function runSocraticAgent(studentMessage, level, conversationHistory, explicitTurn) {
   const toolCallLog = [];
 
   try {
-    // Detect turn number from history (every 2 messages = 1 turn)
-    const turnNumber = Math.floor((conversationHistory.filter(m => m.role === 'user').length)) + 1;
+    // Use the explicit turn from the frontend (accurate), fall back to history-based count
+    const turnNumber = explicitTurn
+      || Math.floor(conversationHistory.filter(m => m.role === 'user').length) + 1;
 
     // Extract topic from student message or last user message
     const topic = extractTopic(studentMessage);
