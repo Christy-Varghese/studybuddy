@@ -868,6 +868,83 @@
     .voice-stop-btn { color: var(--error, #EF4444); }
     .voice-stop-btn:hover { background: rgba(239,68,68,0.1); }
 
+    /* ═══════════ SOCRATIC MODE ═══════════ */
+    .bubble.socratic {
+      background: linear-gradient(135deg, var(--bg-elevated), var(--glass));
+      border: 1px solid var(--accent);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .socratic-turn-badge {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+    .socratic-ack {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .socratic-question {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+    .socratic-hint {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 6px 10px;
+      background: var(--accent-soft);
+      border-radius: var(--radius-sm);
+      margin-top: 6px;
+    }
+    .near-answer-badge {
+      display: inline-block;
+      font-size: 12px; font-weight: 600;
+      background: rgba(234,179,8,0.15);
+      color: #ca8a04;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+    .socratic-summary {
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.08));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-md);
+    }
+    .socratic-summary-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .socratic-summary-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+    .socratic-progress-dots {
+      display: flex; gap: 6px; margin-bottom: 10px;
+    }
+    .socratic-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border-subtle);
+      transition: background 0.3s;
+    }
+    .socratic-dot.filled { background: var(--accent); }
+    .socratic-dot.current { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+
     /* ═══════════ QUIZ MODAL ═══════════ */
     .modal-overlay {
       position: fixed; inset: 0;
@@ -1744,6 +1821,8 @@
       <div class="modal-field">
         <label for="quizCount">Number of Questions</label>
         <input type="number" id="quizCount" min="3" max="10" value="5">
+
+
       </div>
       <div class="modal-buttons">
         <button class="modal-btn secondary" onclick="closeQuizModal()">Cancel</button>
@@ -2123,7 +2202,7 @@
         btn.classList.add('active');
         // Disable agent mode if on
         if (agentMode) toggleAgentMode();
-        addBubble('🔍 Socratic mode activated! Ask me about any topic — I\'ll guide you to discover the answer yourself through questions rather than just telling you.', 'system').classList.add('system-msg');
+        addBubble('🧠 Socratic mode activated! I\'ll ask you exactly 5 questions to guide you to the answer — with a few laughs along the way. Tell me: what topic are we tackling today?', 'system').classList.add('system-msg');
       } else {
         btn.textContent = '🔍 Socratic Mode';
         btn.classList.remove('active');
@@ -2134,11 +2213,18 @@
     async function sendToSocratic(message) {
       socraticTurn += 1;
       if (socraticTurn === 1) {
-        // First turn: extract the topic from the message
         socraticTopic = message.replace(/^(explain|what is|tell me about|teach me|i want to learn)\s+/i, '').trim() || message;
       }
 
-      const thinkingBubble = addBubble('🤔 Thinking of a question...', 'thinking');
+      const thinkingMsgs = [
+        '🤔 Cooking up a question...',
+        '� Thinking of how to stump you...',
+        '💭 Crafting the perfect question...',
+        '🎯 Loading next brain teaser...',
+        '⚡ Preparing your next challenge...'
+      ];
+      const thinkingBubble = addBubble(thinkingMsgs[Math.min(socraticTurn - 1, thinkingMsgs.length - 1)], 'thinking');
+
       try {
         const res = await fetch('/socratic', {
           method:  'POST',
@@ -2146,13 +2232,21 @@
           body: JSON.stringify({
             message,
             level:   levelEl.value,
-            history: history.slice(-6)
+            history: history.slice(-12)
           })
         });
         thinkingBubble.remove();
         const data = await res.json();
         if (data.success && data.structured) {
           renderSocraticResponse(data.structured);
+          // Auto-reset after Turn 5 (the finale)
+          if (data.structured.isFinalTurn) {
+            setTimeout(() => {
+              addBubble('🎓 Session complete! Want to explore another topic? Just type it in, or toggle Socratic mode off.', 'system').classList.add('system-msg');
+              socraticTurn = 0;
+              socraticTopic = '';
+            }, 1000);
+          }
         } else {
           addBubble('⚠️ Socratic agent failed. Try again.', 'bot');
         }
@@ -2169,15 +2263,44 @@
       bubble.className = 'bubble socratic';
 
       let html = '';
-      if (s.isNearAnswer) {
-        html += `<div class="near-answer-badge">💡 You're nearly there!</div>`;
+
+      // Progress dots (1-5)
+      const totalTurns = 5;
+      const currentTurn = s.turn || socraticTurn;
+      html += '<div class="socratic-progress-dots">';
+      for (let i = 1; i <= totalTurns; i++) {
+        const cls = i < currentTurn ? 'filled' : i === currentTurn ? 'current' : '';
+        html += `<div class="socratic-dot ${cls}"></div>`;
       }
+      html += '</div>';
+
+      // Turn badge
+      html += `<div class="socratic-turn-badge">Question ${currentTurn} of ${totalTurns}</div>`;
+
+      // Near-answer badge
+      if (s.isNearAnswer && !s.isFinalTurn) {
+        html += `<div class="near-answer-badge">💡 You're getting warm!</div>`;
+      }
+
+      // Acknowledgement
       if (s.acknowledgement) {
-        html += `<div style="font-size:14px;margin-bottom:8px;color:var(--text-secondary);">${s.acknowledgement}</div>`;
+        html += `<div class="socratic-ack">${s.acknowledgement}</div>`;
       }
+
+      // The question
       html += `<div class="socratic-question">${s.question}</div>`;
+
+      // Hint
       if (s.hint) {
-        html += `<div class="socratic-hint">Hint: ${s.hint}</div>`;
+        html += `<div class="socratic-hint">💡 ${s.hint}</div>`;
+      }
+
+      // Big Picture summary (Turn 5)
+      if (s.isFinalTurn && s.summary) {
+        html += `<div class="socratic-summary">
+          <div class="socratic-summary-title">🎯 The Big Picture</div>
+          <div class="socratic-summary-text">${s.summary}</div>
+        </div>`;
       }
 
       bubble.innerHTML = html;

@@ -309,32 +309,43 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
 
 // ─────────────────────────────────────────────
 // TOOL 5: ask_socratic_question
-// Instead of explaining, guides the student to discover the answer
+// Witty, high-energy Socratic tutor — exactly 5 questions then Big Picture
 // ─────────────────────────────────────────────
 async function ask_socratic_question({ topic, level, studentResponse, turnNumber }) {
   const turn = turnNumber || 1;
+  const isFinalTurn = turn >= 5;
 
-  const systemPrompt = `You are a Socratic tutor. Your goal is to guide the student to discover the answer themselves through questions — never just give the answer directly.
+  const systemPrompt = `You are an expert Socratic Tutor with a witty, high-energy personality. Think of yourself as the cool teacher every student wishes they had — someone who mixes pop-culture references, funny analogies, and contagious enthusiasm.
 
-Turn number: ${turn}
-Rules:
-- Turn 1: Ask an engaging opening question that activates prior knowledge. Start with something relatable.
-- Turn 2-3: Respond to what the student said, acknowledge it, then ask a deeper follow-up question.
-- Turn 4+: If the student is close, give a gentle hint and final guiding question. If stuck, break it into a simpler sub-question.
-- NEVER give the direct answer — always end with a question.
-- Keep each response SHORT: 2-3 sentences max + 1 question.
+CURRENT TURN: ${turn} of 5
 
-Respond ONLY with valid JSON:
+ABSOLUTE RULES:
+1. ENTERTAIN — Use relatable pop-culture references, memes, funny analogies, and humor. Make learning feel like a conversation with a friend, not a lecture.
+2. NO JARGON — Explain everything as if the student is smart but hates boring textbooks. If you must use a technical term, immediately follow it with a fun analogy.
+3. THE 5-STEP LOGIC — You ask EXACTLY 5 questions total. Each question MUST build on the student's previous answer to logically lead them toward understanding the concept.
+4. NEVER GIVE AWAY THE ANSWER — If the student is wrong, nudge them with a hint or a funny comparison. Say things like "Close! Think of it like..." or "Not quite — imagine if...". Never say "No, the answer is..."
+5. THE REVEAL — On Turn 5 (the FINAL turn), after addressing their answer, provide a clear "🎯 Big Picture" summary that ties all 5 answers together into a simple, memorable explanation.
+
+RESPONSE STYLE BY TURN:
+- Turn 1: Energetic opening! Set the vibe. Ask something that activates what they already know. E.g. "Before we dive in — quick: if you had to explain [topic] to a 5-year-old using only pizza toppings, what would you say? 🍕"
+- Turn 2-3: Build momentum. React to their answer with genuine excitement or a funny riff, then ask a question that goes one level deeper.
+- Turn 4: They should be close now. Give a subtle nudge if needed. Your question should be the "aha moment" setup.
+- Turn 5: THE FINALE. Acknowledge their final answer, then drop the 🎯 Big Picture summary — a clean, simple, memorable explanation (3-5 sentences) that connects the dots from all 5 turns.
+
+${isFinalTurn ? `THIS IS TURN 5 — THE FINALE! You MUST include a "summary" field with the Big Picture. Make it clear, simple, and memorable. Tie together what the student discovered across all 5 questions.` : ''}
+
+Respond ONLY with valid JSON (no markdown fences):
 {
-  "acknowledgement": "Brief warm reaction to student's response (empty string on turn 1)",
-  "question": "Your Socratic question",
-  "hint": "A subtle hint if turn >= 3, else empty string",
-  "isNearAnswer": false
+  "acknowledgement": "Your witty, warm reaction to the student's answer (empty string on turn 1)",
+  "question": "Your Socratic question for this turn${isFinalTurn ? ' (can be a final reflective question like \\"So putting it all together, what is [topic] really about?\\")' : ''}",
+  "hint": "A fun, subtle hint if turn >= 3 — use analogies or pop-culture refs. Empty string if not needed.",
+  "isNearAnswer": ${turn >= 4 ? 'true' : 'false'},
+  "summary": "${isFinalTurn ? 'Your 🎯 Big Picture summary (3-5 sentences). Tie everything together.' : ''}"
 }`;
 
   const userMsg = turn === 1
-    ? `Topic: "${topic}". Student level: ${level}. Begin the Socratic dialogue.`
-    : `Topic: "${topic}". Student level: ${level}. Student's latest response: "${studentResponse}". This is turn ${turn}.`;
+    ? `Topic: "${topic}". Student level: ${level}. This is Turn 1 — start the Socratic dialogue with energy!`
+    : `Topic: "${topic}". Student level: ${level}. Student's answer: "${studentResponse}". This is Turn ${turn} of 5.${isFinalTurn ? ' THIS IS THE FINAL TURN — include the Big Picture summary!' : ''}`;
 
   const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
     method:  'POST',
@@ -346,7 +357,7 @@ Respond ONLY with valid JSON:
         { role: 'user',   content: userMsg }
       ],
       stream: false,
-      options: { num_predict: 250, num_ctx: 4096, temperature: 0.7 },
+      options: { num_predict: isFinalTurn ? 500 : 300, num_ctx: 4096, temperature: 0.8 },
       speculative_model: 'gemma2:2b'
     })
   });
@@ -356,16 +367,19 @@ Respond ONLY with valid JSON:
 
   try {
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    return { success: true, ...JSON.parse(cleaned), topic, turn, _ms: fetchMs };
+    const parsed = JSON.parse(cleaned);
+    return { success: true, ...parsed, topic, turn, isFinalTurn, _ms: fetchMs };
   } catch {
     return {
       success:         true,
       acknowledgement: '',
       question:        rawText.trim(),
       hint:            '',
-      isNearAnswer:    false,
+      isNearAnswer:    turn >= 4,
+      summary:         '',
       topic,
       turn,
+      isFinalTurn,
       _ms: fetchMs
     };
   }

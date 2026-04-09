@@ -437,6 +437,8 @@ async function runSocraticAgent(studentMessage, level, conversationHistory) {
       question:        socrResult.question || 'What do you already know about this topic?',
       hint:            socrResult.hint || '',
       isNearAnswer:    socrResult.isNearAnswer || false,
+      isFinalTurn:     socrResult.isFinalTurn || false,
+      summary:         socrResult.summary || '',
       topic,
       turn:            turnNumber,
       progressNote:    generateProgressNote(getProgressSummary(), toolCallLog.length)
