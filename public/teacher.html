@@ -122,6 +122,19 @@
     .btn-logout { color: var(--danger); }
     .btn-refresh { color: var(--accent2); }
 
+    /* ── Danger / Clear buttons ──────────────── */
+    .btn-danger {
+      background: rgba(248, 113, 113, .12);
+      color: var(--danger);
+      border-color: rgba(248, 113, 113, .3);
+      font-weight: 600;
+    }
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, .25);
+      border-color: var(--danger);
+    }
+    .toolbar-spacer { flex: 1; }
+
     /* ── Layout Grid ─────────────────────────── */
     .dashboard { padding: 24px 28px 60px; max-width: 1440px; margin: 0 auto; }
 
@@ -265,6 +278,8 @@
     <option value="">Loading students…</option>
   </select>
   <button class="btn-refresh" onclick="refreshData()" title="Refresh data">🔄 Refresh</button>
+  <span class="toolbar-spacer"></span>
+  <button class="btn-danger" onclick="clearAllData()" title="Delete ALL student data">🗑️ Clear All Data</button>
 </div>
 
 <!-- ── Dashboard Content ───────────────────────── -->
@@ -331,6 +346,47 @@ document.getElementById('studentPicker').addEventListener('change', e => {
 async function logout() {
   await fetch('/auth/logout', { method: 'POST' });
   window.location.href = '/login';
+}
+
+// ─────────────────────────────────────────────
+// CLEAR / RESET ACTIONS
+// ─────────────────────────────────────────────
+
+/** Clear ALL student data (sessions, topics, SRS) */
+async function clearAllData() {
+  if (!confirm('⚠️ This will permanently delete ALL student progress, sessions, and SRS data.\n\nAre you sure?')) return;
+  if (!confirm('🔴 FINAL WARNING: This action cannot be undone.\n\nType OK to confirm.')) return;
+  try {
+    const res = await fetch('/progress?all=true', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ All student data has been cleared.');
+      await refreshData();
+    } else {
+      alert('❌ Failed to clear data: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('❌ Error: ' + err.message);
+  }
+}
+
+/** Clear a single student's data */
+async function clearStudentData(studentId, studentName) {
+  if (!confirm(`⚠️ Delete all data for "${studentName}"?\n\nThis removes their sessions, topics, and SRS data.`)) return;
+  try {
+    const res = await fetch(`/progress?studentId=${encodeURIComponent(studentId)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Data for "${studentName}" has been cleared.`);
+      selectedStudentId = null;
+      document.getElementById('studentPicker').value = '';
+      await refreshData();
+    } else {
+      alert('❌ Failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('❌ Error: ' + err.message);
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -589,6 +645,11 @@ function renderIndividual(dash) {
         <div class="label">Due Reviews</div>
         <div class="value" style="color:var(--danger)">${student.dueReviews || 0}</div>
       </div>
+    </div>
+
+    <!-- Clear student action -->
+    <div style="margin-bottom:20px; text-align:right;">
+      <button class="btn-danger" onclick="clearStudentData('${student.id}', '${student.name.replace(/'/g, "\\'")}')">🗑️ Clear ${student.name}'s Data</button>
     </div>
 
     <!-- Topic breakdown -->

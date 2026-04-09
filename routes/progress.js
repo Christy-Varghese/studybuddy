@@ -23,12 +23,17 @@ router.get('/progress', (req, res) => {
   }
 });
 
-// DELETE — reset all progress
+// DELETE — reset progress (per-student or all)
 router.delete('/progress', (req, res) => {
   try {
-    const studentId = resolveStudent(req);
-    clearProgress(studentId);
-    res.json({ success: true, message: `Progress cleared for ${studentId}` });
+    if (req.query.all === 'true') {
+      clearProgress();          // wipe everything
+      res.json({ success: true, message: 'All progress cleared' });
+    } else {
+      const studentId = resolveStudent(req);
+      clearProgress(studentId);
+      res.json({ success: true, message: `Progress cleared for ${studentId}` });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
