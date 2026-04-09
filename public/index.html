@@ -810,21 +810,12 @@
       animation: pulseGlow 2s infinite;
     }
 
-    #voice-preview {
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      max-width: 120px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     /* ═══════════ VOICE STATUS BAR ═══════════ */
     #voice-status-bar {
       display: none;
       align-items: center;
       gap: 10px;
-      padding: 10px 20px;
+      padding: 10px 16px;
       background: var(--bg-elevated);
       border-top: 1px solid var(--border-subtle);
       animation: slideDown 0.3s ease;
@@ -832,7 +823,7 @@
     }
     #voice-status-bar.active { display: flex; }
     .voice-wave {
-      display: flex; gap: 3px; align-items: center;
+      display: flex; gap: 3px; align-items: center; flex-shrink: 0;
     }
     .voice-wave span {
       display: block;
@@ -846,10 +837,36 @@
     .voice-wave span:nth-child(3) { animation-delay: 0.2s; }
     .voice-wave span:nth-child(4) { animation-delay: 0.3s; }
     .voice-wave span:nth-child(5) { animation-delay: 0.4s; }
+    .voice-status-content {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+    }
     #voice-status-text {
       font-size: var(--font-size-sm);
       color: var(--text-secondary);
     }
+    #voice-preview-bar {
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      min-height: 0;
+      transition: min-height 0.2s;
+    }
+    #voice-preview-bar:not(:empty) {
+      min-height: 1.2em;
+      font-weight: 500;
+    }
+    .voice-send-btn, .voice-stop-btn {
+      background: none; border: none; cursor: pointer; padding: 4px 8px;
+      font-size: 16px; border-radius: var(--radius-sm); flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .voice-send-btn { color: var(--accent); }
+    .voice-send-btn:hover { background: var(--accent-soft); }
+    .voice-stop-btn { color: var(--error, #EF4444); }
+    .voice-stop-btn:hover { background: rgba(239,68,68,0.1); }
 
     /* ═══════════ QUIZ MODAL ═══════════ */
     .modal-overlay {
@@ -1660,8 +1677,12 @@
     <div class="voice-wave">
       <span></span><span></span><span></span><span></span><span></span>
     </div>
-    <span id="voice-status-text">Listening... speak your question</span>
-    <button onclick="stopVoice()" style="margin-left:auto;font-size:12px;color:var(--error);background:none;border:none;cursor:pointer;padding:0;">Stop</button>
+    <div class="voice-status-content">
+      <span id="voice-status-text">Listening... speak your question</span>
+      <div id="voice-preview-bar"></div>
+    </div>
+    <button onclick="toggleVoice()" class="voice-send-btn" title="Send what was captured">✓</button>
+    <button onclick="stopVoice(); setMicState('idle'); hideVoiceStatusBar(); hideVoicePreview();" class="voice-stop-btn" title="Cancel">✕</button>
   </div>
 
   <!-- Input Area -->
@@ -1679,7 +1700,6 @@
           <line x1="12" y1="19" x2="12" y2="22"/>
           <line x1="9"  y1="22" x2="15" y2="22"/>
         </svg>
-        <div id="voice-preview"></div>
       </button>
       <button class="attach-btn" id="attachBtn" onclick="triggerImageUpload()" title="Attach image">📎</button>
       <button id="send">Send</button>
@@ -3677,11 +3697,13 @@
     });
 
     // ── Voice Input Feature ──
-    const SILENCE_MS = 1800;
+    const SILENCE_MS = 2500;
     let recognition = null;
     let isListening = false;
     let voiceTranscript = '';
     let silenceTimer = null;
+    let userExplicitStop = false;   // true when user clicks mic to stop
+    let lastSpeechTime = 0;         // track when speech last detected
 
     // Initialize Web Speech API
     try {
@@ -3701,15 +3723,20 @@
         recognition.onstart = () => {
           isListening = true;
           voiceTranscript = '';
+          userExplicitStop = false;
           setMicState('listening');
-          const theme = document.documentElement.getAttribute('data-theme');
-          const statusMsg = theme === 'beginner' ? '🎤 Listening...' : 'Listening...';
-          document.getElementById('voice-status-text').textContent = statusMsg;
-          console.log('[Voice] Recognition started, listening...');
+          const statusText = document.getElementById('voice-status-text');
+          if (statusText) {
+            statusText.style.color = '';   // reset any error colour
+            const theme = document.documentElement.getAttribute('data-theme');
+            statusText.textContent = theme === 'beginner' ? '🎤 Listening...' : 'Listening... speak your question';
+          }
+          console.log('[Voice] Recognition started');
           announceToScreenReader('Voice input started, listening for your question');
         };
 
         recognition.onresult = (event) => {
+          lastSpeechTime = Date.now();
           let interim = '';
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
@@ -3718,86 +3745,107 @@
               console.log('[Voice] Final result:', transcript);
             } else {
               interim += transcript;
-              console.log('[Voice] Interim result:', transcript);
             }
           }
-          // Show live preview in the floating pill
+          // Show live preview in the status bar
           const preview = voiceTranscript + interim;
           updateVoicePreview(preview);
           // Restart silence timer on each result
           clearTimeout(silenceTimer);
           silenceTimer = setTimeout(finaliseVoiceInput, SILENCE_MS);
-          console.log('[Voice] Silence timer set for', SILENCE_MS, 'ms');
         };
 
         recognition.onend = () => {
-          isListening = false;
+          console.log('[Voice] Recognition ended. isListening:', isListening, 'userExplicitStop:', userExplicitStop);
           clearTimeout(silenceTimer);
-          console.log('[Voice] Recognition ended');
+
+          // If there's accumulated text and we're being finalized, don't restart
+          if (!isListening) return;
+
+          // If user explicitly stopped, don't restart
+          if (userExplicitStop) {
+            isListening = false;
+            userExplicitStop = false;
+            return;
+          }
+
+          // Browser killed recognition spontaneously (no-speech timeout, network blip, etc.)
+          // Auto-restart to keep listening
+          console.log('[Voice] Auto-restarting recognition (browser stopped it unexpectedly)');
+          try {
+            recognition.start();
+          } catch (e) {
+            console.warn('[Voice] Auto-restart failed:', e);
+            // Retry once after short delay
+            setTimeout(() => {
+              try { recognition.start(); }
+              catch (e2) {
+                console.error('[Voice] Auto-restart retry failed:', e2);
+                isListening = false;
+                setMicState('idle');
+                hideVoiceStatusBar();
+              }
+            }, 300);
+          }
         };
 
         recognition.onerror = (event) => {
           console.warn('[Voice] Recognition error:', event.error);
-          console.warn('[Voice] Error details - code:', event.error);
           
+          // no-speech: browser fires this after ~5s silence. Auto-restart via onend.
+          if (event.error === 'no-speech') {
+            console.log('[Voice] No speech detected — will auto-restart via onend');
+            document.getElementById('voice-status-text').textContent = 'Still listening... speak when ready';
+            return; // onend will auto-restart
+          }
+
+          // aborted: we called .stop() ourselves; ignore
+          if (event.error === 'aborted') {
+            console.log('[Voice] Recognition aborted (expected)');
+            return;
+          }
+
+          // network: retry automatically
+          if (event.error === 'network') {
+            console.log('[Voice] Network error — will auto-restart via onend');
+            document.getElementById('voice-status-text').textContent = 'Reconnecting...';
+            announceToScreenReader('Network error, reconnecting');
+            return; // onend will auto-restart
+          }
+
+          // Fatal errors — stop listening and show error
           let errorMessage = '';
           let screenReaderMsg = '';
-          
-          if (event.error === 'no-speech') {
-            errorMessage = 'No speech detected. Please speak clearly and try again.';
-            screenReaderMsg = 'No speech detected, please try again';
-          } else if (event.error === 'network') {
-            errorMessage = 'Network error. Retrying connection...';
-            screenReaderMsg = 'Network error. Checking connection and retrying...';
-            // Retry after a short delay
-            console.log('[Voice] Network error detected. Will retry in 500ms...');
-            setTimeout(() => {
-              if (isListening && recognition) {
-                console.log('[Voice] Retrying recognition after network error');
-                try {
-                  recognition.start();
-                } catch (e) {
-                  console.error('[Voice] Retry failed:', e);
-                }
-              }
-            }, 500);
-            announceToScreenReader(screenReaderMsg);
-            return; // Don't stop yet, we're retrying
-          } else if (event.error === 'audio-capture') {
+
+          if (event.error === 'audio-capture') {
             errorMessage = 'Microphone not available. Please check your device.';
             screenReaderMsg = 'Microphone not found or permission denied';
           } else if (event.error === 'not-allowed') {
             errorMessage = 'Microphone permission denied. Please enable in browser settings.';
             screenReaderMsg = 'Microphone permission not granted';
           } else if (event.error === 'service-not-allowed') {
-            errorMessage = 'Voice input not available in your region.';
+            errorMessage = 'Voice input not available in your browser.';
             screenReaderMsg = 'Voice input service not available';
           } else {
             errorMessage = `Voice error: ${event.error}`;
             screenReaderMsg = `Voice recognition error: ${event.error}`;
           }
-          
-          if (screenReaderMsg && event.error !== 'network') {
-            announceToScreenReader(screenReaderMsg);
+
+          // For fatal errors, force stop
+          isListening = false;
+          userExplicitStop = true; // prevent onend restart
+          announceToScreenReader(screenReaderMsg);
+          console.error('[Voice]', errorMessage);
+          const statusText = document.getElementById('voice-status-text');
+          if (statusText) {
+            statusText.textContent = errorMessage;
+            statusText.style.color = 'var(--error, #EF4444)';
           }
-          
-          // Show error message if present
-          if (errorMessage && event.error !== 'network') {
-            console.error('[Voice]', errorMessage);
-            const statusText = document.getElementById('voice-status-text');
-            if (statusText) {
-              statusText.textContent = errorMessage;
-              statusText.style.color = 'var(--error, #EF4444)';
-            }
-            // Keep the error visible for a moment before resetting
-            setTimeout(() => {
-              setMicState('idle');
-              hideVoiceStatusBar();
-            }, 2000);
-          } else if (event.error !== 'network') {
+          setTimeout(() => {
             setMicState('idle');
             hideVoiceStatusBar();
-          }
+            if (statusText) statusText.style.color = '';
+          }, 3000);
         };
       } else {
         // Web Speech API not supported — hide mic button
@@ -3814,16 +3862,16 @@
       if (!recognition) return;
       try {
         voiceTranscript = '';
+        lastSpeechTime = 0;
+        userExplicitStop = false;
         const lang = getVoiceLanguage();
         recognition.lang = lang;
         console.log('[Voice] Starting recognition with language:', lang);
         recognition.start();
       } catch (e) {
         console.warn('[Voice] Voice start error:', e);
-        // If there's an error, try again after a short delay
         setTimeout(() => {
           try {
-            console.log('[Voice] Retrying recognition start after error');
             recognition.start();
           } catch (e2) {
             console.error('[Voice] Retry failed:', e2);
@@ -3834,10 +3882,12 @@
     }
 
     function stopVoice() {
-      if (!recognition || !isListening) return;
+      if (!recognition) return;
+      userExplicitStop = true;
+      isListening = false;
+      clearTimeout(silenceTimer);
       try {
         recognition.stop();
-        clearTimeout(silenceTimer);
       } catch (e) {
         console.warn('Voice stop error:', e);
       }
@@ -3845,41 +3895,50 @@
 
     function toggleVoice() {
       if (isListening) {
-        stopVoice();
-        setMicState('idle');
-        hideVoiceStatusBar();
-        hideVoicePreview();
+        // If there's captured text, finalize and send it
+        const pendingText = voiceTranscript.trim();
+        if (pendingText) {
+          clearTimeout(silenceTimer);
+          finaliseVoiceInput();
+        } else {
+          stopVoice();
+          setMicState('idle');
+          hideVoiceStatusBar();
+          hideVoicePreview();
+        }
       } else {
         startVoice();
       }
     }
 
     function finaliseVoiceInput() {
-      if (!isListening) return;
-      isListening = false;
-      recognition.stop();
-      setMicState('processing');
+      clearTimeout(silenceTimer);
       const finalText = voiceTranscript.trim();
       console.log('[Voice] Finalising input with text:', finalText);
+
+      // Stop recognition properly
+      userExplicitStop = true;
+      isListening = false;
+      try { recognition.stop(); } catch (e) { /* already stopped */ }
+
       if (finalText) {
-        // Get the textarea and set its value
+        setMicState('processing');
+        // Set text into textarea
         const inputElement = document.getElementById('input');
         if (inputElement) {
           inputElement.value = finalText;
-          console.log('[Voice] Text set in input element:', finalText);
-          
+
           // Reset mic immediately — clear preview, go idle, hide status bar
           voiceTranscript = '';
           hideVoicePreview();
           hideVoiceStatusBar();
           setMicState('idle');
-          
-          // Now send the message (answer generates in background)
+
+          // Send the message
           setTimeout(async () => {
-            console.log('[Voice] Attempting to send message at', new Date().toISOString());
             try {
               await sendMessage();
-              console.log('[Voice] sendMessage() completed successfully');
+              console.log('[Voice] sendMessage() completed');
             } catch (e) {
               console.error('[Voice] Error calling sendMessage:', e);
               addBubble('⚠️ Voice message failed to send. Please try again.', 'bot');
@@ -3891,9 +3950,10 @@
           setMicState('idle');
         }
       } else {
-        announceToScreenReader('No speech was recognized');
+        announceToScreenReader('No speech was recognized. Tap mic to try again.');
         setMicState('idle');
         hideVoiceStatusBar();
+        hideVoicePreview();
       }
     }
 
@@ -3912,18 +3972,20 @@
     }
 
     function updateVoicePreview(text) {
-      const preview = document.getElementById('voice-preview');
-      if (!preview) return;
-      preview.textContent = text || '';
-      preview.classList.add('visible');
+      const barPreview = document.getElementById('voice-preview-bar');
+      if (barPreview) {
+        barPreview.textContent = text || '';
+      }
+      // Also update status text when we have interim text
+      if (text && text.trim()) {
+        const statusText = document.getElementById('voice-status-text');
+        if (statusText) statusText.textContent = '🎤 Listening...';
+      }
     }
 
     function hideVoicePreview() {
-      const preview = document.getElementById('voice-preview');
-      if (preview) {
-        preview.textContent = '';
-        preview.classList.remove('visible');
-      }
+      const barPreview = document.getElementById('voice-preview-bar');
+      if (barPreview) barPreview.textContent = '';
     }
 
     function hideVoiceStatusBar() {
