@@ -6,6 +6,7 @@ const router  = express.Router();
 
 const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak } = require('../agent/progressStore');
 const { toolImplementations } = require('../agent/tools');
+const { flowTraces }          = require('../middleware/devTiming');
 
 // GET student's full progress summary
 router.get('/progress', (req, res) => {
@@ -26,16 +27,37 @@ router.delete('/progress', (req, res) => {
   }
 });
 
-// POST — Dynamic Progress Evolution Report
+// POST — Dynamic Progress Evaluation Report
 router.post('/progress-report', async (req, res) => {
   const reportStart = Date.now();
+  const steps       = [];
+  const mark        = (name, detail) => steps.push({ name, ms: Date.now() - reportStart, detail });
+
+  console.log(`\n⏱  [/progress-report] Evaluation Report generation started`);
+  mark('Received request');
+
   try {
-    const result = await toolImplementations.generate_evolution_report();
+    const result  = await toolImplementations.generate_evaluation_report();
     const elapsed = Date.now() - reportStart;
-    console.log(`✅ [/progress-report] Done in ${(elapsed / 1000).toFixed(2)}s`);
+    mark('LLM generation done', `${(elapsed / 1000).toFixed(2)}s`);
+
+    console.log(`✅ [/progress-report] Evaluation Report done in ${(elapsed / 1000).toFixed(2)}s`);
+
+    // Store flow trace for dev panel
+    flowTraces['/progress-report'] = {
+      route: '/progress-report', ts: Date.now(), totalMs: elapsed, status: 'ok',
+      input: 'Evaluation Report', steps
+    };
+
     res.json({ success: true, report: result });
   } catch (err) {
-    console.error('[/progress-report] Error:', err.message);
+    const elapsed = Date.now() - reportStart;
+    mark('ERROR', err.message);
+    flowTraces['/progress-report'] = {
+      route: '/progress-report', ts: Date.now(), totalMs: elapsed, status: 'error',
+      input: 'Evaluation Report', steps
+    };
+    console.error(`❌ [/progress-report] Error after ${(elapsed / 1000).toFixed(2)}s:`, err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

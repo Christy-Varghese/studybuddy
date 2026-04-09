@@ -441,10 +441,10 @@ Rules:
 }
 
 // ─────────────────────────────────────────────
-// TOOL 7: generate_evolution_report
-// Dynamic Progress Evolution Report — adaptive learning consultant
+// TOOL 7: generate_evaluation_report
+// Dynamic Progress Evaluation Report — adaptive learning consultant
 // ─────────────────────────────────────────────
-async function generate_evolution_report() {
+async function generate_evaluation_report() {
   const progress   = getProgressSummary();
   const dueReviews = getDueReviews();
   const streak     = getLearningStreak();
@@ -480,7 +480,7 @@ ${dueList}
 
   const systemPrompt = `You are an Adaptive Learning Consultant — analytical, observant, and coaching-oriented. You focus on the PROCESS of learning, not just scores.
 
-Given the student's data below, generate a Dynamic Progress Evolution Report with EXACTLY these 5 sections. Be specific to their actual topics and data. Never fabricate topics they haven't studied.
+Given the student's data below, generate a Dynamic Progress Evaluation Report with EXACTLY these 5 sections. Be specific to their actual topics and data. Never fabricate topics they haven't studied.
 
 ${dataBlock}
 
@@ -522,7 +522,7 @@ RESPOND ONLY with valid JSON (no markdown fences, no extra text):
       model:    FAST_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: 'Generate the Dynamic Progress Evolution Report based on the data provided.' }
+        { role: 'user',   content: 'Generate the Dynamic Progress Evaluation Report based on the data provided.' }
       ],
       stream: false,
       options: { num_predict: 600, num_ctx: 4096, temperature: 0.6 },
@@ -558,7 +558,7 @@ const toolImplementations = {
   suggest_next_topic,
   ask_socratic_question,
   generate_concept_map,
-  generate_evolution_report
+  generate_evaluation_report
 };
 
 module.exports = { toolDefinitions, toolImplementations };

@@ -41,8 +41,8 @@ Open **http://localhost:3000** — that's it. No `.env`, no API keys, fully loca
 ### 🎭 Witty Socratic Tutor
 The Socratic tutor is a high-energy, pop-culture-savvy AI that guides discovery through **exactly 5 questions**. Each question builds on your previous answer, nudging you closer to the concept without ever giving it away. On Turn 5, you get a 🎯 **Big Picture** summary tying all your answers together.
 
-### 📈 Dynamic Progress Evolution Report
-Click the **📈 Evolution Report** button to get a personalised 5-section learning analysis:
+### 📈 Dynamic Progress Evaluation Report
+Click the **📈 Evaluation Report** button to get a personalised 5-section learning analysis:
 - **Learning Trajectory** — how your focus is shifting over time
 - **Cross-Pollination** — hidden connections between your studied topics
 - **Vocabulary Heatmap** — how your language is evolving
@@ -117,7 +117,7 @@ studybuddy/
 │   └── helpers.js              — buildSystemPrompt(), estimateResponseTime(), warmUpModels()
 ├── agent/
 │   ├── agentLoop.js            — Sequential, parallel & Socratic agents
-│   ├── tools.js                — 7 learning tools (explain, quiz, track, suggest, socratic, concept-map, evolution-report)
+│   ├── tools.js                — 7 learning tools (explain, quiz, track, suggest, socratic, concept-map, evaluation-report)
 │   ├── progressStore.js        — SM-2 SRS + streak tracking (JSON-based)
 │   ├── smartCache.js           — 4-layer cache waterfall
 │   ├── dynamicTaxonomy.js      — Auto-learn + curate topic taxonomy
@@ -155,7 +155,7 @@ studybuddy/
 | `POST` | `/concept-map` | Generate concept map (nodes + edges JSON) |
 | `POST` | `/quiz` | Standalone quiz generation |
 | `POST` | `/estimate` | Response time prediction (no LLM call) |
-| `POST` | `/progress-report` | Dynamic Progress Evolution Report (AI-generated) |
+| `POST` | `/progress-report` | Dynamic Progress Evaluation Report (AI-generated) |
 | `GET`  | `/progress` | Student progress summary |
 | `DELETE` | `/progress` | Clear all progress |
 | `GET`  | `/due-reviews` | Topics due for spaced repetition review |
@@ -178,7 +178,7 @@ studybuddy/
 | `suggest_next_topic` | Personalised next topic based on weak/strong areas |
 | `ask_socratic_question` | 5-turn witty guided discovery dialogue with Big Picture summary |
 | `generate_concept_map` | Builds nodes + edges knowledge graph |
-| `generate_evolution_report` | AI-generated 5-section adaptive learning report |
+| `generate_evaluation_report` | AI-generated 5-section adaptive learning report |
 
 ---
 
@@ -218,7 +218,7 @@ curl -X POST http://localhost:3000/socratic \
   -H "Content-Type: application/json" \
   -d '{"message":"gravity","level":"intermediate","history":[]}'
 
-# Evolution Report
+# Evaluation Report
 curl -X POST http://localhost:3000/progress-report
 
 # Concept map

@@ -1,14 +1,14 @@
-/* Evolution Report */
-/* Evolution report */
-// ============ Evolution Report ============
-async function showEvolutionReport() {
-  const btn = document.getElementById('evolution-btn');
+/* Evaluation Report */
+/* Evaluation report */
+// ============ Evaluation Report ============
+async function showEvaluationReport() {
+  const btn = document.getElementById('evaluation-btn');
   btn.disabled = true;
   btn.textContent = '📈 Generating...';
 
   // Show loading card
   const card = document.createElement('div');
-  card.className = 'evolution-report';
+  card.className = 'evaluation-report';
   card.innerHTML = `<div class="evo-loading"><span class="evo-spinner"></span> Analyzing your learning journey...</div>`;
   chatEl.appendChild(card);
   scrollToBottom();
@@ -20,7 +20,7 @@ async function showEvolutionReport() {
     if (!data.success || !data.report) {
       card.innerHTML = `<div class="evo-loading">⚠️ Could not generate report. Study some topics first!</div>`;
       btn.disabled = false;
-      btn.textContent = '📈 Evolution Report';
+      btn.textContent = '📈 Evaluation Report';
       return;
     }
 
@@ -29,13 +29,13 @@ async function showEvolutionReport() {
 
     // Header
     html += `<div class="evo-header">
-      <h3>📈 Dynamic Progress Evolution Report</h3>
+      <h3>📈 Dynamic Progress Evaluation Report</h3>
       <div class="evo-subtitle">Adaptive analysis of your learning journey</div>
     </div>`;
 
-    // 1. Evolution Narrative
+    // 1. Evaluation Narrative
     html += `<div class="evo-section">
-      <div class="evo-section-title"><span class="evo-section-icon">🧭</span> Evolution Narrative</div>
+      <div class="evo-section-title"><span class="evo-section-icon">🧭</span> Evaluation Narrative</div>
       <div class="evo-section-body">${r.narrative || 'No narrative available yet.'}</div>
     </div>`;
 
@@ -90,9 +90,9 @@ async function showEvolutionReport() {
 
   } catch (err) {
     card.innerHTML = `<div class="evo-loading">⚠️ Network error. Please try again.</div>`;
-    console.error('[EvolutionReport]', err);
+    console.error('[EvaluationReport]', err);
   }
 
   btn.disabled = false;
-  btn.textContent = '📈 Evolution Report';
+  btn.textContent = '📈 Evaluation Report';
 }

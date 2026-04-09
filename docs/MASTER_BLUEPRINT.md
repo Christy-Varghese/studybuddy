@@ -69,7 +69,7 @@ studybuddy/
 │   │   ├── input.css            ← Input area, buttons
 │   │   ├── voice.css            ← Voice status bar
 │   │   ├── socratic.css         ← Socratic mode
-│   │   ├── evolution.css        ← Evolution Report card
+│   │   ├── evaluation.css       ← Evaluation Report card
 │   │   ├── quiz.css             ← Quiz modal, cards
 │   │   ├── concept-map.css      ← Concept map modal
 │   │   ├── vision.css           ← Vision analysis cards
@@ -88,7 +88,7 @@ studybuddy/
 │   │   ├── loading.js           ← Skeleton loader, facts loading
 │   │   ├── render.js            ← Bot response rendering, LaTeX conversion
 │   │   ├── agent.js             ← Agent mode, SSE streaming
-│   │   ├── evolution.js         ← Evolution Report
+│   │   ├── evaluation.js        ← Evaluation Report
 │   │   ├── voice.js             ← SpeechRecognition
 │   │   ├── init.js              ← Event listeners, window.load
 │   │   └── pwa.js               ← Service worker registration
@@ -222,7 +222,7 @@ Runs the full agent pipeline (`agentLoop.js`) with access to 7 tools. Three exec
 | `suggest_next_topic` | Recommend next topic from weak/strong areas | `currentTopic` |
 | `ask_socratic_question` | Guiding question (never gives the answer) | `topic`, `level` |
 | `generate_concept_map` | Nodes-and-edges knowledge graph | `topic`, `level` |
-| `generate_evolution_report` | Dynamic progress evolution report | `topic` |
+| `generate_evaluation_report` | Dynamic progress evaluation report | `topic` |
 
 ## 2.5 Quiz Generation
 
@@ -238,9 +238,9 @@ Generates multiple-choice questions with 4 options each, correct-answer indicato
 
 Returns `{ nodes: [...], edges: [...] }` rendered as an interactive D3.js force-directed graph in a modal overlay. Nodes are colour-coded by type (concept, detail, related).
 
-## 2.7 Evolution Report
+## 2.7 Evaluation Report
 
-**Endpoint:** via Agent tool `generate_evolution_report`
+**Endpoint:** via Agent tool `generate_evaluation_report`
 
 A dynamic progress analysis combining: topics studied, quiz scores over time, SRS intervals, strengths, weaknesses, and personalised recommendations. Rendered in a collapsible card with scroll support.
 

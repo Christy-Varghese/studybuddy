@@ -37,7 +37,7 @@ The barriers are systemic:
 |---------|-------------|
 | 🎓 **3 Learning Modes** | Tutor (structured step-by-step), Socratic (guided discovery through 5 witty questions), Agent (full pipeline: explain → quiz → track → suggest next) |
 | 🎭 **Witty Socratic Tutor** | A high-energy, pop-culture-savvy tutor guides discovery through exactly 5 questions — building from curiosity to "aha!" moment — then delivers a 🎯 Big Picture summary tying all answers together |
-| � **Dynamic Progress Evolution Report** | AI-generated adaptive learning report with 5 sections: learning trajectory narrative, cross-pollination connections, vocabulary heatmap, "Big Domino" keystone topic, and a 2-minute micro-mission |
+| � **Dynamic Progress Evaluation Report** | AI-generated adaptive learning report with 5 sections: learning trajectory narrative, cross-pollination connections, vocabulary heatmap, "Big Domino" keystone topic, and a 2-minute micro-mission |
 | �📸 **Homework Photo Analysis** | Snap a photo of any problem → Gemma 4 vision analyses the image → step-by-step solution with extracted data, logic walkthrough, and confidence indicator |
 | 🗺 **Interactive Concept Maps** | Type any topic → auto-generated knowledge graph (nodes + edges) rendered as animated SVG showing how concepts interconnect |
 | 🎙 **Voice Input** | Browser-native speech recognition with auto-restart, no-speech error recovery, configurable silence timeout (2500ms), and a live voice preview status bar with ✓/✕ action buttons |
@@ -99,7 +99,7 @@ Available tools:
 4. suggest_next_topic(level) — Personalised recommendation
 5. ask_socratic_question(topic, history) — Guided discovery (5-turn witty dialogue)
 6. generate_concept_map(topic, level) — Knowledge graph
-7. generate_evolution_report() — Dynamic Progress Evolution Report
+7. generate_evaluation_report() — Dynamic Progress Evaluation Report
 
 Gemma plans: "Student asked about gravity →
   Step 1: explain_topic('gravity', 'intermediate')
@@ -128,9 +128,9 @@ Turn 5 → THE FINALE: acknowledge answer + deliver 🎯 Big Picture summary
 - **Big Picture summary** on Turn 5 ties all 5 answers into a memorable 3–5 sentence explanation
 - Temperature raised to **0.8** for creative, varied responses
 
-#### 6. Dynamic Progress Evolution Report
+#### 6. Dynamic Progress Evaluation Report
 
-A **generate_evolution_report** tool acts as an Adaptive Learning Consultant, analysing the student's full learning history to produce a 5-section report:
+A **generate_evaluation_report** tool acts as an Adaptive Learning Consultant, analysing the student's full learning history to produce a 5-section report:
 
 1. **Learning Trajectory Narrative** — describes the *shift* in focus, not just a list of topics
 2. **Cross-Pollination** — finds hidden connections between two studied topics
@@ -173,7 +173,7 @@ Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, lab
 │  ┌────────────────────────────────────────────┐    │
 │  │         Agent Layer (agentLoop.js)         │    │
 │  │  7 Tools: explain, quiz, track, suggest,   │    │
-│  │    socratic, concept-map, evolution-report  │    │
+│  │    socratic, concept-map, evaluation-report │    │
 │  ├────────────────────────────────────────────┤    │
 │  │  Smart Cache  │  Taxonomy  │  Progress/SRS │    │
 │  │  (4-layer)    │  (dynamic) │   (SM-2)      │    │
@@ -285,7 +285,7 @@ Every Ollama request is tuned for speed without sacrificing quality:
 | **Performance on 8GB devices** | Inference can take 30–90s on CPU | Skeleton loaders (instant UX), 4-layer cache (70% skip Ollama), speculative decoding with gemma2:2b draft model, parallel tool execution, predictive pre-warming |
 | **Voice input dying silently** | Browser SpeechRecognition fires `onend` spontaneously, killing sessions | Auto-restart in `onend` unless explicit stop flag; no-speech errors auto-retry; silence timeout raised to 2500ms |
 | **Socratic conversation flow** | Maintaining witty 5-turn structure while ensuring logical progression | Structured turn-tracking with progressive system prompts; temperature 0.8 for creativity; explicit Big Picture trigger on Turn 5 |
-| **Evolution Report data synthesis** | LLM needs rich learning context without hallucinating topics | Full SM-2 data snapshot passed as system prompt context; topic validation ensures report only references studied material |
+| **Evaluation Report data synthesis** | LLM needs rich learning context without hallucinating topics | Full SM-2 data snapshot passed as system prompt context; topic validation ensures report only references studied material |
 
 ---
 
@@ -352,7 +352,7 @@ npm start
 4. **Type "Quiz me on gravity"** → take an interactive MCQ quiz → see your score tracked
 5. **Click the 🗺 button** → generate a concept map → explore the knowledge graph
 6. **Switch to Socratic Mode** → type "gravity" → experience 5 witty guided-discovery questions → see the 🎯 Big Picture summary on Turn 5
-7. **Click 📈 Evolution Report** → see a personalised 5-section learning analysis with micro-mission
+7. **Click 📈 Evaluation Report** → see a personalised 5-section learning analysis with micro-mission
 8. **Use the 🎙 microphone** → speak your question → see the live voice preview → tap ✓ to send
 9. **Ask the same question twice** → second response is instant (cached)
 10. **Press Ctrl+Shift+B** → open the Developer Panel → see flow traces and metrics
@@ -371,11 +371,11 @@ npm start
 | 5 | Screenshot | Concept map | SVG knowledge graph with coloured nodes and edges |
 | 6 | Screenshot | Socratic Mode — Turn 3 | Witty question with hint and progress dots |
 | 7 | Screenshot | Socratic Mode — Turn 5 Big Picture | 🎯 Big Picture summary card tying all turns together |
-| 8 | Screenshot | Evolution Report | 5-section adaptive learning report with micro-mission |
+| 8 | Screenshot | Evaluation Report | 5-section adaptive learning report with micro-mission |
 | 9 | Screenshot | Voice Input | Microphone active with live voice preview status bar |
 | 10 | Screenshot | Spaced repetition banner | "Due for Review" notification |
 | 11 | Screenshot | Developer flow trace | Step-by-step timing with bottleneck detection |
-| 12 | Video (YouTube) | 2-min walkthrough | Ask question → get structured answer → quiz → concept map → Socratic → Evolution Report |
+| 12 | Video (YouTube) | 2-min walkthrough | Ask question → get structured answer → quiz → concept map → Socratic → Evaluation Report |
 
 ---
 
