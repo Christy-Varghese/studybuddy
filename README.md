@@ -139,7 +139,7 @@ studybuddy/
 │   └── taxonomy_learned.json   — Learned topic expansions
 ├── scripts/
 │   └── generate-icons.js       — PWA icon generator
-└── docs/                       — Full documentation (see docs/DOCS_INDEX.md)
+└── docs/                       — Full documentation (see docs/MASTER_BLUEPRINT.md)
 ```
 
 ---
@@ -187,7 +187,6 @@ studybuddy/
 | Model | Role |
 |-------|------|
 | `gemma4:e4b` | Primary — planning, explanation, synthesis, vision |
-| `gemma4:e2b` | Fallback — faster for quiz gen and suggestions |
 
 ---
 
@@ -195,13 +194,8 @@ studybuddy/
 
 | Document | What it covers |
 |----------|----------------|
-| [docs/QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md) | API cheat sheet, commands, troubleshooting |
-| [docs/FEATURES_GUIDE.md](./docs/FEATURES_GUIDE.md) | Complete feature guide with examples for every mode |
-| [docs/CACHING.md](./docs/CACHING.md) | 4-layer smart cache architecture |
-| [docs/AGENT_TESTING_GUIDE.md](./docs/AGENT_TESTING_GUIDE.md) | How to test each agent mode |
-| [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Full system design |
-| [docs/KAGGLE_WRITEUP.md](./docs/KAGGLE_WRITEUP.md) | Hackathon submission writeup |
-| [docs/DOCS_INDEX.md](./docs/DOCS_INDEX.md) | Full documentation map |
+| [docs/MASTER_BLUEPRINT.md](./docs/MASTER_BLUEPRINT.md) | Complete technical reference — architecture, features, fix log, developer guide |
+| [docs/KAGGLE_WRITEUP.md](./docs/KAGGLE_WRITEUP.md) | Kaggle competition submission writeup |
 
 ---
 
