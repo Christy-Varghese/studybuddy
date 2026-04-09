@@ -73,6 +73,60 @@
 }
 
 /* ═══════════ RESPONSIVE ═══════════ */
+
+/* ── Small phones (≤480px) ── */
+@media (max-width: 480px) {
+  header { padding: 8px 12px; }
+  header h1 { font-size: clamp(0.9rem, 3.5vw, 1.1rem); }
+  .status-badge { padding: 3px 8px; font-size: 10px; }
+  .streak-badge { padding: 3px 6px; font-size: 10px; }
+
+  .controls {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .controls button {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .controls select {
+    padding: 5px 8px;
+    font-size: 12px;
+    max-width: 120px;
+  }
+  .controls label { font-size: 11px; }
+
+  #chat { padding: 12px 10px 8px; gap: 10px; }
+  .bubble { max-width: 92%; padding: 10px 14px; font-size: 14px; }
+
+  .input-row { padding: 8px 10px 12px; gap: 6px; }
+  #input { padding: 10px 12px; font-size: 14px; }
+  #send { padding: 8px 14px; font-size: 13px; }
+  .attach-btn { padding: 8px 10px; font-size: 16px; }
+  #mic-btn { padding: 8px 10px; }
+  .button-group { gap: 4px; }
+
+  /* Modals */
+  .modal-content { padding: 20px 16px; width: 95%; }
+  .concept-map-panel { padding: 16px; width: 96%; }
+  .progress-panel { padding: 20px 16px; width: 95%; }
+  .quiz-card { padding: 16px; }
+  .quiz-options { grid-template-columns: 1fr; }
+
+  /* Evaluation report */
+  .evaluation-report { width: 96%; }
+  .evo-section { padding: 10px 14px; }
+
+  /* Vision card */
+  .vision-analysis-card { max-width: 94%; padding: 14px; }
+
+  /* PWA banner */
+  .pwa-install-banner { padding: 16px; }
+  .pwa-install-banner-buttons { flex-direction: column; width: 100%; max-width: 280px; }
+  .pwa-banner-btn { width: 100%; text-align: center; }
+}
+
+/* ── Tablets (≥768px) ── */
 @media (min-width: 768px) {
   header { padding: 14px 32px; }
   .controls { padding: 10px 32px; }
@@ -80,6 +134,8 @@
   .input-row { padding: 14px 32px 20px; }
   .bubble { max-width: 72%; }
 }
+
+/* ── Desktop (≥1200px) ── */
 @media (min-width: 1200px) {
   #chat { max-width: 900px; margin: 0 auto; width: 100%; }
   .input-row { max-width: 900px; margin: 0 auto; width: 100%; }

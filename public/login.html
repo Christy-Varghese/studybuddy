@@ -144,6 +144,39 @@
       border-radius: 4px;
       font-size: 11px;
     }
+
+    /* ── Responsive ──────────────────────────── */
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      .login-card { padding: 28px 22px; border-radius: 14px; }
+      .login-icon { font-size: 40px; }
+      .login-title { font-size: 20px; }
+      .login-subtitle { font-size: 12px; margin-bottom: 22px; }
+      .form-group input { padding: 10px 12px; font-size: 14px; }
+      .login-btn { padding: 12px; font-size: 14px; }
+      .role-hint { font-size: 10px; }
+      .role-hint code { font-size: 10px; }
+    }
+
+    @media (max-width: 360px) {
+      body { padding: 12px; }
+      .login-card { padding: 22px 18px; }
+      .login-icon { font-size: 36px; margin-bottom: 4px; }
+      .login-title { font-size: 18px; }
+      .login-subtitle { font-size: 11px; margin-bottom: 18px; }
+      .form-group label { font-size: 11px; }
+      .form-group input { padding: 9px 10px; font-size: 13px; }
+      .login-btn { padding: 11px; font-size: 13px; }
+    }
+
+    /* Landscape phones — reduce vertical spacing */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .login-card { padding: 20px 28px; }
+      .login-icon { font-size: 32px; margin-bottom: 4px; }
+      .login-subtitle { margin-bottom: 14px; }
+      .form-group { margin-bottom: 10px; }
+      .role-hint { margin-top: 12px; }
+    }
   </style>
 </head>
 <body>
