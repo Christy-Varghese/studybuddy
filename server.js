@@ -132,6 +132,12 @@ if (IS_DEV) {
 // ── PWA middleware (MIME types and cache headers) ──
 app.use(pwaMimeMiddleware);
 
+// ── Block direct access to protected HTML files ──
+// Forces users through semantic routes (/app, /teacher, /login) which have auth guards
+app.get('/index.html', (req, res) => res.redirect('/app'));
+app.get('/teacher.html', (req, res) => res.redirect('/teacher'));
+app.get('/login.html', (req, res) => res.redirect('/login'));
+
 // ── Static files ──
 app.use(express.static('public'));
 
