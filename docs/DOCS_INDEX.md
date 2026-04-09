@@ -81,6 +81,19 @@
 
 ---
 
+### 3.5. **FEATURES_GUIDE.md** - Complete Feature Guide with Examples ⭐ NEW
+- **Purpose**: Hands-on guide to every feature with real examples and expected outputs
+- **Length**: ~500 lines
+- **Audience**: New users, students, anyone wanting to understand what StudyBuddy can do
+- **Key Sections**:
+  - 14 feature sections, each with: What it does, How to use it, Example interaction, API endpoint
+  - Covers: Tutor Mode, Socratic Mode, Vision, Concept Maps, Quiz, Evolution Report, Voice Input, Spaced Repetition, Streaks, Themes, Autocomplete, Dev Panel, Cache, PWA
+  - Quick Reference tables for all 18 API endpoints and all 7 learning tools
+
+**Start reading here if**: You want to see what every feature looks like in action
+
+---
+
 ### 4. **IMPLEMENTATION_STATUS.md** - Development Roadmap
 - **Purpose**: Current status, priorities, testing plan, next steps
 - **Length**: ~800 lines
@@ -122,12 +135,13 @@
 
 ### Path 1: New User (5 minutes)
 1. [README.md](./README.md) - Quick start
-2. [README.md](./README.md#-how-it-works) - How it works section
-3. [README.md](./README.md#-core-tools-the-learning-engine) - Core tools
+2. [FEATURES_GUIDE.md](./FEATURES_GUIDE.md) - See every feature with examples
+3. [README.md](./README.md#-how-it-works) - How it works section
 
 ### Path 2: New Developer (30 minutes)
 1. [README.md](./README.md) - Quick overview
-2. [PROGRESS_SUMMARY.md](./PROGRESS_SUMMARY.md) - Full understanding
+2. [FEATURES_GUIDE.md](./FEATURES_GUIDE.md) - Understand every feature
+3. [PROGRESS_SUMMARY.md](./PROGRESS_SUMMARY.md) - Full understanding
 3. [ARCHITECTURE.md](./ARCHITECTURE.md#api-reference) - API reference
 4. [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md#immediate-next-steps-recommended-priority) - What to build next
 

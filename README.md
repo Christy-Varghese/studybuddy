@@ -35,8 +35,19 @@ Open **http://localhost:3000** — that's it. No `.env`, no API keys, fully loca
 | Mode | How it works |
 |------|-------------|
 | **Tutor Mode** (default) | Structured explanations with steps, follow-up questions, instant quizzes |
-| **Socratic Mode** | AI guides you to *discover* the answer through questions — never just tells you |
+| **Socratic Mode** | AI guides you to *discover* the answer through exactly 5 witty questions — never just tells you. Turn 5 delivers a 🎯 Big Picture summary. |
 | **Agent Mode** | Full pipeline: explain + quiz + track + suggest next topic in one request |
+
+### 🎭 Witty Socratic Tutor
+The Socratic tutor is a high-energy, pop-culture-savvy AI that guides discovery through **exactly 5 questions**. Each question builds on your previous answer, nudging you closer to the concept without ever giving it away. On Turn 5, you get a 🎯 **Big Picture** summary tying all your answers together.
+
+### 📈 Dynamic Progress Evolution Report
+Click the **📈 Evolution Report** button to get a personalised 5-section learning analysis:
+- **Learning Trajectory** — how your focus is shifting over time
+- **Cross-Pollination** — hidden connections between your studied topics
+- **Vocabulary Heatmap** — how your language is evolving
+- **Big Domino** — the ONE keystone topic that would unlock the most progress
+- **Micro-Mission** — a specific 2-minute task to do right now
 
 ### 🗺 Concept Maps
 Generate an interactive knowledge graph for any topic. Gemma 4 produces a nodes-and-edges map showing how concepts connect, rendered as an animated SVG — no external libraries.
@@ -56,10 +67,13 @@ Tracks consecutive study days. Streak badge appears in the header — turns oran
 ~70% bandwidth reduction via gzip. Predictive pre-warming caches your next suggested topic in the background.
 
 ### 📚 Dynamic Topic Taxonomy
-Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin.html` for manual curation.
+76 topics with 1,223 keywords across 9 subjects. Topics asked 2+ times are auto-promoted to the learned taxonomy. Admin panel at `/taxonomy-admin.html` for manual curation.
 
 ### 📸 Homework Photo Analysis
-Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step. Robust error handling with defensive retry logic, async file cleanup, and multer error boundaries.
+Upload a photo of any homework problem — Gemma 4's vision capability explains it step-by-step. Robust error handling with defensive retry logic, async file cleanup, and multer error boundaries. Collapsible sections for easy scanning.
+
+### 🎙 Voice Input
+Click the microphone icon and speak your question. Features auto-restart on unexpected session end, no-speech error recovery, 2500ms silence timeout, and a live voice preview status bar with ✓ (send) and ✕ (cancel) buttons.
 
 ### 🔍 Developer Diagnostics Panel
 Built-in **Metrics** and **Flow** tabs (press the 🛠 button):
@@ -88,7 +102,7 @@ studybuddy/
 ├── server.js                   — Express backend, all API routes
 ├── agent/
 │   ├── agentLoop.js            — Sequential, parallel & Socratic agents
-│   ├── tools.js                — 6 learning tools (explain, quiz, track, suggest, socratic, concept-map)
+│   ├── tools.js                — 7 learning tools (explain, quiz, track, suggest, socratic, concept-map, evolution-report)
 │   ├── progressStore.js        — SM-2 SRS + streak tracking (JSON-based)
 │   ├── smartCache.js           — 4-layer cache waterfall
 │   ├── dynamicTaxonomy.js      — Auto-learn + curate topic taxonomy
@@ -118,6 +132,7 @@ studybuddy/
 | `POST` | `/concept-map` | Generate concept map (nodes + edges JSON) |
 | `POST` | `/quiz` | Standalone quiz generation |
 | `POST` | `/estimate` | Response time prediction (no LLM call) |
+| `POST` | `/progress-report` | Dynamic Progress Evolution Report (AI-generated) |
 | `GET`  | `/progress` | Student progress summary |
 | `DELETE` | `/progress` | Clear all progress |
 | `GET`  | `/due-reviews` | Topics due for spaced repetition review |
@@ -130,7 +145,7 @@ studybuddy/
 
 ---
 
-## 🧰 The 6 Learning Tools
+## 🧰 The 7 Learning Tools
 
 | Tool | What it does |
 |------|-------------|
@@ -138,8 +153,9 @@ studybuddy/
 | `generate_quiz` | 2–5 multiple choice questions with explanations |
 | `track_progress` | Saves study event, updates SRS schedule |
 | `suggest_next_topic` | Personalised next topic based on weak/strong areas |
-| `ask_socratic_question` | Guiding question — adapts each turn of the dialogue |
+| `ask_socratic_question` | 5-turn witty guided discovery dialogue with Big Picture summary |
 | `generate_concept_map` | Builds nodes + edges knowledge graph |
+| `generate_evolution_report` | AI-generated 5-section adaptive learning report |
 
 ---
 
@@ -157,6 +173,7 @@ studybuddy/
 | Document | What it covers |
 |----------|----------------|
 | [docs/QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md) | API cheat sheet, commands, troubleshooting |
+| [docs/FEATURES_GUIDE.md](./docs/FEATURES_GUIDE.md) | Complete feature guide with examples for every mode |
 | [docs/CACHING.md](./docs/CACHING.md) | 4-layer smart cache architecture |
 | [docs/AGENT_TESTING_GUIDE.md](./docs/AGENT_TESTING_GUIDE.md) | How to test each agent mode |
 | [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Full system design |
@@ -183,6 +200,9 @@ curl -X POST http://localhost:3000/chat \
 curl -X POST http://localhost:3000/socratic \
   -H "Content-Type: application/json" \
   -d '{"message":"gravity","level":"intermediate","history":[]}'
+
+# Evolution Report
+curl -X POST http://localhost:3000/progress-report
 
 # Concept map
 curl -X POST http://localhost:3000/concept-map \

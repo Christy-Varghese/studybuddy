@@ -35,13 +35,16 @@ The barriers are systemic:
 
 | Feature | Description |
 |---------|-------------|
-| 🎓 **3 Learning Modes** | Tutor (structured step-by-step), Socratic (guided discovery through questions), Agent (full pipeline: explain → quiz → track → suggest next) |
-| 📸 **Homework Photo Analysis** | Snap a photo of any problem → Gemma 4 vision analyses the image → step-by-step solution with extracted data, logic walkthrough, and confidence indicator |
+| 🎓 **3 Learning Modes** | Tutor (structured step-by-step), Socratic (guided discovery through 5 witty questions), Agent (full pipeline: explain → quiz → track → suggest next) |
+| 🎭 **Witty Socratic Tutor** | A high-energy, pop-culture-savvy tutor guides discovery through exactly 5 questions — building from curiosity to "aha!" moment — then delivers a 🎯 Big Picture summary tying all answers together |
+| � **Dynamic Progress Evolution Report** | AI-generated adaptive learning report with 5 sections: learning trajectory narrative, cross-pollination connections, vocabulary heatmap, "Big Domino" keystone topic, and a 2-minute micro-mission |
+| �📸 **Homework Photo Analysis** | Snap a photo of any problem → Gemma 4 vision analyses the image → step-by-step solution with extracted data, logic walkthrough, and confidence indicator |
 | 🗺 **Interactive Concept Maps** | Type any topic → auto-generated knowledge graph (nodes + edges) rendered as animated SVG showing how concepts interconnect |
+| 🎙 **Voice Input** | Browser-native speech recognition with auto-restart, no-speech error recovery, configurable silence timeout (2500ms), and a live voice preview status bar with ✓/✕ action buttons |
 | 📊 **SM-2 Spaced Repetition** | Every quiz score feeds the SuperMemo-2 algorithm; topics are scheduled for review at scientifically optimal intervals (1 → 6 → 15 → … days) |
 | 🔥 **Learning Streaks** | Consecutive study day tracking with visual streak badge — gamification without the gimmicks |
 | 🧠 **Smart 4-Layer Cache** | Taxonomy resolution → normalised hash → in-flight dedup → disk persistence (48h TTL); ~70% bandwidth reduction |
-| 📚 **Dynamic Taxonomy** | Topics asked 2+ times auto-promote to the learned taxonomy; admin panel for curation |
+| 📚 **Dynamic Taxonomy** | 76 topics, 1,223 keywords across 9 subjects; topics asked 2+ times auto-promote to the learned taxonomy; admin panel for curation |
 | 🎨 **3 Adaptive Themes** | Beginner (ages 8–12, emoji-rich, playful), Intermediate (high school, clean), Advanced (university, terminal-style monospace) |
 | 📱 **PWA** | Installable on any device; service worker caches the shell for offline-first experience |
 | 🔍 **Developer Diagnostics** | Built-in Metrics + Flow tabs: per-route latency, cache hit rates, real-time flow traces with bottleneck detection |
@@ -94,8 +97,9 @@ Available tools:
 2. generate_quiz(topic, level, numQuestions) — MCQ quiz
 3. track_progress(topic, score) — Save to SRS
 4. suggest_next_topic(level) — Personalised recommendation
-5. ask_socratic_question(topic, history) — Guided discovery
+5. ask_socratic_question(topic, history) — Guided discovery (5-turn witty dialogue)
 6. generate_concept_map(topic, level) — Knowledge graph
+7. generate_evolution_report() — Dynamic Progress Evolution Report
 
 Gemma plans: "Student asked about gravity →
   Step 1: explain_topic('gravity', 'intermediate')
@@ -106,7 +110,37 @@ Gemma plans: "Student asked about gravity →
 
 Each tool call goes to Ollama independently, results are synthesised, and the combined response is streamed back. In the sequential agent, `explain_topic` and `generate_concept_map` run **concurrently** via `Promise.all()`, halving latency for the two heaviest Ollama calls.
 
-#### 5. Concept Map Generation
+#### 5. Witty Socratic Tutor (5-Question Flow)
+
+The Socratic mode uses a carefully designed persona — a **high-energy, pop-culture-savvy tutor** who guides students through exactly 5 questions:
+
+```
+Turn 1 → Energetic opener: activate prior knowledge
+Turn 2-3 → Build momentum: react with enthusiasm, go deeper
+Turn 4 → "Aha moment" setup: subtle nudge toward the answer
+Turn 5 → THE FINALE: acknowledge answer + deliver 🎯 Big Picture summary
+```
+
+**Key design choices:**
+- **Never gives away the answer** — always hints with analogies like "Close! Think of it like..."
+- **Pop-culture references** — makes learning feel like a conversation with a friend
+- **Progressive difficulty** — each question builds logically on the student's previous answer
+- **Big Picture summary** on Turn 5 ties all 5 answers into a memorable 3–5 sentence explanation
+- Temperature raised to **0.8** for creative, varied responses
+
+#### 6. Dynamic Progress Evolution Report
+
+A **generate_evolution_report** tool acts as an Adaptive Learning Consultant, analysing the student's full learning history to produce a 5-section report:
+
+1. **Learning Trajectory Narrative** — describes the *shift* in focus, not just a list of topics
+2. **Cross-Pollination** — finds hidden connections between two studied topics
+3. **Vocabulary Heatmap** — analyses how the student's language is evolving
+4. **Big Domino** — identifies the ONE keystone topic that would unlock the most progress
+5. **Micro-Mission** — a specific 2-minute actionable task
+
+The report reads the full SM-2 progress data, streak info, and due reviews — then passes it all to Gemma 4 for narrative synthesis.
+
+#### 7. Concept Map Generation
 
 Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, label}] }` JSON structure for any topic. The frontend renders this as a force-directed SVG graph with:
 - Colour-coded node groups
@@ -132,13 +166,14 @@ Gemma 4 generates a `{ nodes: [{id, label, group}], edges: [{source, target, lab
 │                                                     │
 │  /chat  /chat-with-image  /quiz  /concept-map      │
 │  /agent  /socratic  /estimate  /progress           │
-│  /due-reviews  /srs/:topic  /streak                │
-│  /topics/search  /cache-stats  /dev/flow-traces    │
+│  /progress-report  /due-reviews  /srs/:topic       │
+│  /streak  /topics/search  /cache-stats             │
+│  /dev/metrics  /dev/flow-traces                    │
 │                                                     │
 │  ┌────────────────────────────────────────────┐    │
 │  │         Agent Layer (agentLoop.js)         │    │
-│  │  6 Tools: explain, quiz, track, suggest,   │    │
-│  │           socratic, concept-map            │    │
+│  │  7 Tools: explain, quiz, track, suggest,   │    │
+│  │    socratic, concept-map, evolution-report  │    │
 │  ├────────────────────────────────────────────┤    │
 │  │  Smart Cache  │  Taxonomy  │  Progress/SRS │    │
 │  │  (4-layer)    │  (dynamic) │   (SM-2)      │    │
@@ -248,6 +283,9 @@ Every Ollama request is tuned for speed without sacrificing quality:
 | **Offline reliability** | PWA must work without any network | Service worker with cache-first strategy for shell, local Ollama for AI |
 | **Response consistency** | Gemma output varies wildly across difficulty levels | Structured JSON schema contracts with validation and fallback rendering |
 | **Performance on 8GB devices** | Inference can take 30–90s on CPU | Skeleton loaders (instant UX), 4-layer cache (70% skip Ollama), speculative decoding with gemma2:2b draft model, parallel tool execution, predictive pre-warming |
+| **Voice input dying silently** | Browser SpeechRecognition fires `onend` spontaneously, killing sessions | Auto-restart in `onend` unless explicit stop flag; no-speech errors auto-retry; silence timeout raised to 2500ms |
+| **Socratic conversation flow** | Maintaining witty 5-turn structure while ensuring logical progression | Structured turn-tracking with progressive system prompts; temperature 0.8 for creativity; explicit Big Picture trigger on Turn 5 |
+| **Evolution Report data synthesis** | LLM needs rich learning context without hallucinating topics | Full SM-2 data snapshot passed as system prompt context; topic validation ensures report only references studied material |
 
 ---
 
@@ -255,10 +293,11 @@ Every Ollama request is tuned for speed without sacrificing quality:
 
 | Metric | Value |
 |--------|-------|
-| Lines of code | **11,600+** (excluding node_modules) |
-| Documentation files | **40** markdown guides |
-| API endpoints | **17** |
-| Learning tools | **6** |
+| Lines of code | **12,000+** (excluding node_modules) |
+| Documentation files | **40+** markdown guides |
+| API endpoints | **18** |
+| Learning tools | **7** |
+| Taxonomy topics | **76** (across 9 subjects, 1,223 keywords) |
 | Themes | **3** |
 | External AI APIs used | **0** (Gemma 4 only, local) |
 | Internet required | **No** (after initial setup) |
@@ -272,7 +311,7 @@ Every Ollama request is tuned for speed without sacrificing quality:
 |-----------|------------|
 | AI Model | Gemma 4 E4B via Ollama (local inference) |
 | Backend | Node.js + Express.js |
-| Frontend | Vanilla HTML/CSS/JS (no framework, ~3900 lines) |
+| Frontend | Vanilla HTML/CSS/JS (no framework, ~4400 lines) |
 | Image Processing | Sharp (resize, WebP optimise) |
 | Upload Handling | Multer |
 | Compression | gzip via `compression` middleware |
@@ -312,9 +351,12 @@ npm start
 3. **Upload a homework photo** (paperclip icon) → watch the vision scanning animation → see structured solution
 4. **Type "Quiz me on gravity"** → take an interactive MCQ quiz → see your score tracked
 5. **Click the 🗺 button** → generate a concept map → explore the knowledge graph
-6. **Ask the same question twice** → second response is instant (cached)
-7. **Press Ctrl+Shift+B** → open the Developer Panel → see flow traces and metrics
-8. **Wait a day** → see the "Due for Review" banner appear (spaced repetition)
+6. **Switch to Socratic Mode** → type "gravity" → experience 5 witty guided-discovery questions → see the 🎯 Big Picture summary on Turn 5
+7. **Click 📈 Evolution Report** → see a personalised 5-section learning analysis with micro-mission
+8. **Use the 🎙 microphone** → speak your question → see the live voice preview → tap ✓ to send
+9. **Ask the same question twice** → second response is instant (cached)
+10. **Press Ctrl+Shift+B** → open the Developer Panel → see flow traces and metrics
+11. **Wait a day** → see the "Due for Review" banner appear (spaced repetition)
 
 ---
 
@@ -327,9 +369,13 @@ npm start
 | 3 | Screenshot | Homework photo analysis | Vision card with scanning animation, extracted data, steps |
 | 4 | Screenshot | Interactive quiz | MCQ cards with score and explanations |
 | 5 | Screenshot | Concept map | SVG knowledge graph with coloured nodes and edges |
-| 6 | Screenshot | Spaced repetition banner | "Due for Review" notification |
-| 7 | Screenshot | Developer flow trace | Step-by-step timing with bottleneck detection |
-| 8 | Video (YouTube) | 2-min walkthrough | Ask question → get structured answer → quiz → concept map → image upload |
+| 6 | Screenshot | Socratic Mode — Turn 3 | Witty question with hint and progress dots |
+| 7 | Screenshot | Socratic Mode — Turn 5 Big Picture | 🎯 Big Picture summary card tying all turns together |
+| 8 | Screenshot | Evolution Report | 5-section adaptive learning report with micro-mission |
+| 9 | Screenshot | Voice Input | Microphone active with live voice preview status bar |
+| 10 | Screenshot | Spaced repetition banner | "Due for Review" notification |
+| 11 | Screenshot | Developer flow trace | Step-by-step timing with bottleneck detection |
+| 12 | Video (YouTube) | 2-min walkthrough | Ask question → get structured answer → quiz → concept map → Socratic → Evolution Report |
 
 ---
 
