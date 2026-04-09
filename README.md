@@ -99,24 +99,47 @@ Install on any device directly from the browser. Works fully offline — the she
 
 ```
 studybuddy/
-├── server.js                   — Express backend, all API routes
+├── server.js                   — Express entry point (wires routes + middleware)
+├── routes/                     — API route handlers
+│   ├── chat.js                 — /chat, /chat-with-image, /estimate (SSE streaming)
+│   ├── quiz.js                 — /quiz
+│   ├── agent.js                — /agent (full pipeline)
+│   ├── socratic.js             — /socratic (guided discovery)
+│   ├── conceptMap.js           — /concept-map
+│   ├── progress.js             — /progress, /progress-report, /due-reviews, /srs, /streak
+│   ├── admin.js                — /admin/* + bulk CSV/Excel upload
+│   └── dev.js                  — /dev/metrics, /dev/flow-traces, /cache-stats, /topics/search
+├── middleware/
+│   ├── devTiming.js            — Request timing, dev metrics, flow traces
+│   ├── upload.js               — Multer config (image + spreadsheet uploads)
+│   └── pwa.js                  — PWA MIME type corrections
+├── lib/
+│   └── helpers.js              — buildSystemPrompt(), estimateResponseTime(), warmUpModels()
 ├── agent/
 │   ├── agentLoop.js            — Sequential, parallel & Socratic agents
 │   ├── tools.js                — 7 learning tools (explain, quiz, track, suggest, socratic, concept-map, evolution-report)
 │   ├── progressStore.js        — SM-2 SRS + streak tracking (JSON-based)
 │   ├── smartCache.js           — 4-layer cache waterfall
 │   ├── dynamicTaxonomy.js      — Auto-learn + curate topic taxonomy
-│   ├── taxonomy.js             — Base topic taxonomy
+│   ├── taxonomy.js             — Base topic taxonomy (76 topics, 1,223 keywords)
 │   └── trie.js                 — O(k) prefix search for autocomplete
 ├── public/
-│   ├── index.html              — Full single-page UI (~5000 lines)
+│   ├── index.html              — HTML shell (~190 lines, references external CSS/JS)
+│   ├── styles/                 — 14 CSS files (variables, base, layout, chat, input, voice, etc.)
+│   ├── scripts/                — 15 JS files (state, utils, chat, quiz, render, agent, voice, etc.)
+│   ├── assets/                 — PWA icons (icon-192, icon-512, icon-maskable)
 │   ├── devpanel.js             — Developer diagnostics panel (Metrics + Flow tabs)
 │   ├── manifest.json           — PWA manifest
 │   ├── sw.js                   — Service worker (offline-first)
 │   ├── offline.html            — Offline fallback page
 │   └── taxonomy-admin.html     — Topic taxonomy admin panel
-└── data/
-    └── progress.json           — Student learning history (auto-created)
+├── data/                       — Runtime data (auto-created)
+│   ├── progress.json           — Student learning history
+│   ├── cache.json              — Smart cache persistence
+│   └── taxonomy_learned.json   — Learned topic expansions
+├── scripts/
+│   └── generate-icons.js       — PWA icon generator
+└── docs/                       — Full documentation (see docs/DOCS_INDEX.md)
 ```
 
 ---

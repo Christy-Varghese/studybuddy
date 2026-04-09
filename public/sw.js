@@ -1,4 +1,4 @@
-const CACHE_VERSION   = 'studybuddy-v1';
+const CACHE_VERSION   = 'studybuddy-v2';
 const SHELL_CACHE     = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE   = `${CACHE_VERSION}-runtime`;
 
@@ -9,9 +9,40 @@ const SHELL_ASSETS = [
   '/index.html',
   '/offline.html',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon-maskable.png',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png',
+  '/assets/icon-maskable.png',
+  // Stylesheets
+  '/styles/variables.css',
+  '/styles/base.css',
+  '/styles/layout.css',
+  '/styles/chat.css',
+  '/styles/input.css',
+  '/styles/voice.css',
+  '/styles/socratic.css',
+  '/styles/evolution.css',
+  '/styles/quiz.css',
+  '/styles/concept-map.css',
+  '/styles/vision.css',
+  '/styles/agent.css',
+  '/styles/progress.css',
+  '/styles/pwa.css',
+  // Scripts
+  '/scripts/state.js',
+  '/scripts/utils.js',
+  '/scripts/image.js',
+  '/scripts/chat.js',
+  '/scripts/quiz.js',
+  '/scripts/socratic.js',
+  '/scripts/concept-map.js',
+  '/scripts/theme.js',
+  '/scripts/loading.js',
+  '/scripts/render.js',
+  '/scripts/agent.js',
+  '/scripts/evolution.js',
+  '/scripts/voice.js',
+  '/scripts/init.js',
+  '/scripts/pwa.js',
   // Google Fonts — cache the CSS (fonts themselves load from CDN)
   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap',
 ];

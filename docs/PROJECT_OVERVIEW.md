@@ -5,6 +5,11 @@
 > **Owner:** Christy Varghese  
 > **Repository:** https://github.com/Christy-Varghese/studybuddy
 
+> **⚠️ Note (April 2026):** This document is a historical overview from the initial build.
+> The `src/` and `config/` directories referenced in Phase 2 have since been removed as dead code
+> during the modular reorganization. See [`FOLDER_STRUCTURE.md`](./FOLDER_STRUCTURE.md) for the
+> current project layout.
+
 ---
 
 ## Executive Summary

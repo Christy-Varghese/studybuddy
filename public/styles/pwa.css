@@ -1,0 +1,88 @@
+/* ═══════════ PWA INSTALL BANNER ═══════════ */
+.pwa-install-banner {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2000;
+  padding: 24px;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+.pwa-install-banner.show { display: flex; }
+.pwa-install-banner-icon {
+  font-size: 48px;
+}
+.pwa-install-banner-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pwa-install-banner-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.5;
+}
+.pwa-install-banner-buttons {
+  display: flex; gap: 10px;
+}
+.pwa-banner-btn {
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  min-height: var(--touch-min);
+}
+.pwa-banner-btn.install {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 80%, #fff));
+  color: #fff;
+}
+.pwa-banner-btn.install:hover { opacity: 0.9; }
+.pwa-banner-btn.dismiss {
+  background: var(--glass);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+.pwa-banner-btn.dismiss:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ═══════════ STANDALONE / SAFE AREA ═══════════ */
+@media all and (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header {
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+  .input-row {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ═══════════ RESPONSIVE ═══════════ */
+@media (min-width: 768px) {
+  header { padding: 14px 32px; }
+  .controls { padding: 10px 32px; }
+  #chat { padding: 32px 40px 16px; }
+  .input-row { padding: 14px 32px 20px; }
+  .bubble { max-width: 72%; }
+}
+@media (min-width: 1200px) {
+  #chat { max-width: 900px; margin: 0 auto; width: 100%; }
+  .input-row { max-width: 900px; margin: 0 auto; width: 100%; }
+}
+/* ═══════════ HIDDEN FILE INPUT ═══════════ */
+#imageInput { display: none; }

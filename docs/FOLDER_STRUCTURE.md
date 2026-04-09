@@ -1,123 +1,104 @@
-# 📁 Documentation Folder Structure
+# 📁 Project Structure
 
-## Overview
-
-All documentation has been organized into logical folders for easy navigation.
+> Updated after the modular reorganization (April 2026)
 
 ```
-docs/
-├── 00_START_HERE.md                 # 🚀 Start here first!
-├── DOCS_INDEX.md                    # Complete documentation index
-├── QUICK_REFERENCE.md               # Quick reference guide
-├── KAGGLE_WRITEUP.md                # Kaggle competition writeup
-├── FOLDER_STRUCTURE.md              # This file
-│
-├── dev-panel/                       # 📊 Development Benchmark Panel
-│   ├── 00_DEVPANEL_START_HERE.md   # Start here for dev panel
-│   ├── DEVPANEL_QUICKSTART.md      # Quick setup guide
-│   ├── DEVPANEL_IMPLEMENTATION.md  # Implementation details
-│   └── DEVPANEL_REFERENCE.md       # API reference
-│
-├── voice-input/                     # 🎤 Voice Input Feature
-│   ├── VOICE_INPUT_QUICKSTART.md   # Quick setup guide
-│   ├── VOICE_INPUT_README.md       # Feature overview
-│   ├── VOICE_INPUT_IMPLEMENTATION.md # Implementation details
-│   ├── VOICE_INPUT_VERIFICATION.md # Verification guide
-│   ├── VOICE_INPUT_BUG_FIX.md      # Bug fix documentation
-│   ├── VOICE_INPUT_FIXED.md        # Fixed version notes
-│   ├── VOICE_INPUT_DEBUGGING.md    # Debugging guide
-│   ├── VOICE_QUICK_DEBUG.md        # Quick debug 5-steps
-│   ├── VOICE_TESTING_GUIDE.md      # Testing procedures
-│   └── VOICE_DEBUGGING_COMPLETE.md # Complete debug summary
-│
-├── architecture/                    # 🏗️ System Architecture
-│   ├── ARCHITECTURE.md             # Overall architecture
-│   └── IMPLEMENTATION_STATUS.md    # Implementation status
-│
-└── progress/                        # 📈 Progress & Status
-    ├── PROGRESS_SUMMARY.md         # Progress summary
-    ├── SESSION_SUMMARY.md          # Session summary
-    ├── FINAL_SUMMARY.md            # Final summary
-    ├── IMPLEMENTATION_COMPLETE.md  # Completion status
-    ├── CHANGES.md                  # Change log
-    ├── FEATURES_INDEX.md           # Features index
-    └── SERVER_STARTUP_RESOLVED.md  # Server startup notes
+studybuddy/
+├── server.js                    ← Express entry point (wires routes + middleware)
+├── routes/                      ← API route handlers
+│   ├── chat.js                  ← /chat, /chat-with-image, /estimate (SSE streaming)
+│   ├── quiz.js                  ← /quiz (quiz generation)
+│   ├── agent.js                 ← /agent (full agent pipeline)
+│   ├── socratic.js              ← /socratic (guided discovery dialogue)
+│   ├── conceptMap.js            ← /concept-map (knowledge graph generation)
+│   ├── progress.js              ← /progress, /progress-report, /due-reviews, /srs, /streak
+│   ├── admin.js                 ← /admin/* routes, bulk CSV/Excel upload
+│   └── dev.js                   ← /dev/metrics, /dev/flow-traces, /cache-stats, /topics/search
+├── middleware/                   ← Express middleware
+│   ├── devTiming.js             ← Request timing, dev metrics, flow traces, dev panel injection
+│   ├── upload.js                ← Multer config (image + spreadsheet uploads)
+│   └── pwa.js                   ← PWA MIME type corrections
+├── lib/                          ← Shared utilities
+│   └── helpers.js               ← buildSystemPrompt(), estimateResponseTime(), warmUpModels()
+├── agent/                        ← Agent system (7 files — already modular)
+│   ├── agentLoop.js             ← Sequential, parallel & Socratic agent orchestration
+│   ├── tools.js                 ← 7 learning tools
+│   ├── progressStore.js         ← SM-2 SRS + streak tracking (JSON-based)
+│   ├── smartCache.js            ← 4-layer cache waterfall with disk persistence
+│   ├── dynamicTaxonomy.js       ← Auto-learn + curate topic taxonomy
+│   ├── taxonomy.js              ← Base taxonomy (76 topics, 1,223 keywords)
+│   └── trie.js                  ← O(k) prefix search for autocomplete
+├── public/                       ← Static frontend assets
+│   ├── index.html               ← HTML shell (~190 lines, refs external CSS/JS)
+│   ├── styles/                  ← 14 CSS files
+│   │   ├── variables.css        ← Custom properties, theme overrides
+│   │   ├── base.css             ← Reset, animations, GPU hints
+│   │   ├── layout.css           ← Header, controls bar
+│   │   ├── chat.css             ← Chat bubbles, structured responses
+│   │   ├── input.css            ← Input area, buttons
+│   │   ├── voice.css            ← Voice status bar
+│   │   ├── socratic.css         ← Socratic mode
+│   │   ├── evolution.css        ← Evolution Report card
+│   │   ├── quiz.css             ← Quiz modal, cards
+│   │   ├── concept-map.css      ← Concept map modal
+│   │   ├── vision.css           ← Vision analysis cards
+│   │   ├── agent.css            ← Agent response
+│   │   ├── progress.css         ← Progress modal
+│   │   └── pwa.css              ← PWA banner, responsive, standalone
+│   ├── scripts/                 ← 15 JS files
+│   │   ├── state.js             ← DOM refs, shared state
+│   │   ├── utils.js             ← scrollToBottom(), addBubble()
+│   │   ├── image.js             ← Image upload handlers
+│   │   ├── chat.js              ← sendMessage()
+│   │   ├── quiz.js              ← Quiz generation & rendering
+│   │   ├── socratic.js          ← Socratic mode
+│   │   ├── concept-map.js       ← Concept map (D3)
+│   │   ├── theme.js             ← Theme switching, streak, due reviews
+│   │   ├── loading.js           ← Skeleton loader, facts loading
+│   │   ├── render.js            ← Bot response rendering, LaTeX
+│   │   ├── agent.js             ← Agent mode, SSE streaming
+│   │   ├── evolution.js         ← Evolution Report
+│   │   ├── voice.js             ← SpeechRecognition
+│   │   ├── init.js              ← Event listeners, window.load
+│   │   └── pwa.js               ← Service worker registration
+│   ├── assets/                  ← Icons
+│   │   ├── icon-192.png
+│   │   ├── icon-512.png
+│   │   └── icon-maskable.png
+│   ├── devpanel.js              ← Developer diagnostics panel
+│   ├── manifest.json            ← PWA manifest
+│   ├── sw.js                    ← Service worker (offline-first)
+│   ├── offline.html             ← Offline fallback
+│   ├── taxonomy-admin.html      ← Taxonomy admin panel
+│   └── card-560x280.html        ← Social card template
+├── data/                         ← Runtime data (auto-created)
+│   ├── progress.json            ← Student learning history
+│   ├── cache.json               ← Smart cache persistence
+│   └── taxonomy_learned.json    ← Learned topic expansions
+├── scripts/                      ← Build/utility scripts
+│   └── generate-icons.js        ← PWA icon generator
+├── docs/                         ← Documentation (see DOCS_INDEX.md)
+├── uploads/                      ← Homework photo uploads
+├── package.json                  ← Dependencies & scripts
+└── README.md                     ← Project overview
 ```
 
-## Quick Navigation
+## Key Design Decisions
 
-### 🚀 Getting Started
-- **First Time?** → Start with `docs/00_START_HERE.md`
-- **Dev Panel?** → Go to `docs/dev-panel/00_DEVPANEL_START_HERE.md`
-- **Voice Input?** → Go to `docs/voice-input/VOICE_INPUT_QUICKSTART.md`
+| Decision | Rationale |
+|----------|-----------|
+| 14 CSS files | One per visual feature — easy to find and edit |
+| 15 JS files | State -> utilities -> features -> init -> PWA load order |
+| 8 route files | Each API domain isolated |
+| 3 middleware files | Cross-cutting concerns separated |
+| lib/helpers.js | Shared functions used by multiple routes |
+| agent/ untouched | Already well-structured — 7 focused modules |
 
-### 📊 Development Benchmark Panel
-Located in: `docs/dev-panel/`
-- Setup & Usage: `DEVPANEL_QUICKSTART.md`
-- Full Details: `DEVPANEL_IMPLEMENTATION.md`
-- API Reference: `DEVPANEL_REFERENCE.md`
+## Before & After
 
-### 🎤 Voice Input Feature
-Located in: `docs/voice-input/`
-- Quick Start: `VOICE_INPUT_QUICKSTART.md`
-- Feature Overview: `VOICE_INPUT_README.md`
-- Setup & Implementation: `VOICE_INPUT_IMPLEMENTATION.md`
-- Verify it Works: `VOICE_INPUT_VERIFICATION.md`
-- Having Issues?: `VOICE_QUICK_DEBUG.md` (5-step guide)
-- Complete Debugging: `VOICE_INPUT_DEBUGGING.md`
-
-### 🏗️ Architecture & Design
-Located in: `docs/architecture/`
-- System Design: `ARCHITECTURE.md`
-- Current Status: `IMPLEMENTATION_STATUS.md`
-
-### 📈 Progress & Tracking
-Located in `docs/progress/`
-- See What's Done: `PROGRESS_SUMMARY.md`
-- This Session: `SESSION_SUMMARY.md`
-- Overall Status: `FINAL_SUMMARY.md`
-- Change History: `CHANGES.md`
-
-## Organization Benefits
-
-✅ **Clear Categorization** - Grouped by feature and purpose
-✅ **Easy Navigation** - Find what you need quickly
-✅ **Logical Hierarchy** - Main docs → Feature-specific → Details
-✅ **Multiple Entry Points** - Start from any folder
-✅ **Comprehensive** - All 28 documentation files organized
-
-## Root Level Files Kept
-
-- `README.md` - Main project readme
-- `server.js` - Server implementation
-- `package.json` - Dependencies
-- `agent/` folder - Agent code
-- `public/` folder - Frontend code
-- `data/` folder - Data storage
-- `uploads/` folder - Upload directory
-
-## File Count by Category
-
-- **Dev Panel**: 4 files
-- **Voice Input**: 10 files
-- **Architecture**: 2 files
-- **Progress**: 7 files
-- **Main Docs**: 4 files
-- **Total**: 27 markdown files
-
-## When to Use Each File
-
-| Situation | File | Location |
-|-----------|------|----------|
-| First time setup | `00_START_HERE.md` | `docs/` |
-| Need quick overview | `QUICK_REFERENCE.md` | `docs/` |
-| Setup dev panel | `DEVPANEL_QUICKSTART.md` | `docs/dev-panel/` |
-| Setup voice input | `VOICE_INPUT_QUICKSTART.md` | `docs/voice-input/` |
-| Troubleshoot voice | `VOICE_QUICK_DEBUG.md` | `docs/voice-input/` |
-| Understand architecture | `ARCHITECTURE.md` | `docs/architecture/` |
-| Check progress | `PROGRESS_SUMMARY.md` | `docs/progress/` |
-| View all docs | `DOCS_INDEX.md` | `docs/` |
-
----
-
-**All files are now organized and easy to find!** 📚
+| Metric | Before | After |
+|--------|--------|-------|
+| index.html | 4,402 lines (monolithic) | 190 lines (shell) + 14 CSS + 15 JS |
+| server.js | 1,377 lines (monolithic) | 145 lines (entry) + 8 routes + 3 middleware + 1 lib |
+| Dead code | src/, config/, .bak files | Removed |
+| Total modules | 2 monoliths + 7 agent | 42 focused files + 7 agent |
