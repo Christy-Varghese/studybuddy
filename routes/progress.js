@@ -1,8 +1,60 @@
-// ── Progress Routes ──────────────────────────────
-// /progress, /progress-report, /due-reviews, /srs/:topic, /streak
 
 const express = require('express');
 const router  = express.Router();
+
+// Add this route to routes/progress.js
+router.get('/progress-report', (req, res) => {
+  try {
+    const progress  = getProgressSummary(resolveStudent(req));
+    const topics    = Object.entries(progress.topics || {});
+    const sessions  = progress.sessions || [];
+
+    const scored = topics.filter(([, d]) => (d.scores || []).length > 0);
+
+    const weakAreas = scored
+      .filter(([, d]) => {
+        const avg = d.scores.reduce((a, b) => a + b, 0) / d.scores.length;
+        return avg < 70;
+      })
+      .map(([name, d]) => ({
+        topic: name,
+        avg:   Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length),
+      }))
+      .sort((a, b) => a.avg - b.avg);
+
+    const strongAreas = scored
+      .filter(([, d]) => {
+        const avg = d.scores.reduce((a, b) => a + b, 0) / d.scores.length;
+        return avg >= 80;
+      })
+      .map(([name, d]) => ({
+        topic: name,
+        avg:   Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length),
+      }))
+      .sort((a, b) => b.avg - a.avg);
+
+    const overallAvg = scored.length === 0 ? 0 : Math.round(
+      scored.reduce((sum, [, d]) => {
+        return sum + d.scores.reduce((a, b) => a + b, 0) / d.scores.length;
+      }, 0) / scored.length
+    );
+
+    res.json({
+      totalTopics:     topics.length,
+      totalSessions:   sessions.length,
+      overallAverage:  overallAvg,
+      weakAreas,
+      strongAreas,
+      recentSessions:  sessions.slice(-10).reverse(),
+      generatedAt:     new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[progress-report]', err.message);
+    res.status(500).json({ error: 'Could not generate report' });
+  }
+});
+// ── Progress Routes ──────────────────────────────
+// /progress, /progress-report, /due-reviews, /srs/:topic, /streak
 
 const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak, listStudents, getFullClassData, DEFAULT_STUDENT } = require('../agent/progressStore');
 const { toolImplementations } = require('../agent/tools');

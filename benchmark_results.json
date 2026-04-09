@@ -1,0 +1,624 @@
+{
+  "generated": "2026-04-09T22:24:02.387Z",
+  "target": "http://localhost:3000",
+  "total": 26,
+  "passed": 6,
+  "failed": 20,
+  "avgMs": 12684,
+  "results": [
+    {
+      "id": "health-progress",
+      "category": "Health checks",
+      "name": "GET /progress",
+      "method": "GET",
+      "path": "/progress",
+      "note": null,
+      "ms": 2,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "studentId": "default",
+        "totalTopicsStudied": 8,
+        "totalSessions": 9,
+        "topics": [
+          {
+            "name": "gravity",
+            "timesStudied": 2,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T21:52:28.613Z"
+          },
+          {
+            "name": "because the phone",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T12:30:48.220Z"
+          },
+          {
+            "name": "gravity is a",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T12:32:32.543Z"
+          },
+          {
+            "name": "yes its a",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T12:34:22.961Z"
+          },
+          {
+            "name": "a push comes",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T12:36:15.098Z"
+          },
+          {
+            "name": "who invented pi",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T19:28:49.377Z"
+          },
+          {
+            "name": "photosynthesis",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T21:53:54.092Z"
+          },
+          {
+            "name": "french revolution",
+            "timesStudied": 1,
+            "avgScore": null,
+            "lastStudied": "2026-04-09T21:56:08.988Z"
+          }
+        ],
+        "weakAreas": [
+          "gravity",
+          "because the phone",
+          "gravity is a",
+          "yes its a",
+          "a push comes",
+          "who invented pi",
+          "photosynthesis",
+          "french revolution"
+        ],
+        "strongAreas": [],
+        "recentTopics": [
+          "french revolution",
+          "photosynthesis",
+          "gravity",
+          "who invented pi",
+          "a push comes"
+        ],
+        "streak": {
+          "current": 1,
+          "longest": 1,
+          "lastStudied": "2026-04-09",
+          "studiedToday": true
+        },
+        "dueReviews": 0
+      },
+      "timestamp": "2026-04-09T22:10:09.298Z"
+    },
+    {
+      "id": "health-streak",
+      "category": "Health checks",
+      "name": "GET /streak",
+      "method": "GET",
+      "path": "/streak",
+      "note": null,
+      "ms": 7,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "current": 1,
+        "longest": 1,
+        "lastStudied": "2026-04-09",
+        "studiedToday": true
+      },
+      "timestamp": "2026-04-09T22:10:10.510Z"
+    },
+    {
+      "id": "health-due-reviews",
+      "category": "Health checks",
+      "name": "GET /due-reviews",
+      "method": "GET",
+      "path": "/due-reviews",
+      "note": null,
+      "ms": 6,
+      "status": 200,
+      "ok": true,
+      "valid": false,
+      "error": null,
+      "body": {
+        "reviews": []
+      },
+      "timestamp": "2026-04-09T22:10:11.718Z"
+    },
+    {
+      "id": "health-cache-stats",
+      "category": "Health checks",
+      "name": "GET /cache-stats",
+      "method": "GET",
+      "path": "/cache-stats",
+      "note": null,
+      "ms": 8,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "memEntries": 3,
+        "inFlight": 0,
+        "taxonomySize": 1206,
+        "trieTopics": 76,
+        "diskPath": "/Users/christyvarghese/Documents/studybuddy/data/cache.json",
+        "liveKeywords": 1223,
+        "pendingTopics": 0,
+        "learnedTopics": 10,
+        "topics": [
+          {
+            "key": "1192516c...",
+            "age": "1021s"
+          },
+          {
+            "key": "fd2d8792...",
+            "age": "987s"
+          },
+          {
+            "key": "87a7f1fe...",
+            "age": "894s"
+          }
+        ]
+      },
+      "timestamp": "2026-04-09T22:10:12.926Z"
+    },
+    {
+      "id": "health-topics-search",
+      "category": "Health checks",
+      "name": "GET /topics/search?q=photo",
+      "method": "GET",
+      "path": "/topics/search?q=photo",
+      "note": null,
+      "ms": 8,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "prefix": "photo",
+        "results": [
+          "photosynthesis"
+        ],
+        "count": 1
+      },
+      "timestamp": "2026-04-09T22:10:14.135Z"
+    },
+    {
+      "id": "health-session",
+      "category": "Health checks",
+      "name": "GET /session",
+      "method": "GET",
+      "path": "/session",
+      "note": null,
+      "ms": 5,
+      "status": 401,
+      "ok": false,
+      "valid": false,
+      "error": null,
+      "body": {
+        "authenticated": false
+      },
+      "timestamp": "2026-04-09T22:10:15.341Z"
+    },
+    {
+      "id": "health-pwa-status",
+      "category": "Health checks",
+      "name": "GET /pwa-status",
+      "method": "GET",
+      "path": "/pwa-status",
+      "note": null,
+      "ms": 16,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "pwaReady": true,
+        "serviceWorkerUrl": "/sw.js",
+        "manifestUrl": "/manifest.json",
+        "icons": {
+          "192": "/assets/icon-192.png",
+          "512": "/assets/icon-512.png",
+          "maskable": "/assets/icon-maskable.png"
+        },
+        "cacheVersion": "studybuddy-v2",
+        "timestamp": "2026-04-09T22:10:16.556Z",
+        "environment": "development",
+        "message": "PWA assets are ready. Service Worker can be registered."
+      },
+      "timestamp": "2026-04-09T22:10:16.557Z"
+    },
+    {
+      "id": "health-taxonomy",
+      "category": "Health checks",
+      "name": "GET /admin/taxonomy",
+      "method": "GET",
+      "path": "/admin/taxonomy",
+      "note": null,
+      "ms": 5,
+      "status": 200,
+      "ok": true,
+      "valid": true,
+      "error": null,
+      "body": {
+        "learned": [
+          {
+            "topic": "organic chemistry",
+            "subject": "chemistry",
+            "askCount": 0,
+            "keywords": 3,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:09:52.282Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "cellular respiration",
+            "subject": "biology",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:32:08.839Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "french revolution",
+            "subject": "history",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:32:08.843Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "trigonometry",
+            "subject": "mathematics",
+            "askCount": 0,
+            "keywords": 5,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:32:08.843Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "dna replication",
+            "subject": "biology",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:32:08.847Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "electric circuits",
+            "subject": "physics",
+            "askCount": 0,
+            "keywords": 5,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:32:08.847Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "photosynthesis",
+            "subject": "biology",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:37:24.528Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "newtons laws",
+            "subject": "physics",
+            "askCount": 0,
+            "keywords": 5,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:37:24.528Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "quadratic equations",
+            "subject": "mathematics",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:37:24.529Z",
+            "confidence": "high"
+          },
+          {
+            "topic": "world war ii",
+            "subject": "history",
+            "askCount": 0,
+            "keywords": 4,
+            "source": "manual",
+            "addedAt": "2026-04-08T22:37:24.530Z",
+            "confidence": "high"
+          }
+        ],
+        "pending": [],
+        "learnedCount": 10,
+        "pendingCount": 0,
+        "liveKeywords": 1223,
+        "threshold": 2
+      },
+      "timestamp": "2026-04-09T22:10:17.763Z"
+    },
+    {
+      "id": "estimate-beginner",
+      "category": "Estimate (no LLM)",
+      "name": "POST /estimate — beginner, no image",
+      "method": "POST",
+      "path": "/estimate",
+      "note": null,
+      "ms": 8,
+      "status": 200,
+      "ok": true,
+      "valid": false,
+      "error": null,
+      "body": {
+        "seconds": 15,
+        "label": "~15 seconds",
+        "complexity": "detailed"
+      },
+      "timestamp": "2026-04-09T22:10:18.973Z"
+    },
+    {
+      "id": "estimate-advanced",
+      "category": "Estimate (no LLM)",
+      "name": "POST /estimate — advanced, with image",
+      "method": "POST",
+      "path": "/estimate",
+      "note": null,
+      "ms": 4,
+      "status": 200,
+      "ok": true,
+      "valid": false,
+      "error": null,
+      "body": {
+        "seconds": 47,
+        "label": "about 50 seconds",
+        "complexity": "detailed"
+      },
+      "timestamp": "2026-04-09T22:10:20.180Z"
+    },
+    {
+      "id": "chat-beginner-simple",
+      "category": "Direct chat (/chat)",
+      "name": "POST /chat — beginner, simple topic",
+      "method": "POST",
+      "path": "/chat",
+      "note": null,
+      "ms": 63936,
+      "status": 200,
+      "ok": true,
+      "valid": null,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:11:25.317Z"
+    },
+    {
+      "id": "chat-intermediate-medium",
+      "category": "Direct chat (/chat)",
+      "name": "POST /chat — intermediate, medium topic",
+      "method": "POST",
+      "path": "/chat",
+      "note": null,
+      "ms": 109900,
+      "status": 200,
+      "ok": true,
+      "valid": false,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:13:16.475Z"
+    },
+    {
+      "id": "chat-advanced-complex",
+      "category": "Direct chat (/chat)",
+      "name": "POST /chat — advanced, complex topic",
+      "method": "POST",
+      "path": "/chat",
+      "note": null,
+      "ms": 92356,
+      "status": 200,
+      "ok": true,
+      "valid": false,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:14:50.448Z"
+    },
+    {
+      "id": "quiz-2q-beginner",
+      "category": "Quiz generation (/quiz)",
+      "name": "POST /quiz — 2 questions, beginner",
+      "method": "POST",
+      "path": "/quiz",
+      "note": null,
+      "ms": 26,
+      "status": 400,
+      "ok": false,
+      "valid": false,
+      "error": null,
+      "body": {
+        "error": "numQuestions must be between 3 and 10"
+      },
+      "timestamp": "2026-04-09T22:14:51.680Z"
+    },
+    {
+      "id": "quiz-3q-intermediate",
+      "category": "Quiz generation (/quiz)",
+      "name": "POST /quiz — 3 questions, intermediate",
+      "method": "POST",
+      "path": "/quiz",
+      "note": null,
+      "ms": 120092,
+      "status": 0,
+      "ok": false,
+      "valid": false,
+      "error": "timeout",
+      "body": null,
+      "timestamp": "2026-04-09T22:16:52.974Z"
+    },
+    {
+      "id": "quiz-5q-advanced",
+      "category": "Quiz generation (/quiz)",
+      "name": "POST /quiz — 5 questions, advanced",
+      "method": "POST",
+      "path": "/quiz",
+      "note": null,
+      "ms": 120078,
+      "status": 0,
+      "ok": false,
+      "valid": false,
+      "error": "timeout",
+      "body": null,
+      "timestamp": "2026-04-09T22:18:54.254Z"
+    },
+    {
+      "id": "agent-beginner-simple",
+      "category": "Agent mode (/agent)",
+      "name": "POST /agent — beginner, simple topic",
+      "method": "POST",
+      "path": "/agent",
+      "note": null,
+      "ms": 120133,
+      "status": 0,
+      "ok": false,
+      "valid": false,
+      "error": "timeout",
+      "body": null,
+      "timestamp": "2026-04-09T22:20:55.605Z"
+    },
+    {
+      "id": "agent-intermediate-medium",
+      "category": "Agent mode (/agent)",
+      "name": "POST /agent — intermediate, medium topic",
+      "method": "POST",
+      "path": "/agent",
+      "note": null,
+      "ms": 120041,
+      "status": 0,
+      "ok": false,
+      "valid": false,
+      "error": "timeout",
+      "body": null,
+      "timestamp": "2026-04-09T22:22:56.854Z"
+    },
+    {
+      "id": "agent-advanced-complex",
+      "category": "Agent mode (/agent)",
+      "name": "POST /agent — advanced, complex topic",
+      "method": "POST",
+      "path": "/agent",
+      "note": null,
+      "ms": 54621,
+      "status": 0,
+      "ok": false,
+      "valid": false,
+      "error": "socket hang up",
+      "body": null,
+      "timestamp": "2026-04-09T22:23:52.678Z"
+    },
+    {
+      "id": "agent-cache-hit",
+      "category": "Agent mode (/agent)",
+      "name": "POST /agent — repeat query (should cache hit)",
+      "method": "POST",
+      "path": "/agent",
+      "note": "Should be near-instant if cache is working correctly",
+      "ms": 42,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:53.942Z"
+    },
+    {
+      "id": "socratic-beginner",
+      "category": "Socratic mode (/socratic)",
+      "name": "POST /socratic — beginner",
+      "method": "POST",
+      "path": "/socratic",
+      "note": null,
+      "ms": 1,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:55.145Z"
+    },
+    {
+      "id": "socratic-advanced",
+      "category": "Socratic mode (/socratic)",
+      "name": "POST /socratic — advanced",
+      "method": "POST",
+      "path": "/socratic",
+      "note": null,
+      "ms": 13,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:56.359Z"
+    },
+    {
+      "id": "concept-map-simple",
+      "category": "Concept map (/concept-map)",
+      "name": "POST /concept-map — simple topic",
+      "method": "POST",
+      "path": "/concept-map",
+      "note": null,
+      "ms": 5,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:57.566Z"
+    },
+    {
+      "id": "concept-map-complex",
+      "category": "Concept map (/concept-map)",
+      "name": "POST /concept-map — complex topic",
+      "method": "POST",
+      "path": "/concept-map",
+      "note": null,
+      "ms": 3,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:58.771Z"
+    },
+    {
+      "id": "srs-update",
+      "category": "SRS & Progress",
+      "name": "PUT /srs/gravity — score update",
+      "method": "PUT",
+      "path": "/srs/gravity",
+      "note": null,
+      "ms": 4,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:23:59.976Z"
+    },
+    {
+      "id": "progress-report",
+      "category": "SRS & Progress",
+      "name": "GET /progress-report",
+      "method": "GET",
+      "path": "/progress-report",
+      "note": null,
+      "ms": 3,
+      "status": 0,
+      "error": null,
+      "body": null,
+      "timestamp": "2026-04-09T22:24:01.181Z"
+    }
+  ]
+}

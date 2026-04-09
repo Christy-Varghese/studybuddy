@@ -238,7 +238,15 @@ async function warmUpModels() {
   }
 }
 
-app.listen(3000, () => {
-  console.log('StudyBuddy running at http://localhost:3000');
-  warmUpModels();
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, async () => {
+  console.log(`\n  StudyBuddy server running at http://localhost:${PORT}`);
+  console.log(`  Mode: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`  Keep-alive: ${process.env.OLLAMA_KEEP_ALIVE || 'default'}\n`);
+
+  // Warm up the model immediately so first user request is fast
+  const { warmUpModels } = require('./lib/helpers');
+  await warmUpModels();
 });

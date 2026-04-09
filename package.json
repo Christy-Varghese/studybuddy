@@ -4,8 +4,12 @@
   "description": "A study buddy application",
   "main": "server.js",
   "scripts": {
-    "start": "NODE_ENV=production node server.js",
-    "dev": "NODE_ENV=development OLLAMA_KEEP_ALIVE=60m node server.js"
+    "dev": "OLLAMA_KEEP_ALIVE=60m NODE_ENV=development node server.js",
+    "start": "OLLAMA_KEEP_ALIVE=60m node server.js",
+    "benchmark": "node benchmark.js",
+    "benchmark:quick": "node benchmark.quick.js",
+    "benchmark:cache": "node benchmark.quick.js cache",
+    "benchmark:agent": "node benchmark.quick.js agent"
   },
   "keywords": [
     "study",

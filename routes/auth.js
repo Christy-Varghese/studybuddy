@@ -1,9 +1,17 @@
-// ── Auth Routes ──────────────────────────────────
-// PIN-based authentication with role assignment (student / teacher)
-// Uses express-session to persist login state across requests.
 
 const express = require('express');
 const router  = express.Router();
+
+// ── GET /session — Session status for health/benchmark ──
+router.get('/session', (req, res) => {
+  if (!req.session.role) {
+    return res.status(401).json({ authenticated: false });
+  }
+  res.json({ authenticated: true, role: req.session.role });
+});
+// ── Auth Routes ──────────────────────────────────
+// PIN-based authentication with role assignment (student / teacher)
+// Uses express-session to persist login state across requests.
 
 const STUDENT_PIN = process.env.STUDENT_PIN || '1234';
 const TEACHER_PIN = process.env.TEACHER_PIN || '9999';
