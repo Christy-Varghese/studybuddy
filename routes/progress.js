@@ -4,14 +4,20 @@
 const express = require('express');
 const router  = express.Router();
 
-const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak } = require('../agent/progressStore');
+const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak, listStudents, getFullClassData, DEFAULT_STUDENT } = require('../agent/progressStore');
 const { toolImplementations } = require('../agent/tools');
 const { flowTraces }          = require('../middleware/devTiming');
+
+// Helper: resolve studentId from session or query param
+function resolveStudent(req) {
+  return req.query.studentId || req.session?.studentId || DEFAULT_STUDENT;
+}
 
 // GET student's full progress summary
 router.get('/progress', (req, res) => {
   try {
-    res.json(getProgressSummary());
+    const studentId = resolveStudent(req);
+    res.json(getProgressSummary(studentId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -20,8 +26,9 @@ router.get('/progress', (req, res) => {
 // DELETE — reset all progress
 router.delete('/progress', (req, res) => {
   try {
-    clearProgress();
-    res.json({ success: true, message: 'Progress cleared' });
+    const studentId = resolveStudent(req);
+    clearProgress(studentId);
+    res.json({ success: true, message: `Progress cleared for ${studentId}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -65,7 +72,8 @@ router.post('/progress-report', async (req, res) => {
 // GET topics due for review today
 router.get('/due-reviews', (req, res) => {
   try {
-    res.json({ reviews: getDueReviews() });
+    const studentId = resolveStudent(req);
+    res.json({ reviews: getDueReviews(studentId) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -91,7 +99,8 @@ router.put('/srs/:topic', (req, res) => {
   }
 
   try {
-    const updated = updateSRS(topic, grade);
+    const studentId = resolveStudent(req);
+    const updated = updateSRS(topic, grade, studentId);
     if (!updated) return res.status(404).json({ error: 'Topic not found in progress' });
     res.json({ success: true, topic, srs: updated });
   } catch (err) {
@@ -102,7 +111,30 @@ router.put('/srs/:topic', (req, res) => {
 // GET learning streak
 router.get('/streak', (req, res) => {
   try {
-    res.json(getLearningStreak());
+    const studentId = resolveStudent(req);
+    res.json(getLearningStreak(studentId));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────
+// TEACHER / CLASS-WIDE ENDPOINTS
+// ─────────────────────────────────────────────────
+
+// GET all students (for teacher dropdown)
+router.get('/api/students', (req, res) => {
+  try {
+    res.json({ students: listStudents() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET full class data (all students, all topics, all sessions)
+router.get('/api/class-data', (req, res) => {
+  try {
+    res.json(getFullClassData());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -2,6 +2,7 @@ node_modules/
 uploads/
 data/progress.json
 data/cache.json
+.env
 # Taxonomy files: Uncomment below to accumulate learned taxonomy across deployments
 # Commented: fresh start on each deploy (taxonomy resets)
 # Uncommented: persistent learning (recommended for production)

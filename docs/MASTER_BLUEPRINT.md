@@ -13,6 +13,7 @@
 3. [System Fix Log](#3-system-fix-log)
 4. [Developer Reference](#4-developer-reference)
 
+
 ---
 
 # 1. Project Architecture
@@ -36,13 +37,14 @@ StudyBuddy is a fully local, AI-powered tutoring web app that runs entirely on t
 studybuddy/
 ├── server.js                    ← Express entry point (wires routes + middleware)
 ├── package.json                 ← Dependencies & scripts
-├── routes/                      ← API route handlers (8 files)
+├── routes/                      ← API route handlers (9 files)
+│   ├── auth.js                  ← /auth/login, /auth/logout, /auth/me (PIN auth)
 │   ├── chat.js                  ← /chat, /chat-with-image, /estimate (SSE streaming)
 │   ├── quiz.js                  ← /quiz
 │   ├── agent.js                 ← /agent (full agent pipeline)
 │   ├── socratic.js              ← /socratic (guided discovery dialogue)
 │   ├── conceptMap.js            ← /concept-map
-│   ├── progress.js              ← /progress, /progress-report, /due-reviews, /srs, /streak
+│   ├── progress.js              ← /progress, /progress-report, /due-reviews, /srs, /streak, /api/students, /api/class-data
 │   ├── admin.js                 ← /admin/* routes, bulk CSV/Excel upload
 │   └── dev.js                   ← /dev/metrics, /dev/flow-traces, /cache-stats, /topics/search
 ├── middleware/                   ← Express middleware (3 files)
@@ -571,6 +573,103 @@ The UI uses a layered animation architecture with CSS custom properties for timi
 | `--duration-slow` | `500ms` | Modal open/close, skeleton fade |
 
 All animations respect `prefers-reduced-motion: reduce` by collapsing to instant transitions.
+
+---
+
+# 5. Teacher Dashboard Module (Phase A & B)
+
+> **Added:** Phase 5 of the hackathon build  
+> **Goal:** Give educators a read-only, data-rich dashboard that showcases student engagement, at-risk detection, and SM-2 spaced-repetition analytics.
+
+## 5.1 Authentication System
+
+PIN-based authentication using `express-session` and `dotenv`.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Auth routes | `routes/auth.js` | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
+| Login page | `public/login.html` | Standalone HTML with PIN entry, role feedback |
+| Session config | `server.js` | `express-session` middleware (24h cookie, httpOnly, sameSite) |
+| Env vars | `.env` | `STUDENT_PIN`, `TEACHER_PIN`, `SESSION_SECRET` |
+| Template | `.env.example` | Repo-safe template |
+
+**Roles:**
+- **Student (PIN 1234)** — enters name at login → generates `studentId` from name
+- **Teacher (PIN 9999)** — redirected to `/teacher.html`
+
+**Middleware exports:** `requireTeacher`, `requireAuth` — used to protect routes.
+
+## 5.2 Multi-Student Data Schema
+
+All progress data lives in a single flat JSON file (`data/progress.json`).  
+The schema was migrated from single-student to multi-student with backward compatibility.
+
+```json
+{
+  "sessions": [
+    { "studentId": "alex", "topic": "gravity", "level": "intermediate", "quizScore": 85, "timestamp": "..." }
+  ],
+  "topics": {
+    "alex": {
+      "gravity": { "timesStudied": 3, "scores": [85, 90], "level": "intermediate", "lastStudied": "...", "srs": { "repetitions": 2, "easeFactor": 2.6, "interval": 6, "nextReview": "..." } }
+    }
+  },
+  "students": {
+    "alex": { "name": "Alex", "firstSeen": "...", "lastSeen": "..." }
+  }
+}
+```
+
+**Migration:** On first read, legacy data (no `students` key, topics keyed by topic name) is automatically wrapped into `topics.default` and tagged with `studentId: "default"`.
+
+## 5.3 API Endpoints (Teacher)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/students` | Any | List all student profiles |
+| GET | `/api/class-data` | Any | Full class data (all students, topics, sessions, per-student summaries) |
+| GET | `/progress?studentId=X` | Any | Per-student progress summary |
+| GET | `/due-reviews?studentId=X` | Any | Per-student SRS due reviews |
+| GET | `/streak?studentId=X` | Any | Per-student learning streak |
+
+## 5.4 Teacher Dashboard (`public/teacher.html`)
+
+Standalone HTML with embedded CSS & JS. Uses **Chart.js 4.x** from CDN.
+
+### Views
+
+| View | Toggle | Description |
+|------|--------|-------------|
+| **Class Overview** | Default | Aggregate stats, 4 judge panels, charts, full SRS table |
+| **Individual Student** | Dropdown picker | Per-student scores, timeline, weak/strong areas, SRS schedule |
+
+### Judge Priority Panels
+
+| # | Panel | Metric | Trigger |
+|---|-------|--------|---------|
+| 1 | 🚨 At-Risk Students | Topics with avg score < 60% | Any student with declining/failing scores |
+| 2 | 🤔 Collective Confusion | Class avg per topic < 60% | Topic-level class struggle |
+| 3 | 📉 Engagement Drop-off | Days since last activity ≥ 3 | Student inactivity detection |
+| 4 | 🔍 Curiosity Tracking | Total study counts per topic | Most-explored subjects across class |
+
+### Charts
+
+- **Topic Performance** — Bar chart of class-average scores per topic (color-coded: red < 60, yellow < 75, green ≥ 75)
+- **Sessions Over Time** — Line chart of daily session counts (area filled)
+- **Individual Scores** — Bar chart per student (individual view)
+- **Individual Timeline** — Line chart per student (individual view)
+
+### SM-2 Data Table
+
+Full sortable table showing: Student → Topic → Avg Score → Times Studied → Last Studied.
+
+## 5.5 Route Protection
+
+```
+GET /teacher.html → requireTeacher middleware → redirect /login.html if not teacher
+```
+
+The middleware is mounted **before** `express.static` so the protection applies even for the static file.
 
 ---
 

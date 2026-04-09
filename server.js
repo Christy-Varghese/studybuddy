@@ -1,7 +1,10 @@
 // ── StudyBuddy — Server Entry Point ──────────────
 // Wires together middleware, routes, and starts the Express server.
 
+require('dotenv').config();
+
 const express    = require('express');
+const session    = require('express-session');
 const compression = require('compression');
 const path       = require('path');
 const fs         = require('fs');
@@ -12,6 +15,7 @@ const { pwaMimeMiddleware }            = require('./middleware/pwa');
 const { multerErrorHandler }           = require('./middleware/upload');
 
 // ── Routes ──
+const { router: authRoutes, requireTeacher } = require('./routes/auth');
 const chatRoutes       = require('./routes/chat');
 const quizRoutes       = require('./routes/quiz');
 const agentRoutes      = require('./routes/agent');
@@ -35,6 +39,22 @@ app.use(compression({
 }));
 
 app.use(express.json());
+
+// ── Session middleware (PIN auth for student/teacher roles) ──
+app.use(session({
+  secret:            process.env.SESSION_SECRET || 'studybuddy-dev-secret',
+  resave:            false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge:   24 * 60 * 60 * 1000,   // 24 hours
+    httpOnly: true,
+    secure:   false,                   // set true behind HTTPS in production
+    sameSite: 'lax'
+  }
+}));
+
+// ── Auth routes (login, logout, me) — must be before static files ──
+app.use(authRoutes);
 
 // ── Dev timing middleware (tracks request timing in dev mode) ──
 app.use(devTimingMiddleware);
@@ -85,6 +105,11 @@ if (IS_DEV) {
 
 // ── PWA middleware (MIME types and cache headers) ──
 app.use(pwaMimeMiddleware);
+
+// ── Protect teacher dashboard — must be before static file serving ──
+app.get('/teacher.html', requireTeacher, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'teacher.html'));
+});
 
 // ── Static files ──
 app.use(express.static('public'));
