@@ -1,6 +1,9 @@
 const fs   = require('fs');
 const path = require('path');
+const EventEmitter = require('events');
 
+// The module itself is an EventEmitter so server.js can listen for changes
+const emitter = new EventEmitter();
 const DATA_DIR   = path.join(__dirname, '..', 'data');
 const STORE_PATH = path.join(DATA_DIR, 'progress.json');
 
@@ -74,6 +77,8 @@ function readStore() {
 function writeStore(data) {
   ensureStore();
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
+  // Notify SSE listeners that data changed
+  emitter.emit('data_updated', { ts: Date.now() });
 }
 
 // Ensure a student profile exists in the store
@@ -387,8 +392,12 @@ module.exports = {
   updateSRS,
   getDueReviews,
   getLearningStreak,
-  // New multi-student / teacher helpers
+  // Multi-student / teacher helpers
   listStudents,
   getFullClassData,
-  DEFAULT_STUDENT
+  DEFAULT_STUDENT,
+  // EventEmitter delegation for SSE
+  on:   (...args) => emitter.on(...args),
+  off:  (...args) => emitter.off(...args),
+  emit: (...args) => emitter.emit(...args),
 };

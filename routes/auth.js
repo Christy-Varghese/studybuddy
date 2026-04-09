@@ -22,7 +22,7 @@ router.post('/auth/login', (req, res) => {
     req.session.role = 'teacher';
     req.session.studentId = null;
     console.log(`🔑 [auth] Teacher logged in`);
-    return res.json({ success: true, role: 'teacher', redirect: '/teacher.html' });
+    return res.json({ success: true, role: 'teacher', redirect: '/teacher' });
   }
 
   if (pinStr === STUDENT_PIN) {
@@ -36,7 +36,7 @@ router.post('/auth/login', (req, res) => {
     req.session.studentId = id;
     req.session.studentName = name || id;
     console.log(`🔑 [auth] Student logged in: ${req.session.studentName} (${id})`);
-    return res.json({ success: true, role: 'student', studentId: id, redirect: '/' });
+    return res.json({ success: true, role: 'student', studentId: id, redirect: '/app' });
   }
 
   return res.status(401).json({ error: 'Invalid PIN' });
@@ -68,7 +68,7 @@ function requireTeacher(req, res, next) {
 
   // For HTML page requests, redirect to login
   if (req.accepts('html')) {
-    return res.redirect('/login.html');
+    return res.redirect('/login');
   }
   // For API requests, return 403
   return res.status(403).json({ error: 'Teacher access required' });
@@ -79,7 +79,7 @@ function requireAuth(req, res, next) {
   if (req.session && req.session.role) return next();
 
   if (req.accepts('html')) {
-    return res.redirect('/login.html');
+    return res.redirect('/login');
   }
   return res.status(401).json({ error: 'Authentication required' });
 }

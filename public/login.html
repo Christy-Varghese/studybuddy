@@ -229,8 +229,8 @@
   // Check if already authenticated
   fetch('/auth/me').then(r => r.json()).then(data => {
     if (data.authenticated) {
-      if (data.role === 'teacher') window.location.href = '/teacher.html';
-      else window.location.href = '/';
+      if (data.role === 'teacher') window.location.href = '/teacher';
+      else window.location.href = '/app';
     }
   }).catch(() => {});
 </script>
