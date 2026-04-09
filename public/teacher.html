@@ -310,7 +310,8 @@ async function fetchClassData() {
 }
 
 async function refreshData() {
-  document.getElementById('loadingState').style.display = 'block';
+  const el = document.getElementById('loadingState');
+  if (el) el.style.display = 'block';
   await fetchClassData();
   populateStudentDropdown();
   render();
@@ -493,7 +494,7 @@ function render() {
   destroyCharts();
   const dash = document.getElementById('dashboard');
   const loading = document.getElementById('loadingState');
-  loading.style.display = 'none';
+  if (loading) loading.style.display = 'none';
 
   if (!classData || !classData.students) {
     dash.innerHTML = '<div class="loading">⚠️ No class data available. Students need to log in and study first.</div>';
