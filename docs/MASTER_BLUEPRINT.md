@@ -329,6 +329,7 @@ Visible only in `NODE_ENV=development`. Injected automatically via middleware.
 **How it works:** Gemma 4 natively supports 140+ languages. The language selector injects a high-priority directive into the system prompt — no translation API, no extra model, no additional latency. The same Ollama call that would take 10 seconds in English takes 10 seconds in Hindi, Arabic, or Mandarin.
 
 ### UI
+A new Blur & Render pipeline prevents raw JSON or incomplete tokens from ever appearing in the chat UI. When a message is sent, a `.thinking-overlay` (frosted glass blur with animated bouncing dots) covers the bot bubble. All streamed tokens are buffered in memory, never shown. Only when the final, valid JSON is received and parsed does the overlay fade out and the formatted response (steps, answer, emojis) appear. This ensures students never see malformed JSON, partial output, or model artifacts. See `public/styles/thinking.css`, `public/scripts/agent.js`, and `public/scripts/render.js` for implementation.
 
 A `🌐` language selector in the app header (inside a `.status-badge` pill). Persists to `localStorage` so the student's choice survives page reloads.
 
@@ -405,6 +406,7 @@ A consolidated ledger of every significant bug fix applied to the codebase, orde
 | 23 | No responsive design for mobile | All pages lacked comprehensive mobile breakpoints | Added multi-breakpoint responsive CSS (480px, 360px, landscape) to all pages + `pwa.css` | `public/styles/pwa.css`, `public/teacher.html`, `public/taxonomy-admin.html`, `public/login.html`, `public/offline.html` |
 | 24 | SSE streaming broken — no chat response displayed | `compression()` middleware buffered SSE `text/event-stream` responses, preventing real-time token delivery | Excluded `/chat` and `/api/events` from compression via `filter` function | `server.js` |
 | 25 | Phase 5: Localisation & Digital Equity — Native Language Selector | Students in non-English-speaking regions had no way to receive explanations in their native language | Injected language-specific `CRITICAL` directive into every system prompt (chat, vision, agent, socratic, tools). Gemma 4 handles native inference — zero extra infrastructure or latency | `lib/helpers.js`, `agent/tools.js`, `agent/agentLoop.js`, `routes/chat.js`, `routes/agent.js`, `routes/socratic.js`, `public/index.html`, `public/scripts/state.js`, `public/scripts/init.js`, `public/scripts/agent.js`, `public/scripts/socratic.js` |
+| 26 | Raw JSON exposure in chat UI | SSE streaming appended tokens directly to the DOM, exposing incomplete or malformed JSON to users | Implemented Blur & Render pipeline: `.thinking-overlay` with animated dots and background blur hides all content until the final JSON is parsed and rendered. No raw JSON or tokens ever appear in the UI. | `public/styles/thinking.css`, `public/scripts/agent.js`, `public/scripts/render.js`, `public/scripts/chat.js` |
 
 ---
 

@@ -188,10 +188,33 @@ async function sendToChat(message) {
         throw new Error(errorText);
       }
 
-      // Create a live-streaming bot bubble
-      const streamBubble = addBubble('', 'bot', true);
-      streamBubble.classList.add('streaming');
+      // ── Blur & Render Pipeline ──
+      // Create a "thinking-host" bubble with a blurred overlay.
+      // Stream tokens are buffered silently — NO raw text shown.
+      // Only when the final JSON arrives do we fade the overlay and render rich cards.
+      const thinkingBubble = document.createElement('div');
+      thinkingBubble.className = 'bubble bot thinking-host';
 
+      // Thinking overlay (blurred glass + bouncing dots)
+      const overlay = document.createElement('div');
+      overlay.className = 'thinking-overlay';
+      overlay.innerHTML = `
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="thinking-label">Thinking</div>
+      `;
+      thinkingBubble.appendChild(overlay);
+
+      // Hidden content container — will receive the final rendered response
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'content-hidden';
+      thinkingBubble.appendChild(contentDiv);
+
+      chatEl.appendChild(thinkingBubble);
+      scrollToBottom();
+
+      // SSE reader — buffer tokens silently, never display raw text
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let sseBuffer = '';
@@ -214,17 +237,18 @@ async function sendToChat(message) {
             if (evt.error) {
               // Server-side error during stream
               hideFactsLoading();
-              streamBubble.textContent = '❌ Error: ' + evt.error;
-              streamBubble.classList.remove('streaming');
+              overlay.classList.add('fade-out');
+              contentDiv.classList.add('revealed');
+              contentDiv.classList.remove('content-hidden');
+              contentDiv.innerHTML = '❌ Error: ' + escapeHtml(evt.error);
               throw new Error(evt.error);
             }
             if (evt.done) {
               // Final event with structured data
               finalData = evt;
             } else if (evt.token) {
+              // Buffer silently — do NOT render to DOM
               fullStreamedText += evt.token;
-              streamBubble.textContent = fullStreamedText;
-              scrollToBottom();
             }
           } catch (parseErr) {
             if (parseErr.message && !parseErr.message.startsWith('❌')) {
@@ -238,26 +262,19 @@ async function sendToChat(message) {
       hideFactsLoading();
       if (estimateBadge) estimateBadge.triggerShrinkFade();
       if (countdownInterval) clearInterval(countdownInterval);
-      streamBubble.classList.remove('streaming');
 
-      // If server sent structured JSON, replace the raw-text bubble with rich cards
+      // ── The Reveal: fade overlay, render structured content ──
+      thinkingBubble.remove(); // Remove the thinking placeholder
+
       if (finalData && finalData.structured && finalData.structured.steps) {
-        streamBubble.remove(); // Remove raw text bubble
-        const converted = {
-          intro: convertLatexToReadable(finalData.structured.intro),
-          steps: (finalData.structured.steps || []).map(step => ({
-            title: convertLatexToReadable(step.title),
-            text: convertLatexToReadable(step.text),
-            emoji: step.emoji
-          })),
-          answer: convertLatexToReadable(finalData.structured.answer),
-          followup: convertLatexToReadable(finalData.structured.followup)
-        };
-        renderStructuredResponse(converted);
+        // Structured JSON → rich card rendering via renderResponse
+        renderResponse(finalData.structured);
       } else if (finalData && finalData.reply) {
-        // Use the clean reply (think-stripped) for the fallback render
-        streamBubble.remove();
+        // Fallback: server sent a reply but no structured steps
         renderFormattedFallback(finalData.reply);
+      } else if (fullStreamedText) {
+        // Last resort: render whatever was streamed as formatted text
+        renderFormattedFallback(fullStreamedText);
       }
 
       const replyText = finalData ? (finalData.reply || fullStreamedText) : fullStreamedText;

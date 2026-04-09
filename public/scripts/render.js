@@ -1,3 +1,34 @@
+/**
+ * renderResponse — Blur & Render pipeline entrypoint
+ * Accepts a structured JSON object (steps, answer, etc) and renders cards/answer block.
+ * Handles missing/partial data gracefully. Uses theme colors.
+ */
+function renderResponse(jsonData) {
+  if (!jsonData || typeof jsonData !== 'object') {
+    renderFormattedFallback('⚠️ No response data.');
+    return;
+  }
+  // Defensive: allow both {steps, answer, ...} and {structured: {...}}
+  const s = jsonData.structured && jsonData.structured.steps ? jsonData.structured : jsonData;
+  if (s.steps && Array.isArray(s.steps)) {
+    const converted = {
+      intro: convertLatexToReadable(s.intro || ''),
+      steps: s.steps.map(step => ({
+        title: convertLatexToReadable(step.title || ''),
+        text: convertLatexToReadable(step.text || ''),
+        emoji: step.emoji || ''
+      })),
+      answer: convertLatexToReadable(s.answer || ''),
+      followup: convertLatexToReadable(s.followup || '')
+    };
+    renderStructuredResponse(converted);
+  } else if (s.answer) {
+    // No steps, but has an answer — show as a single answer card
+    renderStructuredResponse({ intro: '', steps: [], answer: convertLatexToReadable(s.answer), followup: '' });
+  } else {
+    renderFormattedFallback('⚠️ No structured response.');
+  }
+}
 /* LaTeX conversion, structured response rendering, vision rendering, fallback rendering */
 // ============ LaTeX to Readable Conversion ============
 function convertLatexToReadable(text) {

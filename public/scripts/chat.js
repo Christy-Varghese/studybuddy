@@ -17,9 +17,6 @@ async function sendMessage() {
   }
   // If there's an image, sendToChat will handle displaying it
 
-  const thinkingBubble = addBubble('Thinking...', 'thinking');
-  thinkingBubble.remove();
-
   if (socraticMode) {
     await sendToSocratic(message);
   } else if (agentMode) {
