@@ -1,5 +1,16 @@
 const { saveProgress, getProgressSummary, getDueReviews, getLearningStreak } = require('./progressStore');
 const { smartGet, smartSet, registerInFlight } = require('./smartCache');
+const {
+  parseTutorResponse,
+  parseQuizResponse,
+  parseConceptMapResponse,
+  parseNextTopicResponse,
+  parseSocraticResponse,
+  parseEvaluationReportResponse,
+} = require('../lib/parseJSON');
+const { ollamaOptions } = require('../lib/helpers');
+
+const enforceJSON = '\n\nIMPORTANT: Return ONLY raw JSON. No markdown. No backticks. Start with { end with }.';
 
 // ─────────────────────────────────────────────
 // LANGUAGE HELPER
@@ -171,8 +182,8 @@ Rules:
 Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not show your scratchpad work; move directly to providing the structured JSON.`;
 
     const userMsg = context
-      ? `Explain "${topic}" to a ${level} student. Extra context: ${context}`
-      : `Explain "${topic}" to a ${level} student.`;
+      ? `Explain "${topic}" to a ${level} student. Extra context: ${context}${enforceJSON}`
+      : `Explain "${topic}" to a ${level} student.${enforceJSON}`;
 
     const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
       method:  'POST',
@@ -184,7 +195,7 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
           { role: 'user',   content: userMsg }
         ],
         stream: false,
-        options: { num_predict: 500, num_ctx: 4096, temperature: 0.7 },
+        options: { ...ollamaOptions('json'), num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
     });
@@ -192,13 +203,9 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
     const data    = await response.json();
     const rawText = data.message.content;
 
-    let explanation = null;
-    try {
-      const cleaned = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
-      explanation   = JSON.parse(cleaned);
-    } catch {
-      explanation = { intro: rawText, steps: [], answer: '', followup: '' };
-    }
+    // Strip <think> blocks and parse with robust parser
+    const cleaned = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const explanation = parseTutorResponse(cleaned);
 
     const result = { success: true, explanation, topic, level, _ms: fetchMs };
     smartSet('explain', topic, level, result);  // store in 4-layer cache
@@ -237,10 +244,10 @@ Format:
         model:    'gemma4:e4b',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.` }
+          { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.${enforceJSON}` }
         ],
         stream: false,
-        options: { num_predict: 500, num_ctx: 4096, temperature: 0.8 },
+        options: { ...ollamaOptions('quiz'), num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
     });
@@ -248,13 +255,15 @@ Format:
     const data    = await response.json();
     const rawText = data.message.content;
 
-    try {
-      const cleaned   = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
-      const questions = JSON.parse(cleaned);
+    // Strip <think> blocks and parse with robust parser
+    const cleaned   = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const questions = parseQuizResponse(cleaned);
+
+    if (questions.length > 0) {
       const result = { success: true, questions, topic, numQuestions: questions.length, _ms: fetchMs };
       smartSet('quiz', `${topic}::${n}`, level, result);
       return result;
-    } catch {
+    } else {
       const result = { success: false, error: 'Quiz generation failed', questions: [], _ms: fetchMs };
       smartSet('quiz', `${topic}::${n}`, level, result);
       return result;
@@ -303,10 +312,10 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
       model:    'gemma4:e4b',
       messages: [
         { role: 'system', content: `${langPrefix()}You are a curriculum advisor. Based on the student's progress, suggest the SINGLE most beneficial next topic to study. Respond ONLY with valid JSON: { "nextTopic": "topic name", "reason": "one sentence why", "relatedTo": "how it connects to what they just studied" }` },
-        { role: 'user',   content: context }
+        { role: 'user',   content: `${context}${enforceJSON}` }
       ],
       stream: false,
-      options: { num_predict: 500, num_ctx: 4096 },
+      options: { ...ollamaOptions('fast'), num_ctx: 4096 },
       speculative_model: 'gemma2:2b'
     })
   });
@@ -314,12 +323,17 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
   const data    = await response.json();
   const rawText = data.message.content;
 
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i,'').replace(/```\s*$/i,'').trim();
-    return { success: true, ...JSON.parse(cleaned), _ms: fetchMs };
-  } catch {
-    return { success: true, nextTopic: 'Review previous topics', reason: 'Consolidate before moving forward', relatedTo: currentTopic, _ms: fetchMs };
-  }
+  // Strip <think> blocks and parse with robust parser
+  const cleaned   = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  const nextTopic = parseNextTopicResponse(cleaned);
+
+  return {
+    success: true,
+    nextTopic: nextTopic.nextTopic || 'Review previous topics',
+    reason:    nextTopic.reason    || 'Consolidate before moving forward',
+    relatedTo: nextTopic.relatedTo || currentTopic,
+    _ms: fetchMs
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -369,10 +383,10 @@ Respond ONLY with valid JSON (no markdown fences):
       model:    FAST_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userMsg }
+        { role: 'user',   content: `${userMsg}${enforceJSON}` }
       ],
       stream: false,
-      options: { num_predict: isFinalTurn ? 500 : 300, num_ctx: 4096, temperature: 0.8 },
+      options: { ...ollamaOptions(isFinalTurn ? 'json' : 'fast'), num_ctx: 4096 },
       speculative_model: 'gemma2:2b'
     })
   });
@@ -380,24 +394,22 @@ Respond ONLY with valid JSON (no markdown fences):
   const data    = await response.json();
   const rawText = data.message.content;
 
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed = JSON.parse(cleaned);
-    return { success: true, ...parsed, topic, turn, isFinalTurn, _ms: fetchMs };
-  } catch {
-    return {
-      success:         true,
-      acknowledgement: '',
-      question:        rawText.trim(),
-      hint:            '',
-      isNearAnswer:    turn >= 4,
-      summary:         '',
-      topic,
-      turn,
-      isFinalTurn,
-      _ms: fetchMs
-    };
-  }
+  // Strip <think> blocks and parse with robust Socratic parser
+  const cleaned = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  const parsed  = parseSocraticResponse(cleaned);
+
+  return {
+    success:         true,
+    acknowledgement: parsed.acknowledgement,
+    question:        parsed.question,
+    hint:            parsed.hint,
+    isNearAnswer:    parsed.isNearAnswer || turn >= 4,
+    summary:         parsed.summary,
+    topic,
+    turn,
+    isFinalTurn,
+    _ms: fetchMs
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -435,10 +447,10 @@ Rules:
       model:    FAST_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: `Generate a concept map for "${topic}" at ${level} level.` }
+        { role: 'user',   content: `Generate a concept map for "${topic}" at ${level} level.${enforceJSON}` }
       ],
       stream: false,
-      options: { num_predict: 600, num_ctx: 4096, temperature: 0.3 },
+      options: { ...ollamaOptions('json'), num_ctx: 4096 },
       speculative_model: 'gemma2:2b'
     })
   });
@@ -446,11 +458,13 @@ Rules:
   const data    = await response.json();
   const rawText = data.message.content;
 
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed  = JSON.parse(cleaned);
-    return { success: true, ...parsed, topic, level, _ms: fetchMs };
-  } catch {
+  // Strip <think> blocks and parse with robust concept map parser
+  const cleaned = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  const { central, nodes, edges } = parseConceptMapResponse(cleaned);
+
+  if (nodes.length > 0) {
+    return { success: true, central, nodes, edges, topic, level, _ms: fetchMs };
+  } else {
     return { success: false, error: 'Concept map generation failed', topic, level, _ms: fetchMs };
   }
 }
@@ -537,10 +551,10 @@ RESPOND ONLY with valid JSON (no markdown fences, no extra text):
       model:    FAST_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user',   content: 'Generate the Dynamic Progress Evaluation Report based on the data provided.' }
+        { role: 'user',   content: `Generate the Dynamic Progress Evaluation Report based on the data provided.${enforceJSON}` }
       ],
       stream: false,
-      options: { num_predict: 600, num_ctx: 4096, temperature: 0.6 },
+      options: { ...ollamaOptions('long'), num_ctx: 4096 },
       speculative_model: 'gemma2:2b'
     })
   });
@@ -548,21 +562,11 @@ RESPOND ONLY with valid JSON (no markdown fences, no extra text):
   const data    = await response.json();
   const rawText = data.message.content;
 
-  try {
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed  = JSON.parse(cleaned);
-    return { success: true, ...parsed, _ms: fetchMs };
-  } catch {
-    return {
-      success:           false,
-      narrative:         rawText.trim(),
-      crossPollination:  null,
-      vocabularyHeatmap: '',
-      bigDomino:         null,
-      microMission:      null,
-      _ms: fetchMs
-    };
-  }
+  // Strip <think> blocks and parse with robust evaluation report parser
+  const cleaned = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  const parsed  = parseEvaluationReportResponse(cleaned);
+
+  return { success: true, ...parsed, _ms: fetchMs };
 }
 
 // Map tool name strings to their implementation functions

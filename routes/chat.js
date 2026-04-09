@@ -6,7 +6,8 @@ const fs      = require('fs');
 const sharp   = require('sharp');
 const router  = express.Router();
 
-const { buildSystemPrompt, estimateResponseTime } = require('../lib/helpers');
+const { buildSystemPrompt, estimateResponseTime, ollamaOptions } = require('../lib/helpers');
+const { parseTutorResponse } = require('../lib/parseJSON');
 const { upload }       = require('../middleware/upload');
 const { flowTraces }   = require('../middleware/devTiming');
 
@@ -54,7 +55,7 @@ router.post('/chat', async (req, res) => {
         model: 'gemma4:e4b',
         messages: messages,
         stream: true,
-        options: { num_predict: 500, num_ctx: 4096 },
+        options: { ...ollamaOptions('json'), num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
     });
@@ -132,40 +133,13 @@ router.post('/chat', async (req, res) => {
     // Strip <think> blocks from full reply for structured parse
     let rawReply = fullReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-    // Attempt to parse as structured JSON
-    let structured = null;
-    try {
-      let cleaned = rawReply;
+    // Parse structured response using robust parser (5 repair strategies)
+    const structured = parseTutorResponse(rawReply);
 
-      // 1. Strip markdown code fences
-      cleaned = cleaned
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-
-      // 3. Try direct parse first
-      try {
-        structured = JSON.parse(cleaned);
-      } catch (_) {
-        // 4. Extract the first JSON object {...} from the text
-        const objMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (objMatch) {
-          // Repair trailing commas before } or ]
-          let candidate = objMatch[0].replace(/,(\s*[\]\}])/g, '$1');
-          structured = JSON.parse(candidate);
-        }
-      }
-
-      // 5. Validate it has the expected shape (intro/steps/answer)
-      if (structured && !structured.steps) {
-        structured = null;
-      }
-    } catch (e) {
-      console.warn('[/chat] JSON parse failed, using plaintext fallback:', e.message);
-      structured = null;
+    if (structured._parseMethod === 'plaintext_fallback') {
+      console.warn('[/chat] parseTutorResponse used plaintext fallback');
     }
-    mark('Parse structured JSON', structured ? 'success' : 'fallback to plain text');
+    mark('Parse structured JSON', `method=${structured._parseMethod}`);
 
     // Send final SSE event with structured data + raw reply, then close
     res.write(`data: ${JSON.stringify({ done: true, reply: rawReply, structured })}\n\n`);
@@ -297,7 +271,7 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
         model: 'gemma4:e4b',
         messages: messages,
         stream: false,
-        options: { num_predict: 1024, num_ctx: 4096, temperature: 0.3 }
+        options: { ...ollamaOptions('vision'), num_ctx: 4096 }
         // NOTE: No speculative_model here — draft models are text-only
         //       and can't process vision/image inputs.
       })
@@ -318,38 +292,20 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
     // Strip <think>…</think> reasoning blocks before anything else
     rawReply = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-    // Attempt to parse as structured vision JSON
+    // Parse vision response using robust parser (5 repair strategies)
+    const { parseJSON } = require('../lib/parseJSON');
+    const { data: visionParsed, method: visionMethod } = parseJSON(rawReply, null);
     let structured = null;
     let isVisionResponse = false;
-    
-    try {
-      // Strip <think>…</think> reasoning blocks (Gemma thinking mode)
-      let cleaned = rawReply.replace(/<think>[\s\S]*?<\/think>/gi, '');
 
-      // Strip any accidental markdown code fences Gemma might add
-      cleaned = cleaned
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-
-      // Try direct parse; if that fails, extract the first JSON object
-      try {
-        structured = JSON.parse(cleaned);
-      } catch (_) {
-        const objMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (objMatch) {
-          structured = JSON.parse(objMatch[0].replace(/,(\s*[\]\}])/g, '$1'));
-        }
-      }
-      
-      // Check if it's the new vision format
-      if (structured && structured.visual_summary && structured.extracted_data) {
-        isVisionResponse = true;
-      }
-    } catch (e) {
-      // Gemma failed to return valid JSON
-      // Construct a vision-compatible fallback from raw text
+    if (visionParsed && typeof visionParsed === 'object' && visionParsed.visual_summary && visionParsed.extracted_data) {
+      structured = visionParsed;
+      isVisionResponse = true;
+    } else if (visionParsed && typeof visionParsed === 'object') {
+      // Parsed as JSON but not vision format — use as-is
+      structured = visionParsed;
+    } else {
+      // All parse attempts failed — build a vision-compatible fallback
       if (rawReply && rawReply.trim().length > 0) {
         structured = {
           visual_summary: 'Image analyzed - see details below',
@@ -363,9 +319,11 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
           confidence: 'low'
         };
         isVisionResponse = true;
-      } else {
-        structured = null;
       }
+    }
+
+    if (visionMethod === 'plaintext_fallback') {
+      console.warn('[/chat-with-image] parseJSON used plaintext fallback');
     }
 
     // Clean up uploaded temp file asynchronously so any cleanup failure

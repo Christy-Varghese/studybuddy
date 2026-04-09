@@ -259,6 +259,32 @@
       `;
     }
 
+    // Parse metrics section (if available)
+    if (data.parseMetrics) {
+      const pm = data.parseMetrics;
+      const total = Object.values(pm).reduce((a, b) => a + b, 0) || 1;
+      html += `
+        <div style="border-top:1px solid #21262D;"></div>
+        <div style="font-size:9px;color:#484F58;padding:4px 10px 2px;
+                    text-transform:uppercase;letter-spacing:.08em;">json parse methods</div>
+        <div style="padding:4px 10px 6px;font-size:10px;font-family:monospace;
+                    display:flex;flex-direction:column;gap:2px;">
+          ${Object.entries(pm).map(([method, count]) => {
+            const pct   = Math.round((count / total) * 100);
+            const color = method === 'direct'             ? '#3FB950' :
+                          method === 'plaintext_fallback' ? '#E0504A' : '#F0B429';
+            return '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<span style="color:' + color + ';min-width:150px;">' + method + '</span>' +
+              '<div style="flex:1;height:4px;background:#21262D;border-radius:2px;">' +
+                '<div style="width:' + pct + '%;height:4px;background:' + color + ';border-radius:2px;"></div>' +
+              '</div>' +
+              '<span style="color:#8B949E;min-width:24px;text-align:right;">' + count + '</span>' +
+            '</div>';
+          }).join('')}
+        </div>
+      `;
+    }
+
     // Uptime footer
     html += `
       <div style="border-top:1px solid #21262D;margin-top:4px;"></div>

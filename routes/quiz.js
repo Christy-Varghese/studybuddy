@@ -4,7 +4,9 @@
 const express = require('express');
 const router  = express.Router();
 
-const { flowTraces } = require('../middleware/devTiming');
+const { flowTraces }      = require('../middleware/devTiming');
+const { parseQuizResponse } = require('../lib/parseJSON');
+const { ollamaOptions }   = require('../lib/helpers');
 
 router.post('/quiz', async (req, res) => {
   const quizStart = Date.now();
@@ -49,7 +51,7 @@ Format:
         model: 'gemma4:e4b',
         messages: [{ role: 'user', content: quizPrompt }],
         stream: false,
-        options: { num_predict: 500, num_ctx: 4096 },
+        options: { ...ollamaOptions('quiz'), num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
     });
@@ -69,52 +71,19 @@ Format:
     let responseText = data.message.content;
     console.log('[/quiz] Raw response length:', responseText.length);
 
-    // ─── Robust JSON extraction and repair ───
-    responseText = responseText
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-    const jsonArrayMatch = responseText.match(/\[[\s\S]*\]/);
-    if (jsonArrayMatch) responseText = jsonArrayMatch[0];
-    mark('Extract JSON array', `${responseText.length} chars`);
+    // ─── Robust JSON parsing via central parser ───
+    // Strip <think> blocks before parsing
+    responseText = responseText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const questions = parseQuizResponse(responseText);
+    mark('Parse JSON', `${questions.length} questions via parseQuizResponse`);
 
-    // Repair common JSON issues
-    responseText = responseText.replace(/,(\s*[\]\}])/g, '$1');
-    responseText = responseText.replace(/\}(\s*)\{/g, '},$1{');
-    responseText = responseText.replace(/([^\\])\\([^"\\nrtbfu])/g, '$1\\\\$2');
-    responseText = responseText.replace(/[\x00-\x1F\x7F]/g, (char) => {
-      if (char === '\n' || char === '\r' || char === '\t') return char;
-      return '';
-    });
-    mark('Repair JSON');
-
-    // Parse JSON with error recovery
-    let questions;
-    try {
-      questions = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('[/quiz] JSON parse error:', parseError.message);
-      const lastBracket = responseText.lastIndexOf(']');
-      if (lastBracket > 0) {
-        const trimmed = responseText.substring(0, lastBracket + 1);
-        try {
-          questions = JSON.parse(trimmed);
-          console.log('[/quiz] Recovered by trimming to last ]');
-        } catch (e) {
-          throw new Error(`Invalid JSON from model: ${parseError.message}`);
-        }
-      } else {
-        throw new Error(`Invalid JSON from model: ${parseError.message}`);
-      }
-    }
-    mark('Parse JSON', Array.isArray(questions) ? `${questions.length} raw questions` : 'not an array');
-
-    if (!Array.isArray(questions)) {
-      return res.status(500).json({ error: 'Invalid quiz format: expected array of questions' });
+    if (questions.length === 0) {
+      console.warn('[quiz] parseQuizResponse returned empty array — raw preview:',
+        responseText.slice(0, 150));
+      return res.status(500).json({ error: 'No valid questions could be generated. Please try again.' });
     }
 
-    // Validate and sanitize each question
+    // Validate and sanitize each question (preserve existing validation logic)
     const validatedQuestions = questions
       .filter(q => q && typeof q === 'object')
       .map((q, index) => {
@@ -138,7 +107,7 @@ Format:
     if (validatedQuestions.length === 0) {
       return res.status(500).json({ error: 'No valid questions could be generated. Please try again.' });
     }
-    mark('Validate questions', `${validatedQuestions.length} valid of ${questions.length} raw`);
+    mark('Validate questions', `${validatedQuestions.length} valid`);
 
     console.log(`[/quiz] Successfully generated ${validatedQuestions.length} questions`);
     const quizMs = Date.now() - quizStart;

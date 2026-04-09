@@ -1,5 +1,6 @@
 const fs   = require('fs');
 const path = require('path');
+const { parseTaxonomyResponse } = require('../lib/parseJSON');
 
 // ─── File paths ────────────────────────────────────────────
 const DATA_DIR      = path.join(__dirname, '..', 'data');
@@ -111,19 +112,16 @@ Respond ONLY with valid JSON. No markdown. No explanation.
     clearTimeout(timeout);
     const data    = await response.json();
     const rawText = data.message?.content || '';
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed  = JSON.parse(cleaned);
+    const parsed  = parseTaxonomyResponse(rawText);
 
-    // Validate required fields
-    if (!parsed.canonicalTopic || !parsed.subject || !Array.isArray(parsed.keywords)) {
+    if (!parsed || !parsed.canonicalTopic) {
+      console.warn('[dynTaxonomy] extraction failed for:', rawQuestion.slice(0, 80));
       return null;
     }
 
     return {
+      ...parsed,
       canonicalTopic: toTopicKey(parsed.canonicalTopic),
-      subject:        parsed.subject,
-      keywords:       parsed.keywords.map(k => k.toLowerCase().trim()),
-      confidence:     parsed.confidence || 'medium'
     };
   } catch (err) {
     console.warn('[dynTaxonomy] Gemma extraction failed:', err.message);

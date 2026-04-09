@@ -6,6 +6,7 @@ const router  = express.Router();
 
 const { IS_DEV, devMetrics, flowTraces } = require('../middleware/devTiming');
 const { getCacheStats, searchTopics, clearAll: clearSmartCache } = require('../agent/smartCache');
+const { getParseMetrics } = require('../lib/parseJSON');
 
 // ─── Cache endpoints ────────────────────────────
 router.get('/cache-stats', (req, res) => {
@@ -97,6 +98,7 @@ if (IS_DEV) {
       routes,
       toolBreakdown,
       cache:         cacheStats,   // add smart cache statistics
+      parseMetrics:  getParseMetrics(),  // JSON parse repair method stats
       timestamp:     now
     });
   });
