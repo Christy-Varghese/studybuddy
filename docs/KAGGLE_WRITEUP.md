@@ -29,7 +29,7 @@ The barriers are systemic:
 
 ### What We Built
 
-**StudyBuddy** is a fully offline, privacy-first AI tutoring platform powered by **Google's Gemma 4** model running locally via Ollama. It combines six specialised learning tools into a single application that adapts to each student's level, tracks their progress with spaced repetition, and works without ever connecting to the internet.
+**StudyBuddy** is a fully offline, privacy-first AI tutoring platform powered by **Google's Gemma 4** model running locally via Ollama. It combines seven specialised learning tools into a single application that adapts to each student's level, tracks their progress with spaced repetition, and works without ever connecting to the internet.
 
 #### Core Capabilities
 
@@ -47,6 +47,8 @@ The barriers are systemic:
 | 📚 **Dynamic Taxonomy** | 76 topics, 1,223 keywords across 9 subjects; topics asked 2+ times auto-promote to the learned taxonomy; admin panel for curation |
 | 🎨 **3 Adaptive Themes** | Beginner (ages 8–12, emoji-rich, playful), Intermediate (high school, clean), Advanced (university, terminal-style monospace) |
 | 📱 **PWA** | Installable on any device; service worker caches the shell for offline-first experience |
+| 🌐 **Native Multilingual Engine** | Zero-lag language switching across 140+ languages via header dropdown. System prompts are dynamically rewritten so Gemma 4 responds entirely in the chosen language — no translation API, no extra model, no additional latency |
+| 👩‍🏫 **Teacher Dashboard** | Live SSE-powered classroom view with 4 AI judge panels: At-Risk Detection, Collective Confusion, Engagement Drop-off, and Curiosity Tracking; PIN-gated dual-role auth (student/teacher) |
 | 🔍 **Developer Diagnostics** | Built-in Metrics + Flow tabs: per-route latency, cache hit rates, real-time flow traces with bottleneck detection |
 
 ---
@@ -262,7 +264,7 @@ Every Ollama request is tuned for speed without sacrificing quality:
 
 - **Hardware requirement**: Any laptop with 8GB RAM + Ollama
 - **Distribution**: Clone from GitHub, or distribute as a USB stick with Ollama pre-bundled
-- **Languages**: Gemma 4 supports 140+ languages — prompts work in any language
+- **Languages**: Built-in language selector (10 starter languages) leveraging Gemma 4's native 140+ language support — zero extra infrastructure
 - **Cost to run**: $0 (once Ollama is installed)
 - **Potential reach**: 100M+ students in offline or low-connectivity regions
 
@@ -311,6 +313,8 @@ Every Ollama request is tuned for speed without sacrificing quality:
 | AI Model | Gemma 4 E4B via Ollama (local inference) |
 | Backend | Node.js + Express.js |
 | Frontend | Vanilla HTML/CSS/JS (SPA shell ~190 lines + 14 CSS + 15 JS modules) |
+| Auth | PIN-based dual-role (student/teacher) via express-session |
+| Multilingual | Prompt-injection pattern — Gemma 4 native 140+ languages, zero extra infra |
 | Image Processing | Sharp (resize, WebP optimise) |
 | Upload Handling | Multer |
 | Compression | gzip via `compression` middleware (SSE excluded) |
