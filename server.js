@@ -915,6 +915,20 @@ app.delete('/progress', (req, res) => {
   }
 });
 
+// POST — Dynamic Progress Evolution Report
+app.post('/progress-report', async (req, res) => {
+  const reportStart = Date.now();
+  try {
+    const result = await toolImplementations.generate_evolution_report();
+    const elapsed = Date.now() - reportStart;
+    console.log(`✅ [/progress-report] Done in ${(elapsed / 1000).toFixed(2)}s`);
+    res.json({ success: true, report: result });
+  } catch (err) {
+    console.error('[/progress-report] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── Socratic mode endpoint ─────────────────────
 // Drives guided-discovery dialogue via Socratic questioning
 app.post('/socratic', async (req, res) => {

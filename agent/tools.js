@@ -1,4 +1,4 @@
-const { saveProgress, getProgressSummary } = require('./progressStore');
+const { saveProgress, getProgressSummary, getDueReviews, getLearningStreak } = require('./progressStore');
 const { smartGet, smartSet, registerInFlight } = require('./smartCache');
 
 
@@ -440,6 +440,116 @@ Rules:
   }
 }
 
+// ─────────────────────────────────────────────
+// TOOL 7: generate_evolution_report
+// Dynamic Progress Evolution Report — adaptive learning consultant
+// ─────────────────────────────────────────────
+async function generate_evolution_report() {
+  const progress   = getProgressSummary();
+  const dueReviews = getDueReviews();
+  const streak     = getLearningStreak();
+
+  // Build a rich data snapshot for the LLM
+  const topicDetails = progress.topics.map(t => {
+    const status = t.avgScore === null ? 'studied (no quiz)' :
+                   t.avgScore >= 80    ? 'mastered' :
+                   t.avgScore >= 60    ? 'progressing' : 'needs review';
+    return `- "${t.name}" (studied ${t.timesStudied}x, avg score: ${t.avgScore ?? 'none'}, status: ${status}, last: ${t.lastStudied})`;
+  }).join('\n');
+
+  const dueList = dueReviews.map(d =>
+    `- "${d.name}" (interval: ${d.interval}d, ease: ${d.easeFactor}, avg: ${d.avgScore ?? 'none'})`
+  ).join('\n') || '- None due';
+
+  const dataBlock = `
+STUDENT DATA SNAPSHOT:
+Total topics studied: ${progress.totalTopicsStudied}
+Total sessions: ${progress.totalSessions}
+Current streak: ${streak.current} days (longest: ${streak.longest})
+Strong areas (avg ≥ 80): ${progress.strongAreas.join(', ') || 'None yet'}
+Weak areas (avg < 70 or no quiz): ${progress.weakAreas.join(', ') || 'None'}
+Recent topics (newest first): ${progress.recentTopics.join(' → ') || 'None'}
+Due for spaced review: ${dueReviews.length} topics
+
+TOPIC DETAILS:
+${topicDetails || '- No topics yet'}
+
+DUE REVIEWS:
+${dueList}
+`;
+
+  const systemPrompt = `You are an Adaptive Learning Consultant — analytical, observant, and coaching-oriented. You focus on the PROCESS of learning, not just scores.
+
+Given the student's data below, generate a Dynamic Progress Evolution Report with EXACTLY these 5 sections. Be specific to their actual topics and data. Never fabricate topics they haven't studied.
+
+${dataBlock}
+
+RESPOND ONLY with valid JSON (no markdown fences, no extra text):
+{
+  "narrative": "2-3 sentences describing the SHIFT in the student's learning focus. Don't list topics — describe the trajectory. E.g. 'You started with broad cultural curiosity and are now channeling that into applied science.' If only 1-2 topics, describe what their choice says about their learning style.",
+  "crossPollination": {
+    "topicA": "name of one studied topic",
+    "topicB": "name of another studied topic",
+    "connection": "1-2 sentences explaining the hidden connection — how knowing A helps with B"
+  },
+  "vocabularyHeatmap": "1-2 sentences about how the student's language is evolving. Are they using technical terms? Moving from casual to formal? If data is limited, describe what their topic choices suggest about their vocabulary growth trajectory.",
+  "bigDomino": {
+    "topic": "the ONE topic from their weak/review areas that would unlock the most progress",
+    "reasoning": "1-2 sentences why this topic is the keystone"
+  },
+  "microMission": {
+    "task": "A specific 2-minute task related to their most recent topic",
+    "topic": "which topic this targets"
+  }
+}`;
+
+  if (progress.totalTopicsStudied === 0) {
+    return {
+      success: true,
+      narrative: "You haven't started studying yet! Ask me about any topic to begin your learning journey.",
+      crossPollination: null,
+      vocabularyHeatmap: "No data yet — your vocabulary heatmap will light up as you explore topics.",
+      bigDomino: null,
+      microMission: { task: "Ask StudyBuddy about a topic you're curious about. Just type it!", topic: "getting started" },
+      _ms: 0
+    };
+  }
+
+  const { res: response, ms: fetchMs } = await timedFetch('http://localhost:11434/api/chat', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model:    FAST_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: 'Generate the Dynamic Progress Evolution Report based on the data provided.' }
+      ],
+      stream: false,
+      options: { num_predict: 600, num_ctx: 4096, temperature: 0.6 },
+      speculative_model: 'gemma2:2b'
+    })
+  });
+
+  const data    = await response.json();
+  const rawText = data.message.content;
+
+  try {
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed  = JSON.parse(cleaned);
+    return { success: true, ...parsed, _ms: fetchMs };
+  } catch {
+    return {
+      success:           false,
+      narrative:         rawText.trim(),
+      crossPollination:  null,
+      vocabularyHeatmap: '',
+      bigDomino:         null,
+      microMission:      null,
+      _ms: fetchMs
+    };
+  }
+}
+
 // Map tool name strings to their implementation functions
 const toolImplementations = {
   explain_topic,
@@ -447,7 +557,8 @@ const toolImplementations = {
   track_progress,
   suggest_next_topic,
   ask_socratic_question,
-  generate_concept_map
+  generate_concept_map,
+  generate_evolution_report
 };
 
 module.exports = { toolDefinitions, toolImplementations };
