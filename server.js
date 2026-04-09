@@ -107,6 +107,11 @@ app.get('/teacher', requireTeacher, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teacher.html'));
 });
 
+// /taxonomy-admin — taxonomy admin panel (requires teacher role)
+app.get('/taxonomy-admin', requireTeacher, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'taxonomy-admin.html'));
+});
+
 // Inject dev panel into other HTML responses (dev mode only)
 if (IS_DEV) {
   app.use((req, res, next) => {
@@ -133,9 +138,10 @@ if (IS_DEV) {
 app.use(pwaMimeMiddleware);
 
 // ── Block direct access to protected HTML files ──
-// Forces users through semantic routes (/app, /teacher, /login) which have auth guards
+// Forces users through semantic routes which have auth guards
 app.get('/index.html', (req, res) => res.redirect('/app'));
 app.get('/teacher.html', (req, res) => res.redirect('/teacher'));
+app.get('/taxonomy-admin.html', (req, res) => res.redirect('/taxonomy-admin'));
 app.get('/login.html', (req, res) => res.redirect('/login'));
 
 // ── Static files ──

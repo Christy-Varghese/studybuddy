@@ -74,7 +74,7 @@ function toTopicKey(text) {
 // ─────────────────────────────────────────────────────────────
 // STEP 1 — Ask Gemma to extract topic metadata from a question
 // Returns: { canonicalTopic, subject, keywords, confidence }
-// Uses gemma4:e2b for speed — this is a simple classification task
+// Uses gemma3:4b for speed — lightweight classification task
 // ─────────────────────────────────────────────────────────────
 async function extractTopicWithGemma(rawQuestion) {
   const prompt = `A student asked this question: "${rawQuestion}"
@@ -98,7 +98,7 @@ Respond ONLY with valid JSON. No markdown. No explanation.
       headers: { 'Content-Type': 'application/json' },
       signal:  controller.signal,
       body: JSON.stringify({
-        model:   'gemma4:e2b',
+        model:   'gemma3:4b',
         messages: [
           { role: 'system', content: 'You are a topic classifier. Output only JSON.' },
           { role: 'user',   content: prompt }
