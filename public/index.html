@@ -953,7 +953,7 @@
       border-radius: var(--radius-lg);
       border: 1px solid var(--accent);
       background: var(--surface, #fff);
-      overflow: hidden;
+      overflow: visible;
       animation: fadeInUp 0.4s ease forwards;
       margin: 10px 0;
     }
@@ -3970,7 +3970,10 @@
         }
 
         card.innerHTML = html;
+        // Multi-stage scroll to ensure chat scrolls past tall report
         scrollToBottom();
+        setTimeout(scrollToBottom, 300);
+        setTimeout(scrollToBottom, 800);
 
       } catch (err) {
         card.innerHTML = `<div class="evo-loading">⚠️ Network error. Please try again.</div>`;
