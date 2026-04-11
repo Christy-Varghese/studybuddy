@@ -10,3 +10,9 @@ data/cache.json
 # data/taxonomy_pending.json
 .DS_Store
 *.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo

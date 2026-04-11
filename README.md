@@ -11,6 +11,7 @@ Built for the [Gemma 4 Good Hackathon](https://kaggle.com/competitions/gemma-4-g
 ### Prerequisites
 - **Ollama** with `gemma4:e4b` — download from [ollama.ai](https://ollama.ai)
 - **Node.js 18+**
+- **Python 3.10+** (only for the low-latency Python bridge — optional)
 - **8GB RAM** minimum (16GB recommended for best performance)
 
 ### Setup (2 minutes)
@@ -23,6 +24,11 @@ ollama run gemma4:e4b
 cd studybuddy
 npm install
 npm start          # or: npm run dev
+
+# (Optional) Terminal 3 — Python bridge setup
+cd python
+pip install -r requirements.txt
+python -m python   # interactive REPL for low-latency queries
 ```
 
 Open **http://localhost:3000** — that's it. No `.env`, no API keys, fully local.
@@ -96,6 +102,15 @@ Learn in any of 140+ languages. Select your language from the 🌐 header dropdo
 ### 📱 Progressive Web App
 Install on any device directly from the browser. Works fully offline — the shell is cached by the service worker, Ollama runs locally.
 
+### 🐍 Low-Latency Python Bridge (`python/`)
+A standalone Python module (`StudyBuddyCore`) that talks directly to the local Ollama instance for sub-5-second response times on an 8 GB MacBook Air. Key design choices:
+
+- **Streaming-first** — tokens print to stdout the instant they arrive via `httpx` streaming
+- **orjson decoding** — minimal CPU overhead when parsing Ollama's newline-delimited JSON chunks
+- **Hard-capped generation** — `num_predict: 100`, `temperature: 0.1` for deterministic, tight answers
+- **Model pinned in RAM** — `keep_alive: -1` prevents re-loading between queries
+- **Sprint/Think routing** — a strict system prompt forces the model to classify queries as `[SPRINT]` (direct answer) or `[THINK]` (3-step Socratic hint, max 50 words), returning compact `{"m": "S"|"T", "a": "..."}` JSON
+
 ---
 
 ## 📁 Project Structure
@@ -142,6 +157,11 @@ studybuddy/
 │   └── taxonomy_learned.json   — Learned topic expansions
 ├── scripts/
 │   └── generate-icons.js       — PWA icon generator
+├── python/                     — Low-latency Python ↔ Ollama bridge
+│   ├── studybuddy_core.py      — StudyBuddyCore class (streaming, orjson)
+│   ├── requirements.txt        — httpx + orjson dependencies
+│   ├── __init__.py             — Package export
+│   └── __main__.py             — CLI entry point (python -m python)
 └── docs/                       — Full documentation (see docs/MASTER_BLUEPRINT.md)
 ```
 
@@ -200,6 +220,7 @@ studybuddy/
 | Model | Role |
 |-------|------|
 | `gemma4:e4b` | Primary — planning, explanation, synthesis, vision |
+| `gemma4:e4b` (via Python bridge) | Low-latency math/fact queries — sub-5 s streaming |
 
 ---
 

@@ -26,6 +26,7 @@ StudyBuddy is a fully local, AI-powered tutoring web app that runs entirely on t
 |-------|-----------|
 | Frontend | Vanilla HTML / CSS / JS (SPA, no framework) |
 | Backend | Node.js + Express.js |
+| Python Bridge | `python/studybuddy_core.py` — low-latency streaming via httpx + orjson |
 | LLM | Ollama → Gemma 4 (`gemma4:e4b`, 9.6 GB, text + vision) |
 | Data | Flat JSON files (`data/progress.json`, `data/cache.json`, `data/taxonomy_learned.json`) |
 | Transport | REST + Server-Sent Events (SSE) for streaming |
@@ -110,6 +111,11 @@ studybuddy/
 │   └── taxonomy_learned.json    ← Learned topic expansions
 ├── scripts/                      ← Build / utility scripts
 │   └── generate-icons.js        ← PWA icon generator
+├── python/                       ← Low-latency Python ↔ Ollama bridge
+│   ├── studybuddy_core.py       ← StudyBuddyCore class (streaming, orjson, sub-5 s)
+│   ├── requirements.txt         ← httpx + orjson
+│   ├── __init__.py              ← Package export
+│   └── __main__.py              ← CLI entry point
 ├── docs/                         ← Documentation
 │   ├── MASTER_BLUEPRINT.md      ← This file
 │   └── KAGGLE_WRITEUP.md        ← Kaggle competition submission (standalone)
@@ -127,6 +133,7 @@ studybuddy/
 | 3 middleware files | Cross-cutting concerns separated |
 | `lib/helpers.js` | Shared functions used by multiple routes |
 | `agent/` untouched | Already well-structured — 7 focused modules |
+| `python/` bridge | Dedicated low-latency path for math/fact queries; httpx streaming + orjson for sub-5 s on 8 GB |
 | Flat JSON data files | No database; progress, cache, taxonomy are simple JSON |
 | No framework | Zero build step; `<script>` tags in load order |
 
@@ -159,6 +166,10 @@ Browser  ─→  Express (server.js)
               ├─ routes/progress.js ──────→ progressStore.js / data/progress.json
               ├─ routes/admin.js ─────────→ dynamicTaxonomy.js
               └─ routes/dev.js ───────────→ devTiming metrics store
+
+Python Bridge (standalone — bypasses Express):
+  StudyBuddyCore.query()
+    └─ httpx.stream() ────────────→ Ollama /api/generate (streaming, orjson)
 ```
 
 ---

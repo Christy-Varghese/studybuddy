@@ -196,11 +196,11 @@ const TESTS = [
 
   // ── Quiz generation ───────────────────────────────────────────────────────
   {
-    id: 'quiz-2q-beginner',
+    id: 'quiz-3q-beginner',
     category: 'Quiz generation (/quiz)',
-    name: 'POST /quiz — 2 questions, beginner',
+    name: 'POST /quiz — 3 questions, beginner',
     method: 'POST', path: '/quiz',
-    body: { topic: 'photosynthesis', level: 'beginner', numQuestions: 2 },
+    body: { topic: 'photosynthesis', level: 'beginner', numQuestions: 3 },
     validate: b => b && Array.isArray(b.questions) && b.questions.length > 0,
   },
   {
