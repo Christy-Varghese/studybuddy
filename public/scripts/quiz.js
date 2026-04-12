@@ -155,7 +155,7 @@ function renderQuizCard() {
       quizHTML += `
         <button 
           class="${btnClass}" 
-          onclick="selectAnswer(${idx}, '${option.replace(/'/g, "&#39;")}')"
+          onclick="selectAnswer(${idx}, ${optIdx})"
           ${answered ? 'disabled' : ''}
         >
           ${option}
@@ -201,7 +201,9 @@ function renderQuizCard() {
   addBubble(quizHTML, 'bot', true, false);
 }
 
-function selectAnswer(questionIdx, option) {
+function selectAnswer(questionIdx, optionIdx) {
+  const option = currentQuiz[questionIdx]?.options[optionIdx];
+  if (option === undefined) return;
   quizAnswers[questionIdx] = option;
   renderQuizCard();
 
