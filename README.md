@@ -233,6 +233,17 @@ studybuddy/
 
 ---
 
+## 🛡 Reliability & Performance
+
+| Area | Detail |
+|------|--------|
+| **Quiz answer matching** | Frontend uses index-based option selection (not string literals in HTML onclick), immune to HTML entity encoding, quote escaping, and LLM re-serialisation artefacts |
+| **Quiz timeout resilience** | AbortController with 110 s hard timeout; graceful 200 fallback instead of 500 error |
+| **Cache observability** | `[cache L4 MISS]` / `[cache WRITE]` debug logging for diagnosing cache behaviour |
+| **Benchmark suite** | `node benchmark.js` — 28 endpoints with per-route time targets; 150 s timeout; robust validators |
+
+---
+
 ## 🧪 Test It Works
 
 ```bash

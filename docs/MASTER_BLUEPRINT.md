@@ -2,7 +2,7 @@
 
 > **Single source of truth** for the entire StudyBuddy codebase.  
 > Consolidates 39 prior documentation files into one technical reference.  
-> Last updated: April 2026
+> Last updated: April 12, 2026
 
 ---
 
@@ -244,6 +244,13 @@ Runs the full agent pipeline (`agentLoop.js`) with access to 7 tools. Three exec
 
 Generates multiple-choice questions with 4 options each, correct-answer indicators, and per-question explanations. Rendered in a modal with animated card transitions.
 
+### Quiz Pipeline
+
+1. **Backend** — Gemma generates JSON array of questions; `parseQuizResponse()` normalises the format; `routes/quiz.js` validates, trims, and sanitises each question (options trimmed, answer trimmed, first-char check). An AbortController enforces a 110 s hard timeout with graceful fallback.
+2. **Agent path** — `generate_quiz` tool in `agent/tools.js` follows the same parse pipeline, caches results via the 4-layer smart cache, and scales `num_predict` for advanced-level quizzes.
+3. **Frontend rendering** — `renderQuizCard()` builds the quiz HTML; buttons pass the **option index** (not the option text) to `selectAnswer(questionIdx, optionIdx)`, which looks up the actual string from `currentQuiz[questionIdx].options[optionIdx]`. This index-based approach is immune to HTML entity encoding, quote escaping, and Gemma re-serialisation artefacts.
+4. **Scoring** — After every answer, the card re-renders with `.correct` (green) / `.wrong` (red) classes, shows explanations, and tallies a live score.
+
 ## 2.6 Concept Map
 
 **Endpoint:** `POST /concept-map`  
@@ -419,6 +426,8 @@ A consolidated ledger of every significant bug fix applied to the codebase, orde
 | 25 | Phase 5: Localisation & Digital Equity — Native Language Selector | Students in non-English-speaking regions had no way to receive explanations in their native language | Injected language-specific `CRITICAL` directive into every system prompt (chat, vision, agent, socratic, tools). Gemma 4 handles native inference — zero extra infrastructure or latency | `lib/helpers.js`, `agent/tools.js`, `agent/agentLoop.js`, `routes/chat.js`, `routes/agent.js`, `routes/socratic.js`, `public/index.html`, `public/scripts/state.js`, `public/scripts/init.js`, `public/scripts/agent.js`, `public/scripts/socratic.js` |
 | 26 | Raw JSON exposure in chat UI | SSE streaming appended tokens directly to the DOM, exposing incomplete or malformed JSON to users | Implemented Blur & Render pipeline: `.thinking-overlay` with animated dots and background blur hides all content until the final JSON is parsed and rendered. No raw JSON or tokens ever appear in the UI. | `public/styles/thinking.css`, `public/scripts/agent.js`, `public/scripts/render.js`, `public/scripts/chat.js` |
 | 27 | Phase 6: Visual Polish & Typewriter Reveal | Even after Blur & Render, instant answer display felt robotic and risked momentary JSON flashes. | Added `.typewriter-text` (blurred), `.active-typing` (revealed) CSS and a vanilla JS typewriterEffect. Answers and Socratic questions are typed out, then revealed crisply. This prevents raw JSON leakage and creates a more tutor-like, human interaction. | `public/styles/typewriter.css`, `public/scripts/render.js`, `public/index.html` |
+| 28 | Performance tuning: cache debug logging, quiz 500 errors, benchmark validators | Smart cache had no visibility into miss/write events; `/quiz` crashed with 500 on Ollama timeout; 5 benchmark validators failed; benchmark timeout too short | Added `[cache L4 MISS]` / `[cache WRITE]` debug logging; added AbortController with 110 s timeout and graceful 200 fallback to quiz route; scaled `num_predict` for advanced quiz; fixed 5 validators (due-reviews, estimate ×2, chat ×3, session); added 28-entry TIME_TARGETS map; raised benchmark timeout 120 s → 150 s | `agent/smartCache.js`, `routes/quiz.js`, `agent/tools.js`, `benchmark.js`, `benchmark.quick.js` |
+| 29 | Quiz answers always marked incorrect | `selectAnswer()` received option text as a string literal inside an HTML `onclick` attribute. Special characters (quotes, ampersands, backslashes, LaTeX markup) broke the JS string or caused silent mismatches between the selected value and `currentQuiz[idx].answer` | Changed `onclick` to pass the **option index** (integer) instead of the option text. `selectAnswer(questionIdx, optionIdx)` now looks up the actual string from `currentQuiz[questionIdx].options[optionIdx]`, guaranteeing an exact reference match every time — immune to HTML entity encoding, quote escaping, or Gemma re-serialisation. | `public/scripts/quiz.js` |
 
 ---
 
