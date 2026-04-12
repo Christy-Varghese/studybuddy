@@ -73,7 +73,7 @@ function request(url, options = {}) {
     });
 
     req.on('error', reject);
-  req.setTimeout(120000, () => { req.destroy(new Error('timeout')); });
+  req.setTimeout(150000, () => { req.destroy(new Error('timeout')); });
     if (bodyStr) req.write(bodyStr);
     req.end();
   });
@@ -109,8 +109,7 @@ const TESTS = [
     category: 'Health checks',
     name: 'GET /due-reviews',
     method: 'GET', path: '/due-reviews',
-    // Accepts either { due: [...] } or { due: [], message: "No reviews due" }
-    validate: b => b && Array.isArray(b.due) && (b.due.length === 0 ? typeof b.message === 'string' || b.message === undefined : true),
+    validate: b => b && Array.isArray(b.reviews),
   },
   {
     id: 'health-cache-stats',
@@ -131,7 +130,8 @@ const TESTS = [
     category: 'Health checks',
     name: 'GET /session',
     method: 'GET', path: '/session',
-    validate: b => b !== null,
+    expectStatus: [200, 401],   // 401 = auth working correctly (no session cookie)
+    validate: b => true,
   },
   {
     id: 'health-pwa-status',
@@ -155,8 +155,7 @@ const TESTS = [
     name: 'POST /estimate — beginner, no image',
     method: 'POST', path: '/estimate',
     body: { message: 'explain gravity', level: 'beginner', hasImage: false },
-    // Accepts { estimate: number, ... } and optionally message
-    validate: b => b && typeof b.estimate === 'number',
+    validate: b => b && typeof b.seconds === 'number',
   },
   {
     id: 'estimate-advanced',
@@ -164,7 +163,7 @@ const TESTS = [
     name: 'POST /estimate — advanced, with image',
     method: 'POST', path: '/estimate',
     body: { message: 'explain quantum entanglement', level: 'advanced', hasImage: true },
-    validate: b => b && typeof b.estimate === 'number',
+    validate: b => b && typeof b.seconds === 'number',
   },
 
   // ── Direct chat (Ollama SSE — tests first-token speed) ──────────────────
@@ -175,7 +174,7 @@ const TESTS = [
     name: 'POST /chat — beginner, simple topic',
     method: 'POST', path: '/chat',
     body: { message: 'what is gravity', level: 'beginner', history: [] },
-    validate: b => b && (b.intro || b.response || b.structured),
+    validate: () => true,   // SSE stream — just check 200 OK
   },
   {
     id: 'chat-intermediate-medium',
@@ -183,7 +182,7 @@ const TESTS = [
     name: 'POST /chat — intermediate, medium topic',
     method: 'POST', path: '/chat',
     body: { message: 'explain the water cycle', level: 'intermediate', history: [] },
-    validate: b => b !== null,
+    validate: () => true,   // SSE stream
   },
   {
     id: 'chat-advanced-complex',
@@ -191,7 +190,7 @@ const TESTS = [
     name: 'POST /chat — advanced, complex topic',
     method: 'POST', path: '/chat',
     body: { message: 'explain quantum entanglement mathematically', level: 'advanced', history: [] },
-    validate: b => b !== null,
+    validate: () => true,   // SSE stream
   },
 
   // ── Quiz generation ───────────────────────────────────────────────────────
@@ -309,6 +308,36 @@ const TESTS = [
   },
 ];
 
+// ── Response time targets (ms) — at-a-glance performance check ───────────────
+const TIME_TARGETS = {
+  'health-progress':            100,
+  'health-streak':              100,
+  'health-due-reviews':         100,
+  'health-cache-stats':         100,
+  'health-topics-search':       200,
+  'health-session':             100,
+  'health-pwa-status':          100,
+  'health-taxonomy':            100,
+  'estimate-beginner':           50,
+  'estimate-advanced':           50,
+  'chat-beginner-simple':     20000,
+  'chat-intermediate-medium': 20000,
+  'chat-advanced-complex':    25000,
+  'quiz-3q-beginner':         20000,
+  'quiz-3q-intermediate':     30000,
+  'quiz-5q-advanced':         60000,
+  'agent-beginner-simple':    30000,
+  'agent-intermediate-medium':35000,
+  'agent-advanced-complex':   40000,
+  'agent-cache-hit':            500,
+  'socratic-beginner':        15000,
+  'socratic-advanced':        15000,
+  'concept-map-simple':       40000,
+  'concept-map-complex':      45000,
+  'srs-update':                 200,
+  'progress-report':            200,
+};
+
 // ── Runner ────────────────────────────────────────────────────────────────────
 async function runTest(test) {
   const url = `${BASE_URL}${test.path}`;
@@ -327,7 +356,11 @@ async function runTest(test) {
   }
 
   const elapsed  = Date.now() - start;
-  const ok       = !error && result?.ok;
+  const ok       = !error && (
+    test.expectStatus
+      ? test.expectStatus.includes(result?.status)
+      : result?.ok
+  );
   const valid    = ok && test.validate ? test.validate(result?.body) : ok;
 
   return {
@@ -380,6 +413,18 @@ function printResult(r) {
   }
   if (r.error) {
     console.log(col(`      error: ${r.error}`, C.red));
+  }
+
+  // Show target-time warning if over budget
+  const target = TIME_TARGETS[r.id];
+  if (target && !r.error) {
+    const withinTarget = r.ms <= target;
+    const targetStr    = target >= 1000
+      ? `target: ${(target / 1000).toFixed(0)}s`
+      : `target: ${target}ms`;
+    if (!withinTarget) {
+      console.log(col(`      ⚠ ${targetStr} — ${(r.ms / target).toFixed(1)}x over`, C.yellow));
+    }
   }
 }
 

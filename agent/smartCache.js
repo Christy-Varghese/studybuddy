@@ -134,6 +134,7 @@ function cacheGet(key) {
 }
 
 function cacheSet(key, value) {
+  console.log(`[cache WRITE] key: ${key.slice(0,8)}… — entries: ${MEM_CACHE.size + 1}`);
   // Evict oldest if memory is full
   if (MEM_CACHE.size >= MAX_MEM_ENTRIES) {
     let oldest = null, oldestTs = Infinity;
@@ -181,6 +182,7 @@ function smartGet(tool, message, level) {
   }
 
   // ── Layer 4: Miss — trigger taxonomy learning and caller must invoke Ollama ──
+  console.log(`[cache L4 MISS] ${normaliseText(message)} (${tool})`);
   if (tool === 'explain' || tool === 'quiz') {
     processCacheMiss(message, level);   // fire-and-forget taxonomy learning
   }

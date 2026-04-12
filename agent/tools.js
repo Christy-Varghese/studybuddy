@@ -220,6 +220,11 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
 // 4-layer smart cache + generates N multiple choice questions
 async function generate_quiz({ topic, level, numQuestions }) {
   const n      = Math.min(Math.max(Math.round(numQuestions), 2), 5);
+
+  // Scale token limit: advanced needs more explanation per question
+  const tokenMultiplier = level === 'advanced' ? 220 : 180;
+  const numPredict      = Math.min(n * tokenMultiplier + 100, 1200);
+
   const lookup = smartGet('quiz', `${topic}::${n}`, level);
   if (lookup.value)    return lookup.value;
   if (lookup.inFlight) return lookup.inFlight;
@@ -247,7 +252,7 @@ Format:
           { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.${enforceJSON}` }
         ],
         stream: false,
-        options: { ...ollamaOptions('quiz'), num_ctx: 4096 },
+        options: { ...ollamaOptions('quiz'), num_predict: numPredict, num_ctx: 4096 },
         speculative_model: 'gemma2:2b'
       })
     });

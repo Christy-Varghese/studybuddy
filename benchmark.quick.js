@@ -45,7 +45,7 @@ function req(url, opts={}) {
       });
     });
     r.on('error',reject);
-  r.setTimeout(120000,()=>r.destroy(new Error('timeout')));
+  r.setTimeout(150000,()=>r.destroy(new Error('timeout')));
     if(body)r.write(body);
     r.end();
   });

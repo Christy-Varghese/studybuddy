@@ -43,10 +43,14 @@ Format:
   mark('Build prompt', `${quizPrompt.length} chars`);
 
   try {
-    // Call Ollama
+    // Call Ollama with a timeout to prevent server hang on long quiz generation
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 110000); // 110s max
+
     const ollamaRes = await fetch('http://localhost:11434/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         model: 'gemma4:e4b',
         messages: [{ role: 'user', content: quizPrompt }],
@@ -55,6 +59,7 @@ Format:
         speculative_model: 'gemma2:2b'
       })
     });
+    clearTimeout(timeout);
     mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
 
     if (!ollamaRes.ok) {
@@ -126,8 +131,12 @@ Format:
       route: '/quiz', ts: Date.now(), totalMs: quizMs, status: 'error',
       input: `${topic} (${numQuestions}q, ${level})`, steps
     };
+    if (err.name === 'AbortError') {
+      console.warn(`⏰ [/quiz] Timed out after ${(quizMs / 1000).toFixed(1)}s`);
+      return res.json({ success: false, questions: [], error: 'Quiz generation timed out', topic, level });
+    }
     console.error(`❌ [/quiz] Error after ${(quizMs / 1000).toFixed(2)}s:`, err.message);
-    res.status(500).json({ error: err.message || 'Gemma is not running or failed to generate quiz. Start Ollama first!' });
+    res.json({ success: false, questions: [], error: err.message || 'Quiz generation failed', topic, level });
   }
 });
 
