@@ -162,7 +162,9 @@ app.use(agentRoutes);
 app.use(socraticRoutes);
 app.use(conceptMapRoutes);
 app.use(progressRoutes);
-app.use(adminRoutes);
+// adminRoutes mutate the live taxonomy — gate every route under it.
+// requireTeacher returns 403 for API requests and redirects HTML to /login.
+app.use(requireTeacher, adminRoutes);
 app.use(devRoutes);
 
 // ─────────────────────────────────────────────────
