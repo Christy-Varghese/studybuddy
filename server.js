@@ -162,9 +162,11 @@ app.use(agentRoutes);
 app.use(socraticRoutes);
 app.use(conceptMapRoutes);
 app.use(progressRoutes);
-// adminRoutes mutate the live taxonomy — gate every route under it.
-// requireTeacher returns 403 for API requests and redirects HTML to /login.
-app.use(requireTeacher, adminRoutes);
+// Gate every /admin/* request behind teacher auth BEFORE adminRoutes runs.
+// Path-scoped middleware only fires on requests that match the mount path,
+// so unrelated routes (e.g. /cache-stats in devRoutes) stay reachable.
+app.use('/admin', requireTeacher);
+app.use(adminRoutes);
 app.use(devRoutes);
 
 // ─────────────────────────────────────────────────
