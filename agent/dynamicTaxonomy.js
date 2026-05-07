@@ -1,6 +1,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { parseTaxonomyResponse } = require('../lib/parseJSON');
+const { classifier } = require('./models');
 
 // ─── File paths ────────────────────────────────────────────
 const DATA_DIR      = path.join(__dirname, '..', 'data');
@@ -99,7 +100,7 @@ Respond ONLY with valid JSON. No markdown. No explanation.
       headers: { 'Content-Type': 'application/json' },
       signal:  controller.signal,
       body: JSON.stringify({
-        model:   'gemma3:4b',
+        ...classifier(),
         messages: [
           { role: 'system', content: 'You are a topic classifier. Output only JSON.' },
           { role: 'user',   content: prompt }

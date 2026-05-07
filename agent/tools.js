@@ -9,6 +9,7 @@ const {
   parseEvaluationReportResponse,
 } = require('../lib/parseJSON');
 const { ollamaOptions } = require('../lib/helpers');
+const { reasoningWithDraft } = require('./models');
 
 const enforceJSON = '\n\nIMPORTANT: Return ONLY raw JSON. No markdown. No backticks. Start with { end with }.';
 
@@ -38,13 +39,6 @@ async function timedFetch(url, options) {
   const ms    = Date.now() - start;
   return { res, ms };
 }
-
-// ─────────────────────────────────────────────
-// MODEL ROUTING
-// Use fast model for structured tasks, full model for quality
-// ─────────────────────────────────────────────
-const FAST_MODEL = 'gemma4:e4b';   // planning, quiz gen, suggest_next, synthesis (e2b not available, using e4b)
-const FULL_MODEL = 'gemma4:e4b';   // standard chat, image analysis
 
 // ─────────────────────────────────────────────
 // TOOL DEFINITIONS
@@ -189,14 +183,13 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:    'gemma4:e4b',
+        ...reasoningWithDraft(),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userMsg }
         ],
         stream: false,
-        options: { ...ollamaOptions('json'), num_ctx: 4096 },
-        speculative_model: 'gemma2:2b'
+        options: { ...ollamaOptions('json'), num_ctx: 4096 }
       })
     });
 
@@ -246,14 +239,13 @@ Format:
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:    'gemma4:e4b',
+        ...reasoningWithDraft(),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: `Generate exactly ${n} multiple choice questions about "${topic}" for a ${level} level student.${enforceJSON}` }
         ],
         stream: false,
-        options: { ...ollamaOptions('quiz'), num_predict: numPredict, num_ctx: 4096 },
-        speculative_model: 'gemma2:2b'
+        options: { ...ollamaOptions('quiz'), num_predict: numPredict, num_ctx: 4096 }
       })
     });
 
@@ -314,14 +306,13 @@ Strong areas: ${summary.strongAreas.join(', ') || 'none yet'}
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:    'gemma4:e4b',
+      ...reasoningWithDraft(),
       messages: [
         { role: 'system', content: `${langPrefix()}You are a curriculum advisor. Based on the student's progress, suggest the SINGLE most beneficial next topic to study. Respond ONLY with valid JSON: { "nextTopic": "topic name", "reason": "one sentence why", "relatedTo": "how it connects to what they just studied" }` },
         { role: 'user',   content: `${context}${enforceJSON}` }
       ],
       stream: false,
-      options: { ...ollamaOptions('fast'), num_ctx: 4096 },
-      speculative_model: 'gemma2:2b'
+      options: { ...ollamaOptions('fast'), num_ctx: 4096 }
     })
   });
 
@@ -385,14 +376,13 @@ Respond ONLY with valid JSON (no markdown fences):
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:    FAST_MODEL,
+      ...reasoningWithDraft(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: `${userMsg}${enforceJSON}` }
       ],
       stream: false,
-      options: { ...ollamaOptions(isFinalTurn ? 'json' : 'fast'), num_ctx: 4096 },
-      speculative_model: 'gemma2:2b'
+      options: { ...ollamaOptions(isFinalTurn ? 'json' : 'fast'), num_ctx: 4096 }
     })
   });
 
@@ -449,14 +439,13 @@ Rules:
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:    FAST_MODEL,
+      ...reasoningWithDraft(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: `Generate a concept map for "${topic}" at ${level} level.${enforceJSON}` }
       ],
       stream: false,
-      options: { ...ollamaOptions('json'), num_ctx: 4096 },
-      speculative_model: 'gemma2:2b'
+      options: { ...ollamaOptions('json'), num_ctx: 4096 }
     })
   });
 
@@ -553,14 +542,13 @@ RESPOND ONLY with valid JSON (no markdown fences, no extra text):
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:    FAST_MODEL,
+      ...reasoningWithDraft(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: `Generate the Dynamic Progress Evaluation Report based on the data provided.${enforceJSON}` }
       ],
       stream: false,
-      options: { ...ollamaOptions('long'), num_ctx: 4096 },
-      speculative_model: 'gemma2:2b'
+      options: { ...ollamaOptions('long'), num_ctx: 4096 }
     })
   });
 

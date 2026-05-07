@@ -1,6 +1,7 @@
 const { toolDefinitions, toolImplementations, setActiveLanguage } = require('./tools');
 const { getProgressSummary } = require('./progressStore');
 const { preWarm } = require('./smartCache');
+const { reasoningWithDraft } = require('./models');
 
 // The main agent loop - simplified version
 // Directly executes tools based on the student message and synthesizes results
@@ -221,14 +222,13 @@ Example:
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model:    'gemma4:e4b',   // gemma4:e2b not available, use e4b instead
+          ...reasoningWithDraft(),
           messages: [
             { role: 'system', content: 'You are a tool planning agent. Respond only with a JSON array.' },
             { role: 'user',   content: planningPrompt }
           ],
           stream:   false,
-          options:  { num_predict: 300, num_ctx: 4096, temperature: 0.2 },
-          speculative_model: 'gemma2:2b'
+          options:  { num_predict: 300, num_ctx: 4096, temperature: 0.2 }
         })
       });
     } catch (err) {
@@ -314,14 +314,13 @@ Respond ONLY with valid JSON — no markdown, no preamble:
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:    'gemma4:e2b',
+      ...reasoningWithDraft(),
       messages: [
         { role: 'system', content: 'You are a synthesis agent. Respond only with JSON.' },
         { role: 'user',   content: synthesisPrompt }
       ],
       stream:   false,
-      options:  { num_predict: 700, num_ctx: 4096, temperature: 0.6 },
-      speculative_model: 'gemma2:2b'
+      options:  { num_predict: 700, num_ctx: 4096, temperature: 0.6 }
     })
   });
 
