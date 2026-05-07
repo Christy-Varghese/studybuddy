@@ -264,13 +264,14 @@ function setMicState(state) {
   const micBtn = document.getElementById('mic-btn');
   if (!micBtn) return;
   micBtn.classList.remove('listening', 'processing');
+  const bar = document.getElementById('voice-status-bar');
   if (state === 'listening') {
     micBtn.classList.add('listening');
-    document.getElementById('voice-status-bar').classList.add('active');
+    if (bar) bar.classList.add('active');
   } else if (state === 'processing') {
     micBtn.classList.add('processing');
   } else {
-    document.getElementById('voice-status-bar').classList.remove('active');
+    if (bar) bar.classList.remove('active');
   }
 }
 

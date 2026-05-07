@@ -7,6 +7,7 @@ const router  = express.Router();
 const { flowTraces }      = require('../middleware/devTiming');
 const { parseQuizResponse } = require('../lib/parseJSON');
 const { ollamaOptions }   = require('../lib/helpers');
+const { REASONING, reasoningWithDraft } = require('../agent/models');
 
 router.post('/quiz', async (req, res) => {
   const quizStart = Date.now();
@@ -42,25 +43,28 @@ Format:
 ]`;
   mark('Build prompt', `${quizPrompt.length} chars`);
 
-  try {
-    // Call Ollama with a timeout to prevent server hang on long quiz generation
-    const controller = new AbortController();
-    const timeout    = setTimeout(() => controller.abort(), 110000); // 110s max
+  // Call Ollama with a timeout to prevent server hang on long quiz generation
+  const controller = new AbortController();
+  const timeout    = setTimeout(() => controller.abort(), 110000); // 110s max
 
-    const ollamaRes = await fetch('http://localhost:11434/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: 'gemma4:e4b',
-        messages: [{ role: 'user', content: quizPrompt }],
-        stream: false,
-        options: { ...ollamaOptions('quiz'), num_ctx: 4096 },
-        speculative_model: 'gemma2:2b'
-      })
-    });
-    clearTimeout(timeout);
-    mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
+  try {
+    let ollamaRes;
+    try {
+      ollamaRes = await fetch('http://localhost:11434/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          ...reasoningWithDraft(),
+          messages: [{ role: 'user', content: quizPrompt }],
+          stream: false,
+          options: { ...ollamaOptions('quiz'), num_ctx: 4096 }
+        })
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    mark('Ollama API call', `model=${REASONING}, status=${ollamaRes.status}`);
 
     if (!ollamaRes.ok) {
       throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);

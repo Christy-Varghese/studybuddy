@@ -42,7 +42,18 @@ function ensureStore() {
 // Read the full store
 function readStore() {
   ensureStore();
-  const raw = JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
+  } catch (err) {
+    // Preserve the corrupt bytes before overwriting so the underlying bug
+    // can be diagnosed. Without this backup, evidence of the cause is lost.
+    const backupPath = `${STORE_PATH}.corrupted-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    try { fs.copyFileSync(STORE_PATH, backupPath); } catch {}
+    console.warn(`[progressStore] progress.json corrupted — backed up to ${backupPath}, resetting to empty:`, err.message);
+    raw = { sessions: [], topics: {}, students: {} };
+    try { fs.writeFileSync(STORE_PATH, JSON.stringify(raw, null, 2)); } catch {}
+  }
 
   // ── Backward compatibility: migrate old flat format ──
   // Old format had topics as { "gravity": { ... } }
@@ -103,8 +114,14 @@ function ensureStudent(store, studentId, studentName) {
 // ─────────────────────────────────────────────────────────────
 function sm2(repetitions, easeFactor, interval, grade) {
   if (grade >= 3) {
+    // Published SM-2 paper specifies interval[1]=6 days. We use 3 because
+    // study sessions in a Kaggle-style demo / classroom evaluation cluster
+    // into shorter windows than the Polish-language-vocabulary use case the
+    // original paper validated against. A 3-day second-review tightens the
+    // feedback loop for short-term mastery without changing the geometric
+    // growth from rep 2 onward (still interval * easeFactor).
     if (repetitions === 0)      interval = 1;
-    else if (repetitions === 1) interval = 6;
+    else if (repetitions === 1) interval = 3;
     else                        interval = Math.round(interval * easeFactor);
 
     easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));

@@ -92,18 +92,34 @@ function loadDiskCache() {
   }
 }
 
-function saveToDisk(key, entry) {
-  // Write to disk asynchronously — never blocks a response
+// Serial write queue — prevents lost cache entries when two requests
+// race a read-modify-write against disk simultaneously.
+const writeQueue = [];
+let isWriting    = false;
+
+function processWriteQueue() {
+  if (isWriting) return;
+  const next = writeQueue.shift();
+  if (!next) return;
+
+  isWriting = true;
   setImmediate(() => {
     try {
       const dir = path.dirname(DISK_PATH);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-      const existing = fs.existsSync(DISK_PATH)
-        ? JSON.parse(fs.readFileSync(DISK_PATH, 'utf8'))
-        : {};
+      let existing;
+      try {
+        existing = fs.existsSync(DISK_PATH)
+          ? JSON.parse(fs.readFileSync(DISK_PATH, 'utf8'))
+          : {};
+      } catch (parseErr) {
+        // Corrupted disk cache — start fresh
+        console.warn('[smartCache] disk cache corrupted — resetting:', parseErr.message);
+        existing = {};
+      }
 
-      existing[key] = entry;
+      existing[next.key] = next.entry;
 
       // Evict oldest entries if over limit
       const keys = Object.keys(existing);
@@ -116,8 +132,17 @@ function saveToDisk(key, entry) {
       fs.writeFileSync(DISK_PATH, JSON.stringify(existing));
     } catch (err) {
       console.warn('[smartCache] disk save failed:', err.message);
+    } finally {
+      isWriting = false;
+      // Drain the rest of the queue
+      if (writeQueue.length > 0) processWriteQueue();
     }
   });
+}
+
+function saveToDisk(key, entry) {
+  writeQueue.push({ key, entry });
+  processWriteQueue();
 }
 
 // ─────────────────────────────────────────────────────────────

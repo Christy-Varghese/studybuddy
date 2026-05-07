@@ -10,6 +10,7 @@ const { buildSystemPrompt, estimateResponseTime, ollamaOptions } = require('../l
 const { parseTutorResponse } = require('../lib/parseJSON');
 const { upload }       = require('../middleware/upload');
 const { flowTraces }   = require('../middleware/devTiming');
+const { REASONING, reasoningWithDraft } = require('../agent/models');
 
 // ============ POST /estimate — Quick time estimate (no Ollama call) ============
 router.post('/estimate', (req, res) => {
@@ -28,7 +29,16 @@ router.post('/chat', async (req, res) => {
   const steps = [];
   const mark = (name, detail) => steps.push({ name, ms: Date.now() - chatStart, detail });
 
-  const { message, level, language, history } = req.body;
+  const { message, level, language } = req.body;
+  // history may arrive as a JSON string (multipart) or a parsed array (JSON body)
+  let history = [];
+  try {
+    const raw = req.body.history;
+    history = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+    if (!Array.isArray(history)) history = [];
+  } catch {
+    history = [];
+  }
   console.log(`\n⏱  [/chat] Started — level: ${level || 'beginner'}, lang: ${language || 'English'}, prompt: "${(message || '').slice(0, 60)}…"`);
 
   // SSE headers — keep connection open for streaming
@@ -46,20 +56,25 @@ router.post('/chat', async (req, res) => {
   ];
   mark('Build prompt', `${messages.length} messages, level=${level || 'beginner'}`);
 
+  // Abort upstream Ollama generation if the client disconnects mid-stream.
+  // Without this, Ollama keeps generating tokens nobody reads, holding the
+  // GPU until natural stop — back-to-back demo retakes stall as a result.
+  const upstreamAbort = new AbortController();
+
   try {
     // Call Ollama with streaming enabled
     const ollamaRes = await fetch('http://localhost:11434/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: upstreamAbort.signal,
       body: JSON.stringify({
-        model: 'gemma4:e4b',
+        ...reasoningWithDraft(),
         messages: messages,
         stream: true,
-        options: { ...ollamaOptions('json'), num_ctx: 4096 },
-        speculative_model: 'gemma2:2b'
+        options: { ...ollamaOptions('json'), num_ctx: 4096 }
       })
     });
-    mark('Ollama API call', `model=gemma4:e4b, status=${ollamaRes.status}`);
+    mark('Ollama API call', `model=${REASONING}, status=${ollamaRes.status}`);
 
     if (!ollamaRes.ok) {
       throw new Error(`Ollama API error: ${ollamaRes.status} ${ollamaRes.statusText}`);
@@ -72,6 +87,13 @@ router.post('/chat', async (req, res) => {
     const reader = ollamaRes.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
+    // Clean up reader + buffer + upstream fetch if the client disconnects early
+    req.on('close', () => {
+      try { reader.cancel(); } catch {}
+      try { upstreamAbort.abort(); } catch {}
+      buffer = '';
+    });
 
     while (true) {
       const { done, value } = await reader.read();
@@ -155,6 +177,16 @@ router.post('/chat', async (req, res) => {
       input: (message || '').slice(0, 80), steps
     };
   } catch (err) {
+    // Client disconnect raised AbortError via upstreamAbort.abort() — that's
+    // expected, not a server-side failure. Don't log as ERROR or 500.
+    if (err.name === 'AbortError') {
+      flowTraces['/chat'] = {
+        route: '/chat', ts: Date.now(), totalMs: Date.now() - chatStart, status: 'aborted',
+        input: (message || '').slice(0, 80), steps
+      };
+      try { res.end(); } catch {}
+      return;
+    }
     const chatMs = Date.now() - chatStart;
     mark('ERROR', err.message);
     flowTraces['/chat'] = {
@@ -268,7 +300,7 @@ Strict Rule: Keep your <think> section extremely brief, under 30 words. Do not s
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemma4:e4b',
+        model: REASONING,
         messages: messages,
         stream: false,
         options: { ...ollamaOptions('vision'), num_ctx: 4096 }
