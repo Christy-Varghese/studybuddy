@@ -108,7 +108,7 @@ fi
 
 # ─── 6. agent/models.js loads ───────────────────────────────────────────
 section "6. agent/models.js exports the right shape"
-node -e '
+models_out=$(node -e '
   const m = require("./agent/models");
   const want = ["REASONING","CLASSIFIER","SPECULATIVE_DRAFT","reasoningWithDraft","classifier"];
   const missing = want.filter(k => !(k in m));
@@ -118,7 +118,13 @@ node -e '
   const c = m.classifier();
   if (!c.model) { console.error("classifier shape wrong:", c); process.exit(1); }
   console.log("REASONING=" + m.REASONING + ", DRAFT=" + m.SPECULATIVE_DRAFT + ", CLASSIFIER=" + m.CLASSIFIER);
-' 2>&1 | (read -r line && ok "models.js OK ($line)" || fail "models.js failed to load")
+' 2>&1)
+models_rc=$?
+if [ "$models_rc" = "0" ]; then
+  ok "models.js OK ($(printf %s "$models_out" | tail -1))"
+else
+  fail "models.js failed to load — $(printf %s "$models_out" | tail -1)"
+fi
 
 # ─── 7. /chat smokes ────────────────────────────────────────────────────
 section "7. /chat streams a token (Ollama up + reasoning model loaded)"
@@ -134,12 +140,16 @@ fi
 
 # ─── 8. smartCache concurrent-write race ────────────────────────────────
 section "8. smartCache write queue handles concurrent writes"
-node -e '
+# Use a per-run unique tool prefix so keys don't collide with prior runs
+# (otherwise smartSet just overwrites existing entries and memEntries
+# doesn't grow, giving a false "lost writes" reading).
+cache_check=$(node -e '
   const c = require("./agent/smartCache");
   const N = 25;
   const before = c.getCacheStats().memEntries || 0;
+  const TOOL = "verify-" + process.pid + "-" + Date.now();
   for (let i = 0; i < N; i++) {
-    c.smartSet("verify", "race-key-" + i, "beginner", { value: i });
+    c.smartSet(TOOL, "race-key-" + i, "beginner", { value: i });
   }
   // Allow setImmediate-driven write queue to drain
   setTimeout(() => {
@@ -153,10 +163,11 @@ node -e '
       process.exit(1);
     }
   }, 500);
-' 2>&1 | tail -1 | (read -r line && case "$line" in
-  OK*) ok "Cache write queue: $line" ;;
-  *)   fail "Cache write queue dropped writes — $line" ;;
-esac)
+' 2>&1 | grep -E "^(OK|LOST)" | tail -1)
+case "$cache_check" in
+  OK*) ok "Cache write queue: $cache_check" ;;
+  *)   fail "Cache write queue dropped writes — ${cache_check:-no result}" ;;
+esac
 
 # ─── 9. progress.json corruption recovery + D5 backup ───────────────────
 section "9. Corrupt progress.json → /progress recovers + .corrupted-<ts> backup"
