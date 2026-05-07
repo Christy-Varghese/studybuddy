@@ -56,6 +56,12 @@ async function generateConceptMap() {
 }
 
 function buildConceptMapSVG(data, container) {
+  // Guard: D3 must be loaded for rendering
+  if (typeof d3 === 'undefined') {
+    container.textContent = 'Concept Map needs network on first load.';
+    return;
+  }
+
   const W = 640, H = 460;
 
   // ── Build node & link arrays for D3 ──
