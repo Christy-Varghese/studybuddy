@@ -209,7 +209,7 @@ fi
 
 # ─── 10. Pre-warm cache for the demo topic ─────────────────────────────
 section "10. Pre-warm cache for DEMO_TOPIC=\"$DEMO_TOPIC\""
-warm_status=$(curl -o /dev/null -s -w '%{http_code}' --max-time 90 -X POST "$HOST/quiz" \
+warm_status=$(curl -o /dev/null -s -w '%{http_code}' --max-time 300 -X POST "$HOST/quiz" \
   -H 'Content-Type: application/json' \
   -d "{\"topic\":\"$DEMO_TOPIC\",\"level\":\"intermediate\",\"numQuestions\":5}")
 if [ "$warm_status" = "200" ]; then
