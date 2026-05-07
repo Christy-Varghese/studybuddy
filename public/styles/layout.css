@@ -45,6 +45,18 @@ header h1 {
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
+@keyframes streak-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.2) rotate(-2deg); }
+  70%  { transform: scale(0.95) rotate(1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.streak-badge.pop {
+  animation: streak-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak-badge.pop { animation: none; transform: scale(1.05); }
+}
 
 /* ═══════════ CONTROLS BAR ═══════════ */
 .controls {
