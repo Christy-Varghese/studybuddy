@@ -94,22 +94,22 @@ function renderSocraticResponse(s) {
 
   // Acknowledgement
   if (s.acknowledgement) {
-    html += `<div class="socratic-ack">${s.acknowledgement}</div>`;
+    html += `<div class="socratic-ack">${escapeHtml(s.acknowledgement)}</div>`;
   }
 
   // The question
-  html += `<div class="socratic-question">${s.question}</div>`;
+  html += `<div class="socratic-question">${escapeHtml(s.question)}</div>`;
 
   // Hint
   if (s.hint) {
-    html += `<div class="socratic-hint">💡 ${s.hint}</div>`;
+    html += `<div class="socratic-hint">💡 ${escapeHtml(s.hint)}</div>`;
   }
 
   // Big Picture summary (Turn 5)
   if (s.isFinalTurn && s.summary) {
     html += `<div class="socratic-summary">
       <div class="socratic-summary-title">🎯 The Big Picture</div>
-      <div class="socratic-summary-text">${s.summary}</div>
+      <div class="socratic-summary-text">${escapeHtml(s.summary)}</div>
     </div>`;
   }
 

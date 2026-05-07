@@ -310,6 +310,13 @@ async function sendToAgent(message) {
     // Silently fail estimate
   }
 
+  // Skeleton placeholder: agent path has no SSE, so show shimmer until response lands.
+  const skeletonBubble = document.createElement('div');
+  skeletonBubble.className = 'bubble bot';
+  skeletonBubble.innerHTML = '<div class="skeleton-loader"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>';
+  chatEl.appendChild(skeletonBubble);
+  scrollToBottom();
+
   try {
     const res = await fetch('/agent', {
       method:  'POST',
@@ -323,6 +330,7 @@ async function sendToAgent(message) {
     });
 
     const data = await res.json();
+    skeletonBubble.remove();
     if (estimateBadge) {
       estimateBadge.triggerShrinkFade();
     }
@@ -342,7 +350,7 @@ async function sendToAgent(message) {
     if (data.structured) {
       renderAgentResponse(data.structured);
     } else {
-      addBubble(data.rawReply, 'bot');
+      addBubble(escapeHtml(data.rawReply), 'bot');
     }
 
     // Add to history
@@ -350,11 +358,14 @@ async function sendToAgent(message) {
     history.push({ role: 'assistant', content: data.rawReply });
 
   } catch (err) {
+    if (skeletonBubble.isConnected) {
+      skeletonBubble.innerHTML = '<div class="bubble bot" style="margin:0">⚠️ Failed to get response. Please try again.</div>';
+      skeletonBubble.className = '';
+    }
     if (estimateBadge) {
       estimateBadge.triggerShrinkFade();
     }
     if (countdownInterval) clearInterval(countdownInterval);
-    addBubble('⚠️ Agent error: could not reach server.', 'bot');
   }
 }
 

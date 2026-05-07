@@ -132,6 +132,12 @@ function convertLatexToReadable(text) {
 let lastUploadedImageDataUrl = null;
 
 function renderBotResponse(data, imageDataUrl = null) {
+  // Guard: null/non-object data (e.g. network error before JSON arrives)
+  if (!data || typeof data !== 'object') {
+    addBubble('⚠️  Empty response from server. Please try again.', 'bot');
+    return;
+  }
+
   // Store image URL for vision responses
   if (imageDataUrl) {
     lastUploadedImageDataUrl = imageDataUrl;
@@ -234,14 +240,6 @@ function renderFormattedFallback(raw) {
   html = convertLatexToReadable(html);
 
   addBubble(html, 'bot', true);
-}
-
-/** Minimal HTML-entity escaper for user-generated text */
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 /**
@@ -348,7 +346,7 @@ function renderVisionResponse(visionData, imageDataUrl) {
           <span class="icon">${icon}</span>
           <span>${currentLabels.summary}</span>
         </div>`,
-        `<div class="vision-summary" style="margin-top:8px">${convertLatexToReadable(visionData.visual_summary)}</div>`
+        `<div class="vision-summary" style="margin-top:8px">${convertLatexToReadable(escapeHtml(visionData.visual_summary))}</div>`
       );
       summarySection.style.animation = 'visionFadeIn 0.4s ease forwards';
       contentElements.push(summarySection);
@@ -361,7 +359,7 @@ function renderVisionResponse(visionData, imageDataUrl) {
       
       const headerIcon = theme === 'beginner' ? '📝' : (theme === 'advanced' ? '⟨⟩' : '📋');
       let itemsHtml = visionData.extracted_data.map(item => 
-        `<div class="vision-extracted-item">${convertLatexToReadable(item)}</div>`
+        `<div class="vision-extracted-item">${convertLatexToReadable(escapeHtml(item))}</div>`
       ).join('');
       
       makeCollapsible(extractedSection,
@@ -387,8 +385,8 @@ function renderVisionResponse(visionData, imageDataUrl) {
         <div class="vision-step" style="animation-delay: ${0.3 + (i * 0.15)}s">
           <div class="vision-step-num">${step.step || i + 1}</div>
           <div class="vision-step-content">
-            <div class="vision-step-title">${convertLatexToReadable(step.title)}</div>
-            <div class="vision-step-explanation">${convertLatexToReadable(step.explanation)}</div>
+            <div class="vision-step-title">${convertLatexToReadable(escapeHtml(step.title))}</div>
+            <div class="vision-step-explanation">${convertLatexToReadable(escapeHtml(step.explanation))}</div>
           </div>
         </div>
       `).join('');
@@ -418,7 +416,7 @@ function renderVisionResponse(visionData, imageDataUrl) {
           <span>${currentLabels.solution}</span>
         </div>`,
         `<div class="vision-final-solution" style="margin-top:8px;animation-delay:${solutionDelay}s">
-          ${convertLatexToReadable(visionData.final_solution)}
+          ${convertLatexToReadable(escapeHtml(visionData.final_solution))}
         </div>`
       );
       contentElements.push(solutionSection);

@@ -36,7 +36,7 @@ async function showEvaluationReport() {
     // 1. Evaluation Narrative
     html += `<div class="evo-section">
       <div class="evo-section-title"><span class="evo-section-icon">🧭</span> Evaluation Narrative</div>
-      <div class="evo-section-body">${r.narrative || 'No narrative available yet.'}</div>
+      <div class="evo-section-body">${escapeHtml(r.narrative) || 'No narrative available yet.'}</div>
     </div>`;
 
     // 2. Intelligence Cross-Pollination
@@ -44,10 +44,10 @@ async function showEvaluationReport() {
       html += `<div class="evo-section">
         <div class="evo-section-title"><span class="evo-section-icon">🔗</span> Hidden Connection</div>
         <div class="evo-section-body">
-          <span class="evo-connection-badge">${r.crossPollination.topicA}</span>
+          <span class="evo-connection-badge">${escapeHtml(r.crossPollination.topicA)}</span>
           ↔
-          <span class="evo-connection-badge">${r.crossPollination.topicB}</span>
-          <div style="margin-top:6px;">${r.crossPollination.connection}</div>
+          <span class="evo-connection-badge">${escapeHtml(r.crossPollination.topicB)}</span>
+          <div style="margin-top:6px;">${escapeHtml(r.crossPollination.connection)}</div>
         </div>
       </div>`;
     }
@@ -56,7 +56,7 @@ async function showEvaluationReport() {
     if (r.vocabularyHeatmap) {
       html += `<div class="evo-section">
         <div class="evo-section-title"><span class="evo-section-icon">🌡️</span> Vocabulary Heatmap</div>
-        <div class="evo-section-body">${r.vocabularyHeatmap}</div>
+        <div class="evo-section-body">${escapeHtml(r.vocabularyHeatmap)}</div>
       </div>`;
     }
 
@@ -65,8 +65,8 @@ async function showEvaluationReport() {
       html += `<div class="evo-section">
         <div class="evo-section-title"><span class="evo-section-icon">🎯</span> One Big Domino</div>
         <div class="evo-domino-box">
-          <div class="evo-domino-topic">🧱 ${r.bigDomino.topic}</div>
-          <div class="evo-domino-reason">${r.bigDomino.reasoning}</div>
+          <div class="evo-domino-topic">🧱 ${escapeHtml(r.bigDomino.topic)}</div>
+          <div class="evo-domino-reason">${escapeHtml(r.bigDomino.reasoning)}</div>
         </div>
       </div>`;
     }
@@ -76,8 +76,8 @@ async function showEvaluationReport() {
       html += `<div class="evo-section">
         <div class="evo-section-title"><span class="evo-section-icon">⚡</span> Your Micro-Mission (2 min)</div>
         <div class="evo-mission-box">
-          <div class="evo-mission-task">${r.microMission.task}</div>
-          <div class="evo-mission-target">Targets: ${r.microMission.topic}</div>
+          <div class="evo-mission-task">${escapeHtml(r.microMission.task)}</div>
+          <div class="evo-mission-target">Targets: ${escapeHtml(r.microMission.topic)}</div>
         </div>
       </div>`;
     }

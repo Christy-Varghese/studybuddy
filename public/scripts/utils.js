@@ -1,4 +1,16 @@
 /* Utility functions: scrollToBottom, addBubble, escapeHtml */
+
+// ============ XSS Guard ============
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ============ Performance: Batched Scroll Helper ============
 // Uses requestAnimationFrame to batch scroll updates and prevent layout thrashing
 let scrollRAF = null;
