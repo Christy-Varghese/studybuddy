@@ -1,3 +1,23 @@
+---
+title:StudyBuddy — README
+aliases:
+  - StudyBuddy
+  - StudyBuddy Overview
+tags:
+  - studybuddy
+  - readme
+  - project-root
+cssclasses:
+  - project-readme
+  - project-hub
+project:studybuddy
+type:readme
+status:active
+related:
+  - [[studybuddy/Dependencies]]
+  - [[studybuddy/CLAUDE]]
+---
+
 # StudyBuddy 📚 — Offline AI Tutor Powered by Gemma 4
 
 An intelligent, fully offline tutoring platform that runs entirely on your device using **Gemma 4 via Ollama**. No cloud, no API keys, no internet required after setup.

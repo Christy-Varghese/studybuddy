@@ -1,3 +1,20 @@
+---
+title:Master Blueprint
+aliases:
+  - Master Blueprint
+tags:
+  - studybuddy
+  - documentation
+cssclasses:
+  - project-doc
+project:studybuddy
+type:documentation
+status:active
+related:
+  - [[studybuddy/README]]
+  - [[studybuddy/CLAUDE]]
+---
+
 # StudyBuddy — Master Blueprint
 
 > **Single source of truth** for the entire StudyBuddy codebase.  

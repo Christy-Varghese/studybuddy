@@ -1,3 +1,20 @@
+---
+title:Kaggle Writeup
+aliases:
+  - Kaggle Writeup
+tags:
+  - studybuddy
+  - documentation
+cssclasses:
+  - project-doc
+project:studybuddy
+type:documentation
+status:active
+related:
+  - [[studybuddy/README]]
+  - [[studybuddy/CLAUDE]]
+---
+
 # StudyBuddy — Offline AI Tutor Powered by Gemma 4
 
 ## Submission Details
