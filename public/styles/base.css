@@ -111,3 +111,72 @@ body::before {
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
+
+/* ═══════════ Toast (replaces alert() for non-blocking errors) ═══════════ */
+#toast-host {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 360px;
+  padding: 12px 14px;
+  background: rgba(20, 22, 36, 0.92);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast--in  { opacity: 1; transform: translateY(0); }
+.toast--out { opacity: 0; transform: translateY(-8px); }
+.toast--error   { border-left: 3px solid #f87171; }
+.toast--success { border-left: 3px solid #34d399; }
+.toast--info    { border-left: 3px solid #6c63ff; }
+.toast__icon { font-size: 1rem; line-height: 1.4; }
+.toast__msg  { flex: 1; word-break: break-word; }
+@media (max-width: 480px) {
+  #toast-host { top: 8px; left: 8px; right: 8px; }
+  .toast { max-width: none; }
+}
+
+/* ═══════════ Quick-start chips (empty chat state) ═══════════ */
+.quick-starts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 4px 0;
+  padding: 0 4px;
+}
+.quick-start-chip {
+  background: rgba(108, 99, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(108, 99, 255, 0.25);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  font-family: inherit;
+}
+.quick-start-chip:hover {
+  background: rgba(108, 99, 255, 0.18);
+  border-color: rgba(108, 99, 255, 0.5);
+}
+.quick-start-chip:active { transform: scale(0.97); }
+.quick-starts.hidden { display: none; }

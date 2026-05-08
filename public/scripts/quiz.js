@@ -113,7 +113,7 @@ async function generateQuiz() {
     hideQuizLoading();
 
     if (data.error) {
-      alert('⚠️ ' + data.error);
+      toast(data.error, 'error');
     } else {
       currentQuiz = data.questions;
       quizAnswers = {};
@@ -122,7 +122,7 @@ async function generateQuiz() {
     }
   } catch (e) {
     hideQuizLoading();
-    alert('⚠️ Could not generate quiz. Is Ollama running?');
+    toast('Could not generate quiz. Is Ollama running?', 'error');
   }
 }
 

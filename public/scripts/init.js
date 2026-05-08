@@ -29,3 +29,20 @@ document.addEventListener('keydown', (e) => {
     closeQuizModal();
   }
 });
+
+// ── Quick-start chips: fill composer (don't auto-send), then focus ──
+const quickStartsEl = document.getElementById('quick-starts');
+if (quickStartsEl) {
+  quickStartsEl.addEventListener('click', (e) => {
+    const chip = e.target.closest('.quick-start-chip');
+    if (!chip) return;
+    const prompt = chip.dataset.prompt || chip.textContent.trim();
+    inputEl.value = prompt;
+    inputEl.focus();
+    quickStartsEl.classList.add('hidden');
+  });
+  // Hide chips once the user starts typing or a real exchange begins
+  inputEl.addEventListener('input', () => {
+    if (inputEl.value.length > 0) quickStartsEl.classList.add('hidden');
+  });
+}

@@ -38,7 +38,7 @@ async function generateConceptMap() {
     document.getElementById('cm-loading').style.display = 'none';
 
     if (!data.success) {
-      alert('⚠️ Could not generate concept map. Try a different topic.');
+      toast('Could not generate concept map. Try a different topic.', 'error');
     } else {
       const svgWrap = document.getElementById('cm-svg-wrap');
       svgWrap.innerHTML = '';
@@ -48,7 +48,7 @@ async function generateConceptMap() {
     }
   } catch (err) {
     document.getElementById('cm-loading').style.display = 'none';
-    alert('⚠️ Server error generating concept map.');
+    toast('Server error generating concept map.', 'error');
   }
 
   btn.disabled = false;

@@ -536,7 +536,8 @@ function renderClassOverview(dash) {
     : 0;
   const allScores = [];
   students.forEach(s => s.topics?.forEach(t => { if (t.avgScore !== null) allScores.push(t.avgScore); }));
-  const classAvg = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : '—';
+  const hasScores = allScores.length > 0;
+  const classAvg = hasScores ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : null;
 
   const atRisk = computeAtRisk();
   const confusion = computeCollectiveConfusion();
@@ -560,7 +561,7 @@ function renderClassOverview(dash) {
       </div>
       <div class="stat-card">
         <div class="label">Class Avg Score</div>
-        <div class="value" style="color:${typeof classAvg === 'number' && classAvg < 60 ? 'var(--danger)' : 'var(--accent2)'}">${classAvg}${typeof classAvg === 'number' ? '%' : ''}</div>
+        <div class="value" style="color:${hasScores && classAvg < 60 ? 'var(--danger)' : hasScores ? 'var(--accent2)' : 'var(--muted)'}; ${hasScores ? '' : 'font-size:1rem; font-weight:500;'}">${hasScores ? `${classAvg}%` : 'No quizzes yet'}</div>
       </div>
       <div class="stat-card">
         <div class="label">At-Risk Students</div>
@@ -576,22 +577,22 @@ function renderClassOverview(dash) {
         <div class="panel-body ${atRisk.length === 0 ? 'empty' : ''}" id="panelRiskBody"></div>
       </div>
 
-      <!-- 2. Collective Confusion -->
+      <!-- 2. Curiosity Tracking -->
+      <div class="panel panel--curiosity" id="panelCuriosity">
+        <div class="panel-header"><span class="icon">🔍</span> Curiosity Tracking <span class="badge badge--good">${curiosity.length} topics</span></div>
+        <div class="panel-body ${curiosity.length === 0 ? 'empty' : ''}" id="panelCuriosityBody"></div>
+      </div>
+
+      <!-- 3. Collective Confusion -->
       <div class="panel panel--confusion" id="panelConfusion">
         <div class="panel-header"><span class="icon">🤔</span> Collective Confusion <span class="badge badge--warning">${confusion.length}</span></div>
         <div class="panel-body ${confusion.length === 0 ? 'empty' : ''}" id="panelConfusionBody"></div>
       </div>
 
-      <!-- 3. Engagement Drop-off -->
+      <!-- 4. Engagement Drop-off -->
       <div class="panel panel--dropout" id="panelDropoff">
         <div class="panel-header"><span class="icon">📉</span> Engagement Drop-off <span class="badge badge--info">${dropoff.length}</span></div>
         <div class="panel-body ${dropoff.length === 0 ? 'empty' : ''}" id="panelDropoffBody"></div>
-      </div>
-
-      <!-- 4. Curiosity Tracking -->
-      <div class="panel panel--curiosity" id="panelCuriosity">
-        <div class="panel-header"><span class="icon">🔍</span> Curiosity Tracking <span class="badge badge--good">${curiosity.length} topics</span></div>
-        <div class="panel-body ${curiosity.length === 0 ? 'empty' : ''}" id="panelCuriosityBody"></div>
       </div>
     </div>
 

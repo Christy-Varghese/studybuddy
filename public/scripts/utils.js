@@ -35,3 +35,27 @@ function addBubble(content, role, isHTML = false, autoScroll = true) {
   if (autoScroll) scrollToBottom();
   return div;
 }
+
+// ============ Toast (replaces alert() for non-blocking errors) ============
+function toast(message, kind = 'error', durationMs = 4500) {
+  let host = document.getElementById('toast-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toast-host';
+    document.body.appendChild(host);
+  }
+  const el = document.createElement('div');
+  el.className = `toast toast--${kind}`;
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  el.setAttribute('aria-live', kind === 'error' ? 'assertive' : 'polite');
+  const icon = kind === 'error' ? '⚠️' : kind === 'success' ? '✅' : 'ℹ️';
+  el.innerHTML = `<span class="toast__icon">${icon}</span><span class="toast__msg"></span>`;
+  el.querySelector('.toast__msg').textContent = message;
+  host.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('toast--in'));
+  setTimeout(() => {
+    el.classList.remove('toast--in');
+    el.classList.add('toast--out');
+    setTimeout(() => el.remove(), 250);
+  }, durationMs);
+}
