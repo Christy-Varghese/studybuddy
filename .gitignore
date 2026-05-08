@@ -16,3 +16,13 @@ data/cache.json
 __pycache__/
 *.pyc
 *.pyo
+.gstack/
+
+# Demo-verify test artifacts (corrupt-recovery backups)
+data/progress.json.corrupted-*
+
+# Local-only Claude/agent settings (project context in .claude/claude.md is fine to commit)
+.claude/settings.local.json
+
+# IDE
+.vscode/
