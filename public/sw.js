@@ -1,4 +1,4 @@
-const CACHE_VERSION   = 'studybuddy-v4';
+const CACHE_VERSION   = 'studybuddy-v5';
 const SHELL_CACHE     = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE   = `${CACHE_VERSION}-runtime`;
 
@@ -46,8 +46,7 @@ const SHELL_ASSETS = [
   // Vendor scripts (precached for offline)
   '/vendor/d3.min.js',
   '/vendor/chart.umd.min.js',
-  // Google Fonts — cache the CSS (fonts themselves load from CDN)
-  'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap',
+  // Typography is system-fonts — no external font request to cache.
 ];
 
 // Routes that should NEVER be cached (always need live server)
@@ -122,12 +121,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle requests to our own origin (or Google Fonts)
-  const isOurOrigin   = url.origin === self.location.origin;
-  const isGoogleFonts = url.origin === 'https://fonts.googleapis.com'
-                      || url.origin === 'https://fonts.gstatic.com';
-
-  if (!isOurOrigin && !isGoogleFonts) return; // let CDN requests pass through
+  // Only handle requests to our own origin. Typography is system-fonts now,
+  // so there's no third-party origin we want to mediate.
+  if (url.origin !== self.location.origin) return;
 
   // Never cache dev/admin routes — always go to network
   if (NEVER_CACHE.some(route => url.pathname.startsWith(route))) {
