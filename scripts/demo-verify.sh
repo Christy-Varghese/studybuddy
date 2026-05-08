@@ -69,18 +69,38 @@ else
   fail "d3.min.js is only $bytes bytes — file may be a 404 page or truncated"
 fi
 
-# ─── 3. service worker v3 ───────────────────────────────────────────────
-section "3. Service worker cache version + d3 precache"
-sw_content=$(curl -fsS "$HOST/sw.js" 2>/dev/null || echo "")
-if printf %s "$sw_content" | grep -q "studybuddy-v3"; then
-  ok "sw.js has CACHE_VERSION = studybuddy-v3"
+# Chart.js for the teacher dashboard
+status=$(curl -o /dev/null -s -w '%{http_code}' "$HOST/vendor/chart.umd.min.js")
+if [ "$status" = "200" ]; then
+  ok "/vendor/chart.umd.min.js → 200"
 else
-  fail "sw.js missing studybuddy-v3 — clients will not refresh on next install"
+  fail "/vendor/chart.umd.min.js → $status (teacher dashboard charts fail offline)"
+fi
+bytes=$(curl -fsS "$HOST/vendor/chart.umd.min.js" 2>/dev/null | wc -c | tr -d ' ' || echo 0)
+if [ "$bytes" -gt 100000 ]; then
+  ok "chart.umd.min.js is $bytes bytes (looks like the full library)"
+else
+  fail "chart.umd.min.js is only $bytes bytes — file may be a 404 page or truncated"
+fi
+
+# ─── 3. service worker cache version + vendor precache ─────────────────
+section "3. Service worker cache version + vendor precache"
+sw_content=$(curl -fsS "$HOST/sw.js" 2>/dev/null || echo "")
+sw_version=$(printf %s "$sw_content" | sed -nE "s/.*CACHE_VERSION[[:space:]]*=[[:space:]]*['\"](studybuddy-v[0-9]+)['\"].*/\1/p" | head -1)
+if [ -n "$sw_version" ]; then
+  ok "sw.js has CACHE_VERSION = $sw_version"
+else
+  fail "sw.js missing a studybuddy-v<N> CACHE_VERSION — clients will not refresh on next install"
 fi
 if printf %s "$sw_content" | grep -q "/vendor/d3.min.js"; then
   ok "sw.js precaches /vendor/d3.min.js"
 else
   fail "sw.js does not precache d3 — first offline load will fail"
+fi
+if printf %s "$sw_content" | grep -q "/vendor/chart.umd.min.js"; then
+  ok "sw.js precaches /vendor/chart.umd.min.js"
+else
+  fail "sw.js does not precache Chart.js — teacher dashboard fails offline"
 fi
 
 # ─── 4. concept-map d3 guard ────────────────────────────────────────────
@@ -127,14 +147,17 @@ else
 fi
 
 # ─── 7. /chat smokes ────────────────────────────────────────────────────
+# Cold model ≈ 50-90s before first token on a 4B reasoning model. Demo
+# topic should already be warm by check 10, but a fresh server restart
+# means this runs cold — give it room.
 section "7. /chat streams a token (Ollama up + reasoning model loaded)"
 chat_body='{"message":"What is 2+2? One sentence.","level":"beginner","language":"English"}'
-chat_out=$(curl -sS --max-time 30 -N -X POST "$HOST/chat" \
+chat_out=$(curl -sS --max-time 120 -N -X POST "$HOST/chat" \
   -H "Content-Type: application/json" -d "$chat_body" 2>/dev/null | head -c 4000 || true)
 if printf %s "$chat_out" | grep -q '"token"'; then
-  ok "/chat streamed at least one token within 30s"
+  ok "/chat streamed at least one token (within 120s)"
 else
-  fail "/chat did not stream a token — Ollama may be down or model unloaded"
+  fail "/chat did not stream a token within 120s — Ollama may be down or model unloaded"
   printf '  %sFirst 300 chars of response:%s %s\n' "$YELLOW" "$RESET" "$(printf %s "$chat_out" | head -c 300)"
 fi
 
