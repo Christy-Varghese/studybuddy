@@ -26,3 +26,6 @@ data/progress.json.corrupted-*
 
 # IDE
 .vscode/
+
+# Playwright MCP scratch
+.playwright-mcp/
