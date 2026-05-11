@@ -185,22 +185,19 @@ Privacy is not a setting — it is the architecture.
 
 ## 7. Impact
 
-- **Students without internet** — full AI tutor, zero connectivity after setup.
-- **Low-income families** — free, open-source; no subscription, no API costs.
-- **Privacy-conscious regions** — all data on-device.
-- **Under-resourced schools** — deploy to a classroom via USB or local network.
+Students without internet get a full AI tutor; low-income families pay nothing; privacy-conscious regions keep all data on-device; under-resourced schools deploy via USB. **Scale:** any 8GB laptop, 140+ languages, $0 to run. Potential reach: 100M+ students in offline regions.
 
-**Scale:** any 8GB laptop, 140+ languages natively, $0 to run. Potential reach: 100M+ students in offline regions.
-
-> *12-year-old Priya in rural India has homework about photosynthesis. No internet, no tutor. She opens StudyBuddy, types her question at Beginner level, sees a colourful step-by-step explanation, takes a quiz, and gets scheduled for a review in 6 days via spaced repetition. When confused about a diagram, she photographs it — Gemma 4 vision breaks it down. Zero internet, zero cost, zero data leaving her device.*
+> *12-year-old Priya in rural India has homework about photosynthesis. No internet, no tutor. She opens StudyBuddy, sees a colourful step-by-step explanation at Beginner level, takes a quiz, gets scheduled for review in 6 days. Confused about a diagram, she photographs it — Gemma 4 vision breaks it down. Zero internet, zero cost, zero data leaving her device.*
 
 ---
 
-## 8. Demo Walkthrough
+## 8. Live Demo & Walkthrough
+
+**Live demo:** A hosted URL would defeat the point — StudyBuddy *is* the offline-first architecture. The video shows the full UX; the repo runs locally in ~2 minutes (Section 9).
 
 **Video:** https://youtu.be/eo5syCtA5xE
 
-Things to try:
+Things to try after local setup:
 
 1. Ask "What is photosynthesis?" at Beginner, then Advanced — notice depth shift.
 2. Upload a homework photo (📎) → vision scanning animation and structured solution.
