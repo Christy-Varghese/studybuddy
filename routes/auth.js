@@ -2,6 +2,49 @@
 const express = require('express');
 const router  = express.Router();
 
+// ── Login rate limiter ──────────────────────────
+// 4-digit PINs are tiny; without throttling they crack in seconds.
+// Sliding window: max 10 failed attempts per IP per 15 minutes.
+// Successful logins reset the counter for that IP.
+const LOGIN_WINDOW_MS    = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+const loginAttempts = new Map(); // ip -> array of failure timestamps (ms)
+
+function pruneAttempts(ip, now) {
+  const arr = loginAttempts.get(ip);
+  if (!arr) return [];
+  const fresh = arr.filter(ts => now - ts < LOGIN_WINDOW_MS);
+  if (fresh.length) loginAttempts.set(ip, fresh);
+  else loginAttempts.delete(ip);
+  return fresh;
+}
+
+function loginRateLimit(req, res, next) {
+  const ip  = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const recent = pruneAttempts(ip, now);
+  if (recent.length >= LOGIN_MAX_ATTEMPTS) {
+    const retryMs = LOGIN_WINDOW_MS - (now - recent[0]);
+    res.set('Retry-After', Math.ceil(retryMs / 1000));
+    return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
+  }
+  next();
+}
+
+function recordLoginFailure(req) {
+  const ip  = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const recent = pruneAttempts(ip, now);
+  recent.push(now);
+  loginAttempts.set(ip, recent);
+  console.warn(`[auth] failed PIN attempt from ${ip} (${recent.length}/${LOGIN_MAX_ATTEMPTS})`);
+}
+
+function clearLoginFailures(req) {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  loginAttempts.delete(ip);
+}
+
 // ── GET /session — Session status for health/benchmark ──
 router.get('/session', (req, res) => {
   if (!req.session.role) {
@@ -17,7 +60,7 @@ const STUDENT_PIN = process.env.STUDENT_PIN || '1234';
 const TEACHER_PIN = process.env.TEACHER_PIN || '9999';
 
 // ── POST /auth/login — Authenticate via PIN ──────
-router.post('/auth/login', (req, res) => {
+router.post('/auth/login', loginRateLimit, (req, res) => {
   const { pin, studentName } = req.body;
 
   if (!pin) {
@@ -27,6 +70,7 @@ router.post('/auth/login', (req, res) => {
   const pinStr = String(pin).trim();
 
   if (pinStr === TEACHER_PIN) {
+    clearLoginFailures(req);
     req.session.role = 'teacher';
     req.session.studentId = null;
     console.log(`🔑 [auth] Teacher logged in`);
@@ -34,19 +78,26 @@ router.post('/auth/login', (req, res) => {
   }
 
   if (pinStr === STUDENT_PIN) {
-    // Generate a studentId from the name, or use a default
+    clearLoginFailures(req);
     const name = (studentName || '').trim();
-    const id   = name
-      ? name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      : 'student-' + Date.now().toString(36);
 
-    req.session.role      = 'student';
-    req.session.studentId = id;
-    req.session.studentName = name || id;
-    console.log(`🔑 [auth] Student logged in: ${req.session.studentName} (${id})`);
+    // If name not yet provided, confirm PIN is correct but don't create a session yet.
+    // The client will show the name field and resubmit with the name included.
+    if (!name) {
+      return res.json({ success: true, role: 'student', needsName: true });
+    }
+
+    // Name provided — create the real session
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'student-' + Date.now().toString(36);
+
+    req.session.role        = 'student';
+    req.session.studentId   = id;
+    req.session.studentName = name;
+    console.log(`🔑 [auth] Student logged in: ${name} (${id})`);
     return res.json({ success: true, role: 'student', studentId: id, redirect: '/app' });
   }
 
+  recordLoginFailure(req);
   return res.status(401).json({ error: 'Invalid PIN' });
 });
 
@@ -74,6 +125,10 @@ router.get('/auth/me', (req, res) => {
 function requireTeacher(req, res, next) {
   if (req.session && req.session.role === 'teacher') return next();
 
+  // SSE / EventSource sends Accept: text/event-stream — never redirect those
+  if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+    return res.status(403).json({ error: 'Teacher access required' });
+  }
   // For HTML page requests, redirect to login
   if (req.accepts('html')) {
     return res.redirect('/login');

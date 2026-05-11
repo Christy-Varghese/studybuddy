@@ -273,10 +273,10 @@ Format:
 
 // Tool 3: track_progress
 // Saves to the progress JSON store and returns a summary
-function track_progress({ topic, level, quizScore }) {
+function track_progress({ topic, level, quizScore, studentId, studentName }) {
   try {
-    const topicData = saveProgress(topic, level, quizScore ?? null);
-    const summary   = getProgressSummary();
+    const topicData = saveProgress(topic, level, quizScore ?? null, studentId, studentName);
+    const summary   = getProgressSummary(studentId);
     return {
       success:     true,
       saved:       { topic, level, quizScore },
@@ -467,10 +467,10 @@ Rules:
 // TOOL 7: generate_evaluation_report
 // Dynamic Progress Evaluation Report — adaptive learning consultant
 // ─────────────────────────────────────────────
-async function generate_evaluation_report() {
-  const progress   = getProgressSummary();
-  const dueReviews = getDueReviews();
-  const streak     = getLearningStreak();
+async function generate_evaluation_report(studentId) {
+  const progress   = getProgressSummary(studentId);
+  const dueReviews = getDueReviews(studentId);
+  const streak     = getLearningStreak(studentId);
 
   // Build a rich data snapshot for the LLM
   const topicDetails = progress.topics.map(t => {

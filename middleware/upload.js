@@ -37,22 +37,19 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
 });
 
-// ── Spreadsheet upload config ──
+// ── Spreadsheet upload config (CSV-only) ──
+// xlsx parser removed: unfixable prototype pollution + ReDoS advisories.
+// Teachers export to .csv from Excel/Google Sheets before uploading.
 const spreadsheetUpload = multer({
   dest: uploadsDir,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    const allowed = [
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain'                           // some systems send csv as text/plain
-    ];
+    const allowed = ['text/csv', 'application/csv', 'text/plain'];
     if (allowed.includes(file.mimetype) ||
-        file.originalname.match(/\.(csv|xlsx|xls)$/i)) {
+        file.originalname.match(/\.csv$/i)) {
       cb(null, true);
     } else {
-      cb(new Error('Only CSV and Excel files (.csv, .xlsx, .xls) are allowed'), false);
+      cb(new Error('Only CSV files (.csv) are allowed. Export your spreadsheet as CSV.'), false);
     }
   }
 });

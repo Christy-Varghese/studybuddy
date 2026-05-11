@@ -6,12 +6,22 @@ const router  = express.Router();
 // /progress, /progress-report, /due-reviews, /srs/:topic, /streak
 
 const { getProgressSummary, clearProgress, updateSRS, getDueReviews, getLearningStreak, listStudents, getFullClassData, DEFAULT_STUDENT } = require('../agent/progressStore');
+const { saveProgress } = require('../agent/progressStore');
 const { toolImplementations } = require('../agent/tools');
 const { flowTraces }          = require('../middleware/devTiming');
+const { requireAuth, requireTeacher } = require('./auth');
 
-// Helper: resolve studentId from session or query param
+// All progress endpoints require an authenticated session.
+// Teachers can read any studentId; students are pinned to their own.
+router.use(requireAuth);
+
+// Helper: resolve studentId from session or query param.
+// Students cannot read other students by passing ?studentId=...
 function resolveStudent(req) {
-  return req.query.studentId || req.session?.studentId || DEFAULT_STUDENT;
+  if (req.session?.role === 'teacher') {
+    return req.query.studentId || DEFAULT_STUDENT;
+  }
+  return req.session?.studentId || DEFAULT_STUDENT;
 }
 
 // GET student's full progress summary
@@ -28,7 +38,11 @@ router.get('/progress', (req, res) => {
 router.delete('/progress', (req, res) => {
   try {
     if (req.query.all === 'true') {
-      clearProgress();          // wipe everything
+      // Class-wide wipe is teacher-only.
+      if (req.session?.role !== 'teacher') {
+        return res.status(403).json({ error: 'Teacher access required to wipe all progress' });
+      }
+      clearProgress();
       res.json({ success: true, message: 'All progress cleared' });
     } else {
       const studentId = resolveStudent(req);
@@ -50,7 +64,8 @@ router.post('/progress-report', async (req, res) => {
   mark('Received request');
 
   try {
-    const result  = await toolImplementations.generate_evaluation_report();
+    const studentId = req.session?.studentId || DEFAULT_STUDENT;
+    const result  = await toolImplementations.generate_evaluation_report(studentId);
     const elapsed = Date.now() - reportStart;
     mark('LLM generation done', `${(elapsed / 1000).toFixed(2)}s`);
 
@@ -80,6 +95,32 @@ router.get('/due-reviews', (req, res) => {
   try {
     const studentId = resolveStudent(req);
     res.json({ reviews: getDueReviews(studentId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /progress/quiz-score — save a completed standalone quiz score
+// Called by the frontend when a student finishes a quiz card
+router.post('/progress/quiz-score', (req, res) => {
+  try {
+    const { topic, score, level } = req.body;
+    if (!topic || score === undefined) {
+      return res.status(400).json({ error: 'topic and score are required' });
+    }
+    const studentId   = req.session?.studentId   || DEFAULT_STUDENT;
+    const studentName = req.session?.studentName || null;
+    const pctScore    = Math.round(Math.min(100, Math.max(0, Number(score))));
+    const lvl         = level || 'intermediate';
+
+    // Save to progress store (this records the session + score)
+    saveProgress(topic, lvl, pctScore, studentId, studentName);
+
+    // Also update SRS so spaced-repetition intervals adjust
+    updateSRS(topic, pctScore, studentId);
+
+    console.log(`[quiz-score] ${studentName || studentId} → "${topic}" ${pctScore}%`);
+    res.json({ success: true, topic, score: pctScore });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -129,7 +170,7 @@ router.get('/streak', (req, res) => {
 // ─────────────────────────────────────────────────
 
 // GET all students (for teacher dropdown)
-router.get('/api/students', (req, res) => {
+router.get('/api/students', requireTeacher, (req, res) => {
   try {
     res.json({ students: listStudents() });
   } catch (err) {
@@ -138,10 +179,105 @@ router.get('/api/students', (req, res) => {
 });
 
 // GET full class data (all students, all topics, all sessions)
-router.get('/api/class-data', (req, res) => {
+router.get('/api/class-data', requireTeacher, (req, res) => {
   try {
     res.json(getFullClassData());
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────
+// STUDENT PDF REPORT DATA  (teacher only)
+// Returns a rich structured payload for client-side PDF generation.
+// ─────────────────────────────────────────────────
+router.get('/api/student-report/:studentId', requireTeacher, (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const store = require('../agent/progressStore');
+    const summary = getProgressSummary(studentId);
+    const classData = getFullClassData();
+    const studentMeta = classData.students.find(s => s.id === studentId) || {};
+    const streak = summary.streak || {};
+
+    // Per-topic deep breakdown with SRS info
+    const { readStore } = (() => {
+      // Inline read — reuse the store module's data
+      const fs   = require('fs');
+      const path = require('path');
+      const storeRaw = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/progress.json'), 'utf8'));
+      return { readStore: () => storeRaw };
+    })();
+    const raw = readStore();
+    const topicDetails = Object.entries(raw.topics[studentId] || {}).map(([name, data]) => {
+      const scores  = data.scores || [];
+      const avg     = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+      const trend   = scores.length >= 2
+        ? (scores[scores.length-1] - scores[0] > 0 ? 'improving' : scores[scores.length-1] - scores[0] < 0 ? 'declining' : 'stable')
+        : 'new';
+      return {
+        name,
+        timesStudied:  data.timesStudied || 0,
+        level:         data.level || 'beginner',
+        scores,
+        avgScore:      avg,
+        lastStudied:   data.lastStudied,
+        trend,
+        srsInterval:   data.srs?.interval || 1,
+        srsRepetitions: data.srs?.repetitions || 0,
+        nextReview:    data.srs?.nextReview || null,
+        mastery: avg === null ? 'untested' : avg >= 85 ? 'mastered' : avg >= 65 ? 'developing' : 'needs-work'
+      };
+    });
+
+    // Classify strengths / weaknesses / untested
+    const strengths   = topicDetails.filter(t => t.mastery === 'mastered');
+    const developing  = topicDetails.filter(t => t.mastery === 'developing');
+    const needsWork   = topicDetails.filter(t => t.mastery === 'needs-work');
+    const untested    = topicDetails.filter(t => t.mastery === 'untested');
+
+    // Session timeline (last 30)
+    const sessions = (raw.sessions || [])
+      .filter(s => (s.studentId || 'default') === studentId)
+      .slice(-30)
+      .reverse();
+
+    // Overall engagement score (0–100)
+    const engagement = Math.min(100, Math.round(
+      (streak.current || 0) * 5 +
+      summary.totalSessions * 2 +
+      summary.totalTopicsStudied * 3
+    ));
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      student: {
+        id:        studentId,
+        name:      studentMeta.name || studentId,
+        firstSeen: studentMeta.firstSeen,
+        lastSeen:  studentMeta.lastSeen
+      },
+      summary: {
+        totalTopics:   summary.totalTopicsStudied,
+        totalSessions: summary.totalSessions,
+        dueReviews:    summary.dueReviews,
+        engagement
+      },
+      streak: {
+        current: streak.current || 0,
+        longest: streak.longest || 0,
+        studiedToday: streak.studiedToday || false
+      },
+      strengths,
+      developing,
+      needsWork,
+      untested,
+      topicDetails,
+      recentTopics: summary.recentTopics || [],
+      sessions
+    });
+  } catch (err) {
+    console.error('[student-report]', err);
     res.status(500).json({ error: err.message });
   }
 });

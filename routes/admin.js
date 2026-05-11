@@ -7,7 +7,8 @@ const path    = require('path');
 const router  = express.Router();
 
 const { parse: csvParse }    = require('csv-parse/sync');
-const XLSX                   = require('xlsx');
+// xlsx removed: GHSA-4r6h-8v6p-xvw6 prototype pollution + GHSA-5pgg-2g8v-p4x9 ReDoS, no upstream fix.
+// Bulk upload is CSV-only. Teachers can export to .csv from Excel/Google Sheets.
 const { spreadsheetUpload }  = require('../middleware/upload');
 
 const {
@@ -49,33 +50,30 @@ router.get('/admin/taxonomy/template.csv', (req, res) => {
   res.send(csv);
 });
 
-// POST — bulk upload CSV or Excel file
+// POST — bulk upload CSV file
 router.post('/admin/taxonomy/bulk-upload', spreadsheetUpload.single('file'), (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded. Send a CSV or Excel file as the "file" field.' });
+    return res.status(400).json({ error: 'No file uploaded. Send a CSV file as the "file" field.' });
   }
 
   const filePath = req.file.path;
   const originalName = req.file.originalname.toLowerCase();
 
-  try {
-    let rows = [];
+  if (!originalName.endsWith('.csv') && !originalName.endsWith('.txt')) {
+    fs.unlink(filePath, () => {});
+    return res.status(400).json({
+      error: 'Only .csv files are accepted. Export your spreadsheet as CSV and try again.'
+    });
+  }
 
-    if (originalName.endsWith('.csv') || originalName.endsWith('.txt')) {
-      // ── Parse CSV ──
-      const raw = fs.readFileSync(filePath, 'utf8');
-      rows = csvParse(raw, {
-        columns: true,          // first row = headers
-        skip_empty_lines: true,
-        trim: true,
-        relax_column_count: true
-      });
-    } else {
-      // ── Parse Excel (.xlsx / .xls) ──
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-    }
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    let rows = csvParse(raw, {
+      columns: true,          // first row = headers
+      skip_empty_lines: true,
+      trim: true,
+      relax_column_count: true
+    });
 
     // Clean up the temp file
     fs.unlink(filePath, () => {});

@@ -6,6 +6,9 @@ const router  = express.Router();
 
 const { toolImplementations } = require('../agent/tools');
 const { flowTraces }          = require('../middleware/devTiming');
+const { requireAuth }         = require('./auth');
+
+router.use(requireAuth);
 
 router.post('/concept-map', async (req, res) => {
   const mapStart = Date.now();

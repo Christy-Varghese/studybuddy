@@ -20,6 +20,401 @@ related:
 
 # StudyBuddy 📚 — Offline AI Tutor Powered by Gemma 4
 
+> **Private, local AI tutoring for students who cannot always depend on the cloud.**
+
+A fully offline, privacy-first AI tutoring platform powered by **Google's Gemma 4** running locally via Ollama. No cloud, no API keys, no internet required after setup.
+
+Built for the [Gemma 4 Good Hackathon](https://kaggle.com/competitions/gemma-4-good-hackathon) — **Future of Education** track.
+
+---
+
+## 📺 Demo Video
+
+**▶ [Watch the 2-minute walkthrough on YouTube](https://youtu.be/eo5syCtA5xE)**
+
+---
+
+## 📸 Screenshots
+
+| Feature | Preview |
+|---------|---------|
+| Beginner theme — step-by-step explanation | Chat with emoji-rich step cards |
+| Advanced theme — technical depth | Terminal-style monospace explanation |
+| Homework photo analysis | Vision card with scanning animation + extracted steps |
+| Interactive quiz | MCQ cards with score tracking |
+| Concept map | D3.js force-directed SVG knowledge graph |
+| Socratic Mode — Turn 5 Big Picture | 🎯 Big Picture summary tying all turns together |
+| Dynamic Progress Evaluation Report | 5-section adaptive learning report |
+| Teacher Dashboard | Live SSE-powered class overview with AI judge panels |
+
+> Screenshots available in the `/docs` folder and the Kaggle submission gallery.
+
+---
+
+## ✨ Features
+
+### 🎓 Learning Modes
+| Mode | How it works |
+|------|-------------|
+| **Tutor** (default) | Structured explanations with steps, follow-up questions, instant quizzes |
+| **Socratic** | AI guides you through exactly 5 witty questions — never just tells you. Turn 5 delivers a 🎯 Big Picture summary |
+| **Agent** | Full pipeline: explain + quiz + track progress + suggest next topic |
+
+### Full Feature Set
+
+| Feature | Description |
+|---------|-------------|
+| 🎭 **Witty Socratic Tutor** | 5-turn guided discovery, pop-culture references, Big Picture summary on Turn 5 |
+| 📈 **Dynamic Progress Evaluation** | AI-generated 5-section report: narrative, cross-pollination, vocabulary heatmap, Big Domino, Micro-Mission |
+| 📸 **Homework Photo Analysis** | Snap a photo → Gemma 4 vision → step-by-step solution |
+| 🗺 **Interactive Concept Maps** | D3.js force-directed SVG knowledge graphs for any topic |
+| 🎙 **Voice Input** | Auto-restart speech recognition with live voice preview bar |
+| 📊 **SM-2 Spaced Repetition** | Quiz scores feed SM-2; topics scheduled at scientifically optimal intervals |
+| 🔥 **Learning Streaks** | Consecutive study-day tracking with animated streak badge |
+| 🧠 **Smart 4-Layer Cache** | ~70% of repeated queries skip Ollama entirely (48h TTL disk persistence) |
+| 📚 **Dynamic Taxonomy** | 76 topics, 1,223 keywords across 9 subjects; auto-promotes frequently asked topics |
+| 🎨 **3 Adaptive Themes** | Beginner (emoji-rich), Intermediate (clean), Advanced (terminal monospace) |
+| 📱 **PWA** | Installable; service worker caches shell for offline-first use |
+| 🌐 **140+ Languages** | Prompt-injection multilingual — Gemma 4 responds natively, no translation API |
+| 👩‍🏫 **Teacher Dashboard** | Live SSE class view: At-Risk Detection, Collective Confusion, Engagement Drop-off, Curiosity Tracking |
+| 🔍 **Developer Panel** | Per-route latency, cache hit rates, real-time flow traces (`Ctrl+Shift+B`) |
+
+---
+
+## 🏗 Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│         Browser (Single-Page App / PWA)          │
+│                                                   │
+│  Chat UI ← → Quiz Modal ← → Concept Map SVG     │
+│  Image Upload ← → Theme Switcher ← → Streak     │
+│  Skeleton Loaders ← → Dev Panel (Metrics+Flow)  │
+└──────────────────────┬────────────────────────────┘
+                       │ HTTP (localhost:3000)
+┌──────────────────────▼────────────────────────────┐
+│           Express.js Backend (server.js)           │
+│                                                     │
+│  /chat  /chat-with-image  /quiz  /concept-map      │
+│  /agent  /socratic  /progress  /progress-report    │
+│  /due-reviews  /srs/:topic  /streak                │
+│  /api/events (SSE)  /api/class-data                │
+│  /dev/metrics  /dev/flow-traces                    │
+│                                                     │
+│  ┌────────────────────────────────────────────┐    │
+│  │         Agent Layer (agentLoop.js)         │    │
+│  │  7 Tools: explain, quiz, track, suggest,   │    │
+│  │    socratic, concept-map, eval-report      │    │
+│  ├────────────────────────────────────────────┤    │
+│  │  Smart Cache  │  Taxonomy  │  Progress/SRS │    │
+│  │  (4-layer)    │  (dynamic) │   (SM-2)      │    │
+│  └───────────────┴──────┬─────┴───────────────┘    │
+└─────────────────────────┼──────────────────────────┘
+                          │ HTTP (localhost:11434)
+┌─────────────────────────▼──────────────────────────┐
+│              Ollama (Local Inference)                │
+│         Gemma 4 E4B — Text + Vision                 │
+│         (runs on CPU, 8GB RAM minimum)              │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠 Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| AI Model | Gemma 4 E4B via Ollama (local inference, text + vision) |
+| Backend | Node.js 18+ + Express.js |
+| Frontend | Vanilla HTML/CSS/JS (SPA shell + 15 JS modules, 14 CSS files) |
+| Auth | PIN-based dual-role (student / teacher) via `express-session` |
+| Real-time | Server-Sent Events (SSE) for teacher dashboard live updates |
+| Image Processing | `sharp` (resize to 640px WebP) |
+| Upload Handling | `multer` |
+| Compression | `compression` middleware (gzip; SSE excluded) |
+| SRS Algorithm | SM-2 (SuperMemo 2) |
+| Search | O(k) trie-based prefix autocomplete |
+| PWA | Service worker + Web App Manifest |
+| Concept Maps | D3.js force-directed SVG |
+| Multilingual | Prompt-injection — Gemma 4 native 140+ languages |
+| Python Bridge | `httpx` streaming + `orjson` for sub-5s low-latency queries |
+
+---
+
+## ⚙️ Gemma 4 & Ollama Setup
+
+### 1. Install Ollama
+Download from [ollama.ai](https://ollama.ai) and install for your OS.
+
+### 2. Pull Gemma 4 E4B
+```bash
+ollama pull gemma4:e4b
+```
+> Model size: ~3.2 GB. Requires 8GB RAM minimum (16GB recommended).
+
+### 3. Start Ollama
+```bash
+ollama serve
+```
+Ollama runs at `http://localhost:11434`. Keep this terminal open.
+
+### Verify Ollama is working
+```bash
+curl http://localhost:11434/api/tags
+```
+
+---
+
+## 🚀 How to Run Locally
+
+### Prerequisites
+- [Ollama](https://ollama.ai) with `gemma4:e4b` pulled and running
+- Node.js 18+
+- 8GB RAM minimum
+
+### Steps
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/Christy-Varghese/studybuddy.git
+cd studybuddy
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the server
+npm start
+```
+
+Open **http://localhost:3000**
+
+### Login PINs
+| Role | PIN |
+|------|-----|
+| Student | `student2026` |
+| Teacher | `teacher2026` |
+
+### Optional: Python low-latency bridge
+```bash
+cd python
+pip install -r requirements.txt
+python -m python    # interactive REPL, sub-5s responses
+```
+
+> No `.env` configuration needed — the app ships with defaults. No API keys required.
+
+---
+
+## 📁 Project Structure
+
+```
+studybuddy/
+├── server.js                   — Express entry point
+├── routes/
+│   ├── auth.js                 — PIN login, session, requireTeacher middleware
+│   ├── chat.js                 — /chat, /chat-with-image, /estimate
+│   ├── quiz.js                 — /quiz (with answer normalisation)
+│   ├── agent.js                — /agent (full pipeline)
+│   ├── socratic.js             — /socratic (5-turn guided discovery)
+│   ├── conceptMap.js           — /concept-map
+│   ├── progress.js             — /progress, /progress-report, /due-reviews,
+│   │                             /srs, /streak, /progress/quiz-score,
+│   │                             /api/class-data, /api/students
+│   ├── admin.js                — /admin/* + bulk CSV/Excel taxonomy upload
+│   └── dev.js                  — /dev/metrics, /dev/flow-traces, /cache-stats
+├── middleware/
+│   ├── devTiming.js            — Request timing + flow traces
+│   ├── upload.js               — Multer config
+│   └── pwa.js                  — PWA MIME type corrections
+├── lib/
+│   └── helpers.js              — buildSystemPrompt(), estimateResponseTime()
+├── agent/
+│   ├── agentLoop.js            — Sequential, parallel & Socratic agents
+│   ├── tools.js                — 7 learning tools
+│   ├── progressStore.js        — SM-2 SRS + multi-student progress (JSON)
+│   ├── smartCache.js           — 4-layer cache waterfall
+│   ├── dynamicTaxonomy.js      — Auto-learn + curate taxonomy
+│   ├── taxonomy.js             — Base taxonomy (76 topics, 1,223 keywords)
+│   └── trie.js                 — O(k) prefix autocomplete
+├── public/
+│   ├── index.html              — Student SPA shell
+│   ├── login.html              — PIN login (two-step: PIN → name)
+│   ├── teacher.html            — Live teacher dashboard (SSE-powered)
+│   ├── taxonomy-admin.html     — Taxonomy curation panel
+│   ├── styles/                 — 14 CSS files
+│   ├── scripts/                — 15 JS modules
+│   ├── assets/                 — PWA icons + logo SVGs
+│   ├── manifest.json           — PWA manifest
+│   ├── sw.js                   — Service worker
+│   └── devpanel.js             — Developer diagnostics panel
+├── data/                       — Runtime data (auto-created)
+│   ├── progress.json           — Multi-student learning history
+│   ├── cache.json              — Cache persistence
+│   └── taxonomy_learned.json   — Learned topics
+├── python/                     — Low-latency Python ↔ Ollama bridge
+│   ├── studybuddy_core.py
+│   ├── requirements.txt
+│   ├── __init__.py
+│   └── __main__.py
+└── docs/
+    ├── KAGGLE_WRITEUP.md       — Kaggle submission writeup
+    └── MASTER_BLUEPRINT.md     — Full technical reference
+```
+
+---
+
+## 📡 API Reference
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/auth/login` | PIN login — returns role + redirect |
+| `POST` | `/auth/logout` | Destroy session |
+| `GET`  | `/auth/me` | Current session (role, name, studentId) |
+| `POST` | `/chat` | Structured Gemma 4 chat (SSE streaming) |
+| `POST` | `/chat-with-image` | Vision: homework photo analysis |
+| `POST` | `/agent` | Full agent pipeline |
+| `POST` | `/socratic` | Socratic dialogue mode |
+| `POST` | `/concept-map` | Generate concept map (nodes + edges) |
+| `POST` | `/quiz` | Standalone quiz generation |
+| `POST` | `/estimate` | Response time prediction |
+| `POST` | `/progress-report` | AI-generated Dynamic Progress Evaluation |
+| `POST` | `/progress/quiz-score` | Save completed quiz score + update SRS |
+| `GET`  | `/progress` | Student progress summary |
+| `DELETE` | `/progress` | Clear progress |
+| `GET`  | `/due-reviews` | Topics due for SRS review |
+| `PUT`  | `/srs/:topic` | Update SRS after review session |
+| `GET`  | `/streak` | Current + longest learning streak |
+| `GET`  | `/api/students` | List all student profiles (teacher only) |
+| `GET`  | `/api/class-data` | Full class data for teacher dashboard (teacher only) |
+| `GET`  | `/api/events` | SSE stream for live teacher dashboard |
+| `GET`  | `/topics/search?q=` | Trie-based topic autocomplete |
+| `GET`  | `/cache-stats` | Cache performance stats |
+| `DELETE` | `/cache` | Clear response cache |
+| `GET`  | `/dev/metrics` | Latency, cache stats per route |
+| `GET`  | `/dev/flow-traces` | Per-route flow traces with step timing |
+
+---
+
+## 🧰 The 7 Learning Tools
+
+| Tool | What it does |
+|------|-------------|
+| `explain_topic` | Structured explanation: intro + steps + answer + follow-up |
+| `generate_quiz` | 2–5 MCQ questions with 3-priority answer normalisation |
+| `track_progress` | Saves study event + updates SM-2 schedule per student |
+| `suggest_next_topic` | Personalised recommendation based on weak/strong areas |
+| `ask_socratic_question` | 5-turn witty discovery dialogue with Big Picture summary |
+| `generate_concept_map` | Nodes + edges knowledge graph for D3.js rendering |
+| `generate_evaluation_report` | 5-section adaptive learning report per student |
+
+---
+
+## 🧪 Quick Smoke Test
+
+```bash
+# Is Ollama up?
+curl http://localhost:11434/api/tags
+
+# Is the server up?
+curl http://localhost:3000/auth/me
+
+# Explain a topic
+curl -X POST http://localhost:3000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain gravity","level":"beginner","history":[]}'
+
+# Generate a quiz
+curl -X POST http://localhost:3000/quiz \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"photosynthesis","level":"intermediate","numQuestions":3}'
+
+# Concept map
+curl -X POST http://localhost:3000/concept-map \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"photosynthesis","level":"beginner"}'
+```
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| **Inference speed** | Gemma 4 on CPU: 20–90s per response. Not suitable for <8GB RAM devices |
+| **Initial setup** | Requires Node.js, Ollama, and ~3GB model download |
+| **No real-time collaboration** | Students work independently; no shared live sessions |
+| **Single-machine default** | Designed for local use; classroom multi-student requires local network config |
+| **Model accuracy** | Gemma 4 E4B can hallucinate on niche topics; verify answers for high-stakes use |
+| **Vision quality** | Handwritten text recognition depends on image clarity |
+| **MemoryStore sessions** | Sessions reset on server restart (no Redis persistence) |
+
+---
+
+## 🔭 Future Roadmap
+
+- [ ] **Lighter model support** — Gemma 3 1B/2B for 4GB RAM devices
+- [ ] **USB classroom bundle** — pre-packaged installer for offline school deployment
+- [ ] **Curriculum alignment** — map topics to CBSE, Common Core, Cambridge IGCSE syllabi
+- [ ] **Parent/guardian dashboard** — weekly progress digest generated locally
+- [ ] **Collaborative Socratic sessions** — two students, one AI tutor
+- [ ] **Adaptive difficulty auto-detection** — infer level from first response
+- [ ] **PDF study guide export** — export session explanations as a formatted study sheet
+- [ ] **Redis session store** — persistent sessions across server restarts
+
+---
+
+## 📖 Documentation
+
+| Document | What it covers |
+|----------|----------------|
+| [docs/KAGGLE_WRITEUP.md](./docs/KAGGLE_WRITEUP.md) | Competition writeup — problem, solution, architecture, impact |
+| [docs/MASTER_BLUEPRINT.md](./docs/MASTER_BLUEPRINT.md) | Full technical reference — architecture, fix log, developer guide |
+
+---
+
+## 📄 License
+
+MIT License — free to use, modify, and distribute.
+
+```
+MIT License
+
+Copyright (c) 2026 Christy Varghese
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+```
+
+---
+
+## 🔗 Links
+
+| Resource | URL |
+|------|-----|
+| **GitHub Repository** | https://github.com/Christy-Varghese/studybuddy |
+| **Demo Video** | https://youtu.be/eo5syCtA5xE |
+| **Kaggle Submission** | https://kaggle.com/competitions/gemma-4-good-hackathon |
+| **Ollama** | https://ollama.ai |
+| **Gemma 4 Model** | https://ollama.ai/library/gemma4 |
+
+---
+
+*Built with ❤️ to make quality education accessible to every student — everywhere.*
+*Privacy-first. Offline-capable. Powered by Google's Gemma 4.*
+
+# StudyBuddy 📚 — Offline AI Tutor Powered by Gemma 4
+
 An intelligent, fully offline tutoring platform that runs entirely on your device using **Gemma 4 via Ollama**. No cloud, no API keys, no internet required after setup.
 
 Built for the [Gemma 4 Good Hackathon](https://kaggle.com/competitions/gemma-4-good-hackathon) — Future of Education track.

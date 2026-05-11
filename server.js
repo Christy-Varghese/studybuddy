@@ -8,6 +8,41 @@ const session    = require('express-session');
 const compression = require('compression');
 const path       = require('path');
 const fs         = require('fs');
+const crypto     = require('crypto');
+
+// ── Startup security validation ──
+// In production, refuse to start with default PINs or a missing SESSION_SECRET.
+// In dev, warn loudly and synthesize a random session secret so HMR doesn't break.
+const IS_PROD = process.env.NODE_ENV === 'production';
+const DEFAULT_PINS = new Set(['1234', '9999']);
+
+if (IS_PROD) {
+  const errors = [];
+  if (!process.env.SESSION_SECRET) {
+    errors.push('SESSION_SECRET is required in production');
+  }
+  if (!process.env.STUDENT_PIN || DEFAULT_PINS.has(process.env.STUDENT_PIN)) {
+    errors.push('STUDENT_PIN must be set to a non-default value (not 1234)');
+  }
+  if (!process.env.TEACHER_PIN || DEFAULT_PINS.has(process.env.TEACHER_PIN)) {
+    errors.push('TEACHER_PIN must be set to a non-default value (not 9999)');
+  }
+  if ((process.env.TEACHER_PIN || '').length < 6) {
+    errors.push('TEACHER_PIN must be at least 6 characters in production');
+  }
+  if (errors.length) {
+    console.error('\n❌ Startup blocked — fix these before running with NODE_ENV=production:');
+    for (const e of errors) console.error('   • ' + e);
+    process.exit(1);
+  }
+}
+
+// Synthesize an ephemeral SESSION_SECRET for dev so we never sign with a known string.
+const SESSION_SECRET = process.env.SESSION_SECRET || (() => {
+  const generated = crypto.randomBytes(32).toString('hex');
+  console.warn('[security] SESSION_SECRET not set — using a random per-process secret. Sessions will not survive restart.');
+  return generated;
+})();
 
 // ── Middleware ──
 const { IS_DEV, devTimingMiddleware }  = require('./middleware/devTiming');
@@ -47,13 +82,13 @@ app.use(express.json());
 
 // ── Session middleware (PIN auth for student/teacher roles) ──
 app.use(session({
-  secret:            process.env.SESSION_SECRET || 'studybuddy-dev-secret',
+  secret:            SESSION_SECRET,
   resave:            false,
   saveUninitialized: false,
   cookie: {
     maxAge:   24 * 60 * 60 * 1000,   // 24 hours
     httpOnly: true,
-    secure:   false,                   // set true behind HTTPS in production
+    secure:   false,                  // HTTP-only local server — never HTTPS, so secure must be false
     sameSite: 'lax'
   }
 }));
@@ -64,9 +99,19 @@ app.use(authRoutes);
 // ── Dev timing middleware (tracks request timing in dev mode) ──
 app.use(devTimingMiddleware);
 
-// Block devpanel.js in production
+// Block devpanel.js in production — return an empty no-op script so the
+// browser cache is overwritten and the panel never initialises.
 app.get('/devpanel.js', (req, res, next) => {
-  if (!IS_DEV) return res.status(404).send('Not found');
+  if (!IS_DEV) {
+    res.set({
+      'Content-Type':  'application/javascript',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma':        'no-cache',
+      'Expires':       '0',
+    });
+    // Return an empty IIFE — overwrites any cached copy instantly
+    return res.send('/* devpanel disabled in production */');
+  }
   next();
 });
 
@@ -115,6 +160,11 @@ app.get('/teacher', requireTeacher, (req, res) => {
 // /taxonomy-admin — taxonomy admin panel (requires teacher role)
 app.get('/taxonomy-admin', requireTeacher, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'taxonomy-admin.html'));
+});
+
+// /teacher/reports — student PDF report generator (requires teacher role)
+app.get('/teacher/reports', requireTeacher, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reports.html'));
 });
 
 // Inject dev panel into other HTML responses (dev mode only)

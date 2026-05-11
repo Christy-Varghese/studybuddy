@@ -8,6 +8,9 @@ const { flowTraces }      = require('../middleware/devTiming');
 const { parseQuizResponse } = require('../lib/parseJSON');
 const { ollamaOptions }   = require('../lib/helpers');
 const { REASONING, reasoningWithDraft } = require('../agent/models');
+const { requireAuth }     = require('./auth');
+
+router.use(requireAuth);
 
 router.post('/quiz', async (req, res) => {
   const quizStart = Date.now();
@@ -97,18 +100,34 @@ Format:
       .filter(q => q && typeof q === 'object')
       .map((q, index) => {
         const validated = {
-          question: String(q.question || `Question ${index + 1}`).trim(),
-          options: Array.isArray(q.options) ? q.options.map(o => String(o).trim()) : ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
-          answer: String(q.answer || q.options?.[0] || 'A) Option 1').trim(),
+          question:    String(q.question || `Question ${index + 1}`).trim(),
+          options:     Array.isArray(q.options) ? q.options.map(o => String(o).trim()) : ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
+          answer:      String(q.answer || q.options?.[0] || 'A) Option 1').trim(),
+          topic,      // embed topic so the frontend can report it back when saving scores
           explanation: String(q.explanation || 'No explanation provided').trim()
         };
         while (validated.options.length < 4) {
           validated.options.push(`${String.fromCharCode(65 + validated.options.length)}) Option`);
         }
         validated.options = validated.options.slice(0, 4);
-        if (!validated.options.some(opt => opt.startsWith(validated.answer.charAt(0)))) {
-          validated.answer = validated.options[0];
-        }
+
+        // ── Normalise answer to always be the full matching option text ──
+        // The AI may return just a letter ("C"), letter+paren ("C)"), or full text ("C) Sunlight").
+        // Find the option whose text starts with the same letter so the client comparison always works.
+        const rawAnswer    = validated.answer;
+        const answerLetter = rawAnswer.charAt(0).toUpperCase();         // e.g. "C"
+        const answerBody   = rawAnswer.replace(/^[A-D][).\s]+/i, '').trim().toLowerCase(); // text after prefix
+
+        // Priority 1: exact match (AI already returned full option text)
+        const exactMatch = validated.options.find(opt => opt === rawAnswer);
+        // Priority 2: letter prefix match (e.g. answer="C" → option "C) Sunlight")
+        const letterMatch = validated.options.find(opt => opt.charAt(0).toUpperCase() === answerLetter);
+        // Priority 3: body text match (e.g. answer="Sunlight" inside any option)
+        const bodyMatch   = validated.options.find(opt =>
+          opt.replace(/^[A-D][).\s]+/i, '').trim().toLowerCase() === answerBody
+        );
+
+        validated.answer = exactMatch || letterMatch || bodyMatch || validated.options[0];
         return validated;
       })
       .filter(q => q.question && q.question.length > 5);

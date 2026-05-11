@@ -282,6 +282,7 @@
   <div class="nav-tabs">
     <a class="nav-tab active" href="/teacher" title="Live Dashboard">📈 Live Dashboard</a>
     <a class="nav-tab" href="/taxonomy-admin" title="Taxonomy Admin">🏷️ Taxonomy Admin</a>
+    <a class="nav-tab" href="/teacher/reports" title="Student PDF Reports">📄 Reports</a>
     <span class="live-badge" id="liveBadge"><span class="live-dot"></span> Live</span>
     <button class="nav-tab logout-tab" onclick="logout()" title="Sign out">🚪 Logout</button>
   </div>
@@ -1032,11 +1033,16 @@ function renderIndividualSRS(student) {
 function connectSSE() {
   const badge = document.getElementById('liveBadge');
   let es;
+  let sseOk = false;
+
+  // Polling fallback — refreshes every 15 s in case SSE is blocked
+  setInterval(() => { if (!sseOk) refreshData(); }, 15000);
 
   function open() {
     es = new EventSource('/api/events');
 
     es.onopen = () => {
+      sseOk = true;
       badge.classList.remove('disconnected');
       badge.innerHTML = '<span class="live-dot"></span> Live';
       console.log('[SSE] Connected');
@@ -1048,11 +1054,12 @@ function connectSSE() {
     });
 
     es.onerror = () => {
+      sseOk = false;
       badge.classList.add('disconnected');
       badge.innerHTML = '<span class="live-dot"></span> Reconnecting…';
-      console.warn('[SSE] Disconnected — will auto-reconnect');
+      console.warn('[SSE] Disconnected — will retry in 5 s');
       es.close();
-      setTimeout(open, 3000);     // retry after 3 s
+      setTimeout(open, 5000);     // retry after 5 s
     };
   }
 

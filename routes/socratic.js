@@ -6,6 +6,9 @@ const router  = express.Router();
 
 const { runSocraticAgent } = require('../agent/agentLoop');
 const { flowTraces }       = require('../middleware/devTiming');
+const { requireAuth }      = require('./auth');
+
+router.use(requireAuth);
 
 router.post('/socratic', async (req, res) => {
   const socStart = Date.now();
@@ -19,7 +22,7 @@ router.post('/socratic', async (req, res) => {
   mark('Received request', `level=${level || 'intermediate'}, lang=${language || 'English'}, turn=${turn || '?'}, history=${(history || []).length} msgs`);
 
   try {
-    const result = await runSocraticAgent(message, level || 'intermediate', history || [], turn, language);
+    const result = await runSocraticAgent(message, level || 'intermediate', history || [], turn, language, req.session?.studentId || null, req.session?.studentName || null);
     mark('Socratic agent done', `turn=${result?.structured?.agentSummary || '?'}`);
 
     const socMs = Date.now() - socStart;

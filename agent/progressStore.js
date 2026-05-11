@@ -100,6 +100,9 @@ function ensureStudent(store, studentId, studentName) {
       firstSeen: new Date().toISOString(),
       lastSeen:  new Date().toISOString()
     };
+  } else if (studentName && store.students[studentId].name === studentId) {
+    // Update name if it was previously just the ID (e.g. first session before name was threaded)
+    store.students[studentId].name = studentName;
   }
   if (!store.topics[studentId]) {
     store.topics[studentId] = {};
@@ -175,9 +178,9 @@ function defaultSRS() {
 // ─────────────────────────────────────────────────────────────
 
 // Save a study event: topic studied, optional quiz score (0-100), level
-function saveProgress(topic, level, quizScore = null, studentId = DEFAULT_STUDENT) {
+function saveProgress(topic, level, quizScore = null, studentId = DEFAULT_STUDENT, studentName = null) {
   const store = readStore();
-  ensureStudent(store, studentId);
+  ensureStudent(store, studentId, studentName);
 
   const studentTopics = store.topics[studentId];
 

@@ -11,6 +11,9 @@ const { parseTutorResponse } = require('../lib/parseJSON');
 const { upload }       = require('../middleware/upload');
 const { flowTraces }   = require('../middleware/devTiming');
 const { REASONING, reasoningWithDraft } = require('../agent/models');
+const { requireAuth }  = require('./auth');
+
+router.use(requireAuth);
 
 // ============ POST /estimate — Quick time estimate (no Ollama call) ============
 router.post('/estimate', (req, res) => {

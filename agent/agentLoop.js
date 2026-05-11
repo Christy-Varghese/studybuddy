@@ -5,9 +5,9 @@ const { reasoningWithDraft } = require('./models');
 
 // The main agent loop - simplified version
 // Directly executes tools based on the student message and synthesizes results
-async function runAgentLoop(studentMessage, level, conversationHistory, progressSummary, language) {
+async function runAgentLoop(studentMessage, level, conversationHistory, progressSummary, language, studentId, studentName) {
   setActiveLanguage(language);
-  const summary = progressSummary || getProgressSummary();
+  const summary = progressSummary || getProgressSummary(studentId);
 
   const toolCallLog = [];
   let explanation = null;
@@ -72,7 +72,9 @@ async function runAgentLoop(studentMessage, level, conversationHistory, progress
         const trackResult = await toolImplementations.track_progress({
           topic: mainTopic,
           level: level,
-          quizScore: null
+          quizScore: null,
+          studentId,
+          studentName
         });
         toolCallLog.push({ tool: 'track_progress', args: { topic: mainTopic, level }, result: trackResult });
       }
@@ -185,9 +187,9 @@ function extractTopic(message) {
 }
 
 // Fast parallel agent — runs independent tools concurrently
-async function runParallelAgent(studentMessage, level, conversationHistory, language) {
+async function runParallelAgent(studentMessage, level, conversationHistory, language, studentId, studentName) {
   setActiveLanguage(language);
-  const summary = getProgressSummary();
+  const summary = getProgressSummary(studentId);
   const toolCallLog = [];
 
   try {
@@ -282,7 +284,9 @@ Example:
 
   // Step 4 — Run sync tools sequentially (they are instant — file I/O only)
   for (const call of syncTools) {
-    const result = await executeTool(call.name, call.args || {});
+    // Inject student identity so progress is saved under the correct student
+    const args = { ...(call.args || {}), studentId, studentName };
+    const result = await executeTool(call.name, args);
     toolCallLog.push({ tool: call.name, args: call.args, result });
     parallelResults.push({ name: call.name, result });
   }
@@ -404,7 +408,7 @@ Respond ONLY with valid JSON — no markdown, no preamble:
 // Drives a guided-discovery conversation instead of explaining.
 // Each turn asks a question rather than giving the answer.
 // ─────────────────────────────────────────────────────────────
-async function runSocraticAgent(studentMessage, level, conversationHistory, explicitTurn, language) {
+async function runSocraticAgent(studentMessage, level, conversationHistory, explicitTurn, language, studentId, studentName) {
   setActiveLanguage(language);
   const toolCallLog = [];
 
@@ -429,7 +433,7 @@ async function runSocraticAgent(studentMessage, level, conversationHistory, expl
     toolCallLog.push({ tool: 'ask_socratic_question', args: { topic, level, turnNumber }, result: socrResult });
 
     // Track that the student is engaging with this topic
-    const trackResult = toolImplementations.track_progress({ topic, level, quizScore: null });
+    const trackResult = toolImplementations.track_progress({ topic, level, quizScore: null, studentId, studentName });
     toolCallLog.push({ tool: 'track_progress', args: { topic, level }, result: trackResult });
 
     const structured = {

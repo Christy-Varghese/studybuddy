@@ -50,6 +50,7 @@
     }
 
     .login-icon { font-size: 48px; margin-bottom: 8px; }
+    .login-logo { width: 140px; height: 140px; margin: 0 auto 4px; display: block; }
     .login-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
     .login-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
 
@@ -189,42 +190,61 @@
   <form id="loginForm" onsubmit="handleLogin(event)">
     <div class="form-group">
       <label for="pin">Access PIN</label>
-      <input type="password" id="pin" placeholder="Enter PIN" autocomplete="off" maxlength="8" required autofocus>
+      <input type="password" id="pin" placeholder="Enter PIN" autocomplete="off" maxlength="20" required autofocus>
     </div>
 
     <div id="nameGroup" class="form-group name-group">
       <label for="studentName">Your Name</label>
-      <input type="text" id="studentName" placeholder="e.g. Alex, Room 204" style="font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; letter-spacing: normal;">
+      <input type="text" id="studentName" placeholder="e.g. Alex, Room 204" autocomplete="given-name" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; letter-spacing: normal;">
     </div>
 
     <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
   </form>
 
   <div class="role-hint">
-    Demo PINs: Student <code>1234</code> &nbsp;·&nbsp; Teacher <code>9999</code>
+    Enter your PIN to access StudyBuddy
   </div>
 </div>
 
 <script>
   const pinEl      = document.getElementById('pin');
   const nameGroup  = document.getElementById('nameGroup');
+  const nameEl     = document.getElementById('studentName');
   const errorMsg   = document.getElementById('errorMsg');
   const loginBtn   = document.getElementById('loginBtn');
 
-  // Live detect: if the typed PIN matches student PIN, show the name field
+  // Track whether we are in the "enter name" step
+  let awaitingName = false;
+  let verifiedPin  = '';
+
   pinEl.addEventListener('input', () => {
     errorMsg.classList.remove('visible');
-    // Show name field when PIN is 4+ digits (potential student)
-    if (pinEl.value.length >= 4) {
-      nameGroup.classList.add('visible');
-    } else {
-      nameGroup.classList.remove('visible');
-    }
   });
 
   async function handleLogin(e) {
     e.preventDefault();
     errorMsg.classList.remove('visible');
+
+    // Step 2: name was requested and user just filled it in
+    if (awaitingName) {
+      const name = nameEl.value.trim();
+      if (!name) {
+        errorMsg.textContent = 'Please enter your name to continue.';
+        errorMsg.classList.add('visible');
+        nameEl.focus();
+        return;
+      }
+      await doLogin(verifiedPin, name);
+      return;
+    }
+
+    // Step 1: validate PIN
+    const pin = pinEl.value.trim();
+    if (!pin) return;
+    await doLogin(pin, nameEl.value.trim());
+  }
+
+  async function doLogin(pin, name) {
     loginBtn.disabled = true;
     loginBtn.textContent = 'Signing in…';
 
@@ -232,23 +252,33 @@
       const res = await fetch('/auth/login', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pin:         pinEl.value.trim(),
-          studentName: document.getElementById('studentName').value.trim()
-        })
+        body: JSON.stringify({ pin, studentName: name })
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         errorMsg.textContent = data.error || 'Invalid PIN';
         errorMsg.classList.add('visible');
+        awaitingName = false;
         loginBtn.disabled = false;
         loginBtn.textContent = 'Sign In';
         return;
       }
 
-      // Redirect based on role
+      // Server confirmed student PIN but wants a name first
+      if (data.needsName) {
+        awaitingName = true;
+        verifiedPin  = pin;
+        nameGroup.classList.add('visible');
+        nameEl.focus();
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Continue →';
+        return;
+      }
+
+      // Authenticated — redirect
       window.location.href = data.redirect || '/';
+
     } catch (err) {
       errorMsg.textContent = 'Connection error — is the server running?';
       errorMsg.classList.add('visible');
@@ -257,11 +287,10 @@
     }
   }
 
-  // Check if already authenticated
+  // Already authenticated? Skip the login page.
   fetch('/auth/me').then(r => r.json()).then(data => {
     if (data.authenticated) {
-      if (data.role === 'teacher') window.location.href = '/teacher';
-      else window.location.href = '/app';
+      window.location.href = data.role === 'teacher' ? '/teacher' : '/app';
     }
   }).catch(() => {});
 </script>

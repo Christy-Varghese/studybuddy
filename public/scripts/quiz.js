@@ -1,4 +1,18 @@
 /* Quiz modal, loading, generation, rendering */
+
+// ── Robust answer comparison ──────────────────────────────────
+// Strips leading "A) " / "B." / "C " prefixes and compares case-insensitively.
+// Handles cases where the AI returns the answer with/without the letter prefix.
+function normaliseOption(str) {
+  return String(str || '').replace(/^[A-D][).\s]+/i, '').trim().toLowerCase();
+}
+function isAnswerCorrect(option, answer) {
+  if (option === answer) return true;                                      // exact match
+  if (option.charAt(0).toUpperCase() === answer.charAt(0).toUpperCase()   // same letter prefix
+      && /^[A-D]/i.test(answer)) return true;
+  return normaliseOption(option) === normaliseOption(answer);              // text body match
+}
+
 // ============ Quiz Modal Handlers ============
 function openQuizModal() {
   quizModal.classList.add('active');
@@ -117,6 +131,7 @@ async function generateQuiz() {
     } else {
       currentQuiz = data.questions;
       quizAnswers = {};
+      renderQuizCard._scoreSaved = false;   // reset for each new quiz
       closeQuizModal();
       renderQuizCard();
     }
@@ -142,7 +157,7 @@ function renderQuizCard() {
 
     q.options.forEach((option, optIdx) => {
       const answered = quizAnswers[idx] !== undefined;
-      const isCorrect = option === q.answer;
+      const isCorrect = isAnswerCorrect(option, q.answer);
       const wasSelected = quizAnswers[idx] === option;
 
       let btnClass = 'quiz-option';
@@ -175,14 +190,15 @@ function renderQuizCard() {
 
   // Score tracker
   const score = Object.keys(quizAnswers).filter(
-    idx => currentQuiz[idx].answer === quizAnswers[idx]
+    idx => isAnswerCorrect(quizAnswers[idx], currentQuiz[idx].answer)
   ).length;
   const total = currentQuiz.length;
+  const allAnswered = Object.keys(quizAnswers).length === total;
 
   quizHTML += `<div class="quiz-score">Score: ${score} / ${total}</div>`;
 
   // Restart button (if all answered)
-  if (Object.keys(quizAnswers).length === total) {
+  if (allAnswered) {
     quizHTML += `
       <button class="quiz-restart" onclick="restartQuiz()">Restart Quiz</button>
     `;
@@ -199,6 +215,28 @@ function renderQuizCard() {
   }
 
   addBubble(quizHTML, 'bot', true, false);
+
+  // ── Save score to server when quiz is fully completed ──
+  if (allAnswered && !renderQuizCard._scoreSaved) {
+    renderQuizCard._scoreSaved = true;   // prevent double-save on re-render
+    const pct   = Math.round((score / total) * 100);
+    const topic = currentQuiz[0]?.topic || document.getElementById('quizTopic')?.value || 'Unknown Topic';
+    const level = typeof levelEl !== 'undefined' ? levelEl.value : 'intermediate';
+    fetch('/progress/quiz-score', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ topic, score: pct, level })
+    }).then(() => {
+      // Refresh streak badge + due-reviews banner after score is saved
+      if (typeof loadStreak === 'function')     loadStreak();
+      if (typeof loadDueReviews === 'function') loadDueReviews();
+      // Show progress + evaluation buttons now that there's data
+      const pBtn = document.getElementById('progress-btn');
+      const eBtn = document.getElementById('evaluation-btn');
+      if (pBtn) pBtn.style.display = '';
+      if (eBtn) eBtn.style.display = '';
+    }).catch(() => {});
+  }
 }
 
 function selectAnswer(questionIdx, optionIdx) {
@@ -225,6 +263,7 @@ function selectAnswer(questionIdx, optionIdx) {
 function restartQuiz() {
   currentQuiz = null;
   quizAnswers = {};
+  renderQuizCard._scoreSaved = false;   // allow saving again for next quiz
   const quizCard = chatEl.querySelector('.quiz-card');
   if (quizCard) {
     quizCard.closest('.bubble').remove();

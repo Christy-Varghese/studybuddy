@@ -12,6 +12,18 @@ async function loadStreak() {
       if (data.current >= 3) badge.classList.add('hot');
     }
   } catch (e) { /* streak is cosmetic, fail silently */ }
+
+  // Show progress + evaluation buttons if student has any recorded activity
+  try {
+    const res  = await fetch('/progress');
+    const data = await res.json();
+    if (data.totalTopicsStudied > 0) {
+      const pBtn = document.getElementById('progress-btn');
+      const eBtn = document.getElementById('evaluation-btn');
+      if (pBtn) pBtn.style.display = '';
+      if (eBtn) eBtn.style.display = '';
+    }
+  } catch (e) { /* non-critical */ }
 }
 
 async function loadDueReviews() {
